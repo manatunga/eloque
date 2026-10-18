@@ -448,3 +448,8 @@ func (l *Lexer) nextToken() (Token, error) {
 		Message:  "unexpected character",
 	}
 }
+
+// NextToken returns the next token from the production lexer.
+func (l *Lexer) NextToken() (Token, error) {
+	return l.nextToken()
+}
