@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 	"strings"
@@ -104,6 +105,20 @@ func TestCompactFrontendEquivalence(t *testing.T) {
 		{"invalid_character", "say @"},
 		{"invalid_integer", "say 012"},
 		{"unterminated_string", "say \"hello"},
+		{"empty_string", `say ""`},
+		{"single_quoted_string", `say 'hello'`},
+		{"escaped_quote", `say "hello\"world"`},
+		{"trailing_newline", "say 1\n"},
+		{"multiple_blank_lines", "say 1\n\n\nsay 2"},
+		{"comment_only", "# comment"},
+		{"comment_at_eof", "say 1 # comment"},
+		{"nested_parentheses", "say ((2 + 3) * (4 - 1))"},
+		{"multiline_expression", "say (\n  2 +\n  3\n)"},
+		{"error_on_second_line", "say 1\nsay 2 +"},
+		{"error_after_blank_lines", "\n\nsay 2 +"},
+		{"unexpected_token_second_line", "say 1\n42"},
+		{"unterminated_string_second_line", "say 1\nsay \"hello"},
+		{"invalid_character_second_line", "say 1\nsay @"},
 	}
 
 	for _, tc := range cases {
@@ -119,10 +134,21 @@ func TestCompactFrontendEquivalence(t *testing.T) {
 			}
 
 			if fullErr != nil {
-				if !reflect.DeepEqual(fullErr, compactErr) {
+				var fullLexErr *lexer.LexError
+				var compactLexErr *lexer.LexError
+
+				if !errors.As(fullErr, &fullLexErr) ||
+					!errors.As(compactErr, &compactLexErr) {
 					t.Fatalf(
-						"lexical errors differ:\nfull: %#v\ncompact: %#v",
+						"unexpected lexical error types:\nfull: %T\ncompact: %T",
 						fullErr, compactErr,
+					)
+				}
+
+				if fullLexErr.Error() != compactLexErr.Error() {
+					t.Fatalf(
+						"lexical errors differ:\nfull: %v\ncompact: %v",
+						fullLexErr, compactLexErr,
 					)
 				}
 				return

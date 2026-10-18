@@ -7,7 +7,7 @@ type CompactToken struct {
 	Kind  TokenKind
 }
 
-// Lexer maintains the state required to tokenize Eloque source code.
+// CompactLexer maintains the state required to tokenize Eloque source code.
 // start marks the beginning of the current token, while current points
 // to the next unread byte. Line and column positions are 1-based.
 // indentStack records active indentation widths in spaces.
@@ -37,7 +37,7 @@ type CompactLexer struct {
 	parenPositions []Position
 }
 
-// New creates a lexer for the provided source text.
+// NewCompact creates a lexer for the provided source text.
 // Scanning begins at byte offset 0, line 1, column 1.
 func NewCompact(source string) *CompactLexer {
 	return &CompactLexer{
@@ -93,7 +93,7 @@ func isIdentifierStartTest(ch byte) bool {
 // isIdentifierContinue reports whether a byte can appear after the
 // first character of an identifier, including ASCII digits.
 func isIdentifierContinueTest(ch byte) bool {
-	return isIdentifierStart(ch) ||
+	return isIdentifierStartTest(ch) ||
 		(ch >= '0' && ch <= '9')
 }
 
@@ -101,7 +101,7 @@ func isIdentifierContinueTest(ch byte) bool {
 // The first character must already have been consumed by advance.
 // It returns the complete identifier text without classifying it.
 func (l *CompactLexer) scanIdentifier() string {
-	for isIdentifierContinue(l.peek()) {
+	for isIdentifierContinueTest(l.peek()) {
 		l.advance()
 	}
 	return l.source[l.start:l.current]
@@ -297,7 +297,7 @@ func (l *CompactLexer) scanString(quote byte) (CompactToken, error) {
 	return l.makeToken(TokenString), nil
 }
 
-// nextToken returns the next token in source order, emitting queued
+// NextToken returns the next token in source order, emitting queued
 // structural tokens before scanning additional source text. At the start
 // of a non-blank line, it measures and processes indentation before
 // scanning ordinary tokens. It skips horizontal spaces, preserves
@@ -423,7 +423,7 @@ func (l *CompactLexer) NextToken() (CompactToken, error) {
 		kind := l.scanIdentifierKind()
 		return l.makeToken(kind), nil
 	}
-	if isDigit(char) {
+	if isDigitTest(char) {
 		lexeme := l.scanInteger()
 		if isIdentifierStartTest(l.peek()) {
 			return CompactToken{}, &LexError{
