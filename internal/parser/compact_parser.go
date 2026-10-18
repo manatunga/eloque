@@ -127,10 +127,21 @@ func (p *CompactParser) expect(
 		return p.advance(), nil
 	}
 
-	return lexer.CompactToken{}, &Diagnostic{
+	return lexer.CompactToken{}, p.unexpectedToken(token, kind, message)
+}
+
+// unexpectedToken constructs a diagnostic for a token mismatch.
+func (p *CompactParser) unexpectedToken(
+	token lexer.CompactToken,
+	expected lexer.TokenKind,
+	message string,
+) *Diagnostic {
+	actual := token.Kind
+
+	return &Diagnostic{
 		Message:  message,
 		Location: p.tokenSpan(token),
-		Expected: []lexer.TokenKind{kind},
-		Actual:   &token.Kind,
+		Expected: []lexer.TokenKind{expected},
+		Actual:   &actual,
 	}
 }
