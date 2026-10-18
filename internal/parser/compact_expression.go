@@ -46,6 +46,27 @@ func (p *CompactParser) parseCompactPrefix() (compactExpressionResult, *Diagnost
 	}, nil
 }
 
+// unexpectedExpression constructs a diagnostic for an invalid expression token.
+func (p *CompactParser) unexpectedExpression(
+    token lexer.CompactToken,
+) *Diagnostic {
+    actual := token.Kind
+
+    return &Diagnostic{
+        Message: "expected an expression",
+        Location: p.tokenSpan(token),
+        Expected: []lexer.TokenKind{
+            lexer.TokenInt,
+            lexer.TokenString,
+            lexer.TokenIdent,
+            lexer.TokenLeftParen,
+			lexer.TokenPlus,
+			lexer.TokenMinus,
+        },
+        Actual: &actual,
+    }
+}
+
 // parseCompactPrimary parses integer literals, string literals,
 // identifiers and parenthesized expressions from compact tokens.
 func (p *CompactParser) parseCompactPrimary() (compactExpressionResult, *Diagnostic) {
@@ -122,19 +143,7 @@ func (p *CompactParser) parseCompactPrimary() (compactExpressionResult, *Diagnos
 		}, nil
 
 	default:
-		return compactExpressionResult{}, &Diagnostic{
-			Message:  "expected an expression",
-			Location: p.tokenSpan(currentToken),
-			Expected: []lexer.TokenKind{
-				lexer.TokenInt,
-				lexer.TokenString,
-				lexer.TokenIdent,
-				lexer.TokenLeftParen,
-				lexer.TokenPlus,
-				lexer.TokenMinus,
-			},
-			Actual: &currentToken.Kind,
-		}
+		return compactExpressionResult{}, p.unexpectedExpression(currentToken)
 	}
 }
 

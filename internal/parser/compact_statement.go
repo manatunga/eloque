@@ -103,6 +103,24 @@ func (p *CompactParser) parseCompactSayStatement() (ast.Statement, *Diagnostic) 
 	return statement, nil
 }
 
+// unexpectedStatement constructs a diagnostic for an invalid statement token.
+func (p *CompactParser) unexpectedStatement(
+    token lexer.CompactToken,
+) *Diagnostic {
+    actual := token.Kind
+
+    return &Diagnostic{
+        Message:  "expected a statement ('let', 'change' or 'say')",
+        Location: p.tokenSpan(token),
+        Expected: []lexer.TokenKind{
+			lexer.TokenLet,
+			lexer.TokenChange,
+			lexer.TokenSay,
+        },
+        Actual: &actual,
+    }
+}
+
 // parseCompactStatement dispatches a compact-token statement to
 // its corresponding parser or reports a positioned syntax error.
 func (p *CompactParser) parseCompactStatement() (ast.Statement, *Diagnostic) {
@@ -119,15 +137,6 @@ func (p *CompactParser) parseCompactStatement() (ast.Statement, *Diagnostic) {
 		return p.parseCompactSayStatement()
 
 	default:
-		return nil, &Diagnostic{
-			Message:  "expected a statement ('let', 'change' or 'say')",
-			Location: p.tokenSpan(currentToken),
-			Expected: []lexer.TokenKind{
-				lexer.TokenLet,
-				lexer.TokenChange,
-				lexer.TokenSay,
-			},
-			Actual: &currentToken.Kind,
-		}
+		return nil, p.unexpectedStatement(currentToken)
 	}
 }
