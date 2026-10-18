@@ -77,14 +77,28 @@ No installation instructions are provided yet because there is no working Eloque
 
 ## Project status
 
-Eloque is in active frontend development under Milestone 1.
+Eloque is in active development under **Milestone 1 — Frontend foundations**.
 
-The lexer and foundational AST/parser infrastructure are implemented and tested. The Pratt expression parser supports integer and string literals, identifiers, grouping, unary arithmetic, and binary arithmetic with the documented precedence and associativity rules.
+The following checkpoints are complete:
 
-The initial statement parser supports `let`, `change`, and `say`. Complete-program parsing supports newline-separated statements, blank lines, and EOF termination. Parsed statements and programs retain source spans, while malformed syntax produces structured, fail-fast diagnostics.
+- **M0:** Repository foundations, Go module, minimal CLI skeleton, and initial testing infrastructure.
+- **M1-P1:** AST foundations, shared source spans, parser infrastructure, and structured syntax diagnostics.
+- **M1-P2:** Pratt arithmetic expression parsing, including precedence, associativity, grouping, and source-location tracking.
+- **M1-P3:** `let`, `change`, and `say` statement parsing, complete-program AST construction, and fail-fast syntax diagnostics.
+- **Post-M1-P3 optimization:** Canonical lexer/parser consolidation, performance improvements, and updated frontend benchmarks.
 
-Expression and program parsing have undergone correctness, robustness, and performance testing. Initial program-parsing benchmarks demonstrate approximately linear scaling across workloads containing 3, 300, and 3,000 statements. These benchmarks measure parsing from prepared tokens, excluding lexing.
+The current frontend can construct ASTs for the implemented syntax subset. Integrated benchmark workloads exercise lexing, token collection, parsing, and AST construction.
 
-The M1-P3 implementation has been completed after a final checkpoint review. Lexer–parser integration, broader frontend conformance, mandatory static type checking, bytecode compilation, and virtual-machine execution remain future work.
+**Next checkpoint:** M1-P4 — Syntax diagnostics and conformance testing, followed by M1-P5 — Frontend integration and milestone closure.
 
-The language specification describes the intended language, not the currently executable feature set. Syntax, release boundaries, and technical details may evolve before version 1.0.
+### Performance benchmarks
+
+The optimized frontend has reproducible lexer, parser, and complete frontend benchmarks. Preliminary synthetic-workload comparisons with CPython 3.15.0rc2 are documented in [benchmarks/README.md](benchmarks/README.md).
+
+These measurements concern frontend processing only. They do not demonstrate runtime execution performance or general superiority over Python.
+
+### Implementation limitations
+
+Eloque cannot yet execute source programs. Name resolution, mandatory static type checking, bytecode compilation, and virtual-machine execution remain future milestones.
+
+The [language specification](docs/LANGUAGE_SPEC.md) describes the intended language, not the currently executable feature set. Syntax, release boundaries, and technical details may evolve before version 1.0.

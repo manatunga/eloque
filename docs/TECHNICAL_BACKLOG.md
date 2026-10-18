@@ -222,6 +222,21 @@ At each milestone, inspect items whose triggers have arrived. Record the decisio
 - **Next action:** Retain `internal/parser/program_bench_test.go` and the saved `benchmark_m1_p3.txt` results as a performance baseline. Reassess after frontend integration or substantial grammar changes.
 - **Next review trigger:** M1-P5 frontend integration, a measured performance regression, or a demonstrated robustness issue.
 
+## Post-M1-P3 canonical frontend optimization review
+
+- **Date / milestone:** October 2026 — post-M1-P3, before M1-P4.
+- **Status:** Resolved for the current lexer and parser subset.
+- **Decision:** Adopt the optimized canonical lexer and parser as the implementation baseline for subsequent frontend work.
+- **Rationale:** Consolidate frontend implementation paths, reduce avoidable parsing and allocation overhead, and establish reproducible performance evidence before expanding syntax conformance.
+- **Evidence:** Recorded optimized lexer throughput of approximately 261.6 MB/s with 2 allocations per operation. Parser benchmarks measured approximately 76.0–99.4 µs for 1,000-operation chains and 664 µs with 13,028 allocations for a 3,000-statement program. The expression-heavy complete frontend benchmark measured approximately 34.5 MB/s.
+- **Comparison:** The original M1-P3 3,000-statement benchmark measured approximately 1.007 ms and 25,015 allocations per parse. The optimized measurement represents approximately 34% lower execution time and 48% fewer allocations under the recorded workload.
+- **Scope:** These measurements cover the currently implemented lexical and syntactic subset. They do not measure static checking, bytecode compilation, or runtime execution.
+- **Next action:** Preserve historical benchmark evidence, use the canonical frontend for M1-P4 conformance testing, and complete the M1-P5 integration and regression review.
+- **Next review trigger:** M1-P5, substantial grammar expansion, a reproducible performance regression, or an identified correctness or robustness issue.
+- **Acceptance criteria:** Existing language behavior and diagnostics remain correct; new syntax receives positive and negative conformance tests; performance remains measurable and regressions are investigated before introducing additional optimization complexity.
+
+See [`benchmarks/README.md`](../benchmarks/README.md) for reproduction instructions, recorded benchmark results, and methodological limitations.
+
 ## Milestone review checklist
 
 - [x] **M1 lexer performance:** TB-022 token representation, allocation efficiency, and scaling review.
@@ -230,6 +245,9 @@ At each milestone, inspect items whose triggers have arrived. Record the decisio
 - [x] **M1-P1:** Establish shared AST source spans and the initial structured parser diagnostic contract under TB-019.
 - [x] **M1-P2:** Verify arithmetic expression precedence, associativity, source spans, syntax diagnostics, robustness, and initial performance scaling.
 - [x] **M1-P3:** Verify statement and complete-program source spans, structured syntax diagnostics, nested expression diagnostic propagation, and program-parsing performance.
+- [x] **Post-M1-P3:** Complete canonical lexer/parser
+  optimization, establish updated performance baselines,
+  and preserve reproducible benchmark evidence.
 - [ ] **M1-P4:** Complete broader syntax diagnostics and positive/negative frontend conformance fixtures.
 - [ ] **M1-P5:** Complete lexer–parser integration, end-to-end frontend validation, and performance regression review.
 - [ ] **M2:** Extend TB-019 diagnostics to name resolution and static type checking.

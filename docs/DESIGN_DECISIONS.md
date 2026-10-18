@@ -45,6 +45,12 @@
 | D-035 | Decided (implementation) | The Go lexer represents token kinds using a `uint8`-backed enumeration, reserving zero for `TokenInvalid`. A `String()` method preserves readable token names. The lexer emits tokens incrementally and reuses indentation-stack and pending-token-queue storage to reduce allocations. This is an internal representation decision, not a language-level semantic rule. |
 | D-036 | Decided | `change`, `to`, `with`, and `giving` are reserved keywords represented by dedicated lexer token kinds. They cannot be used as ordinary identifiers. A reserved token may have different grammatical roles depending on context; for example, `to` appears in assignment and function-definition syntax. This does not require separate token kinds for each grammatical use. |
 | D-037 | Decided (initial implementation) | The initial parser uses fail-fast syntax diagnostics: parsing terminates at the first syntax error and returns a structured diagnostic containing its message, source span, and optional expected/actual token metadata. Malformed input must not be accepted as a successfully parsed program. This approach prioritizes correctness, deterministic diagnostics, and simpler parser control flow during M1. Multi-error recovery is deferred rather than rejected permanently; it may be introduced later when statement-boundary synchronization, nested-expression recovery, and diagnostic quality can be tested systematically. |
+| D-038 | Decided (implementation) | The optimized canonical
+lexer and parser form the baseline for subsequent frontend
+development. Historical benchmark results are preserved,
+and future performance changes must be evaluated against
+correctness, diagnostic quality, and reproducible measurements.
+This decision does not alter language-level semantics. |
 
 ## Superseded syntax and semantics
 

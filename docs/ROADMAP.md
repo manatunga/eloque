@@ -71,7 +71,7 @@ The order may change where dependencies demand it. In particular, implement enou
 - Established initial expression-parsing benchmarks for arithmetic, precedence, operator chains, and nested grouping.
 - Observed approximately linear execution-time and allocation scaling; no immediate production-code optimisation required.
 
-**M1-P3 — Statements and program parsing: Implemented; checkpoint review in progress**
+**M1-P3 — Statements and program parsing: Completed**
 
 - Implemented `let`, `change`, and `say` statement parsing, including delegation to the existing Pratt expression parser.
 - Implemented statement dispatch based on the initiating keyword.
@@ -83,14 +83,22 @@ The order may change where dependencies demand it. In particular, implement enou
 - Completed performance review using 3-, 300-, and 3,000-statement workloads, observing approximately linear scaling and retaining benchmark results for future comparisons.
 - No production-code optimisation required at the current checkpoint.
 
-M1-P3 implementation, diagnostics, and initial performance review are complete. Documentation reconciliation, technical-backlog review, comprehensive validation, Git review, and checkpoint closure remain in progress.
+**Post-M1-P3 — Canonical frontend optimization: Completed**
+
+- Consolidated and optimized the existing lexer and parser implementations before M1-P4.
+- Established updated lexer, parser, and complete frontend performance baselines.
+- Preserved historical benchmark measurements for regression comparisons.
+- Added reproducible benchmark documentation and a preliminary comparison with CPython's frontend.
+- Merged the canonical frontend optimization into `main`.
+
+**Current checkpoint:** M1-P4 — Syntax diagnostics and conformance. M1-P5 remains the subsequent integration and milestone-closure checkpoint.
 
 **Remaining M1 checkpoints**
 
 - **M1-P4 — Syntax diagnostics and conformance:** Verify malformed syntax, source locations, and positive/negative grammar fixtures.
 - **M1-P5 — Frontend integration and milestone closure:** Complete lexer–parser integration, end-to-end tests, benchmarks, documentation, and release audit.
 
-M1 remains incomplete. Eloque can construct complete program ASTs from prepared token streams, but lexer–parser integration and source-program execution are not yet operational.
+M1 remains in progress. The canonical lexer and parser support the implemented arithmetic, literal, binding, assignment, and output syntax, with complete-program AST construction and structured fail-fast diagnostics. Integrated frontend benchmarks exercise lexing through AST construction, but formal end-to-end conformance and integration validation remain scheduled for M1-P4 and M1-P5. Eloque cannot yet execute source programs.
 
 ## Public release planning
 

@@ -1,6 +1,6 @@
 # Eloque Architecture
 
-**Status:** Early implementation — Milestone 1 (Frontend foundations) in progress. The lexer, initial AST structures, shared source-location types, parser infrastructure, and Pratt arithmetic expression parser are implemented and tested. M1-P3 adds parsing for `let`, `change`, and `say` statements and complete programs constructed from prepared token streams, including statement boundaries, source spans, and structured fail-fast diagnostics. Initial expression and program parsing benchmarks demonstrate approximately linear scaling. Lexer–parser integration, broader frontend conformance, the static checker, bytecode compiler, and VM remain pending. The working language name, `.elq` extension, and CLI command remain provisional.
+**Status:** Early implementation — Milestone 1 (Frontend foundations) in progress. The lexer, foundational AST structures, parser infrastructure, Pratt arithmetic expression parser, and initial `let`, `change`, and `say` statement/program parser are implemented and tested. Following M1-P3, the existing lexer and parser underwent a canonical frontend consolidation and performance optimization, now merged into `main`. The frontend supports both prepared-token parser benchmarks and integrated lexer-to-AST benchmark workloads. Broader syntax conformance (M1-P4) and formal lexer–parser integration validation (M1-P5) remain pending. Static analysis, bytecode compilation, and VM execution are not yet implemented. The working language name, `.elq` extension, and CLI command remain provisional.
 
 ## Goals and boundaries
 
@@ -197,6 +197,29 @@ Malformed expressions produce fail-fast syntax diagnostics with source locations
 
 The implemented expression subset excludes comparisons, Boolean operators, function calls, member access, and collection expressions. These remain part of the target language specification and will be introduced according to their scheduled implementation milestones.
 
+### Expression parser complexity and performance (M1-P2)
+
+The Pratt expression parser consumes tokens without backtracking and has expected O(n) parsing time for an expression containing n tokens. AST memory grows proportionally to the number of expression nodes. Recursive parsing introduces additional stack usage proportional to expression nesting depth.
+
+The initial M1-P2 benchmark suite measures parsing and AST construction from prepared token streams, excluding lexing and token generation. Five benchmark runs were collected on linux/amd64 using an Intel Core Ultra 7 155H processor.
+
+| Benchmark | Input size | Median time | Memory per parse | Allocations per parse |
+|---|---:|---:|---:|---:|
+| Simple arithmetic | 2 operators | ~287 ns | 496 B | 8 |
+| Mixed precedence | 3 operators | ~394 ns | 688 B | 11 |
+| Additive chain | 100 operators | ~12.42 µs | 19,314 B | 302 |
+| Additive chain | 1,000 operators | ~115.63 µs | ~192 KB | 3,002 |
+| Exponentiation chain | 100 operators | ~13.11 µs | 19,314 B | 302 |
+| Exponentiation chain | 1,000 operators | ~135.02 µs | ~192 KB | 3,002 |
+| Nested parentheses | 100 levels | ~14.38 µs | 12,913 B | 202 |
+| Nested parentheses | 1,000 levels | ~160.87 µs | ~128 KB | 2,002 |
+
+The tested workloads demonstrate approximately linear execution-time and allocation scaling. Stress tests with 1,000 nested parentheses and 1,000 exponentiation operators also pass.
+
+No production-code optimisation was justified by the initial measurements. Recursive nesting remains a potential robustness concern for unusually deep or adversarial inputs; no universal nesting limit has been established.
+
+Benchmarks are maintained in `internal/parser/expression_bench_test.go`. These results establish an expression-parser baseline rather than full frontend or compiler throughput.
+
 ### Statement and program parsing (M1-P3)
 
 M1-P3 introduces the initial statement grammar and complete-program AST construction using the existing parser infrastructure.
@@ -293,6 +316,34 @@ The results demonstrate approximately linear scaling in execution time, memory c
 
 Benchmarks are maintained in `internal/parser/program_bench_test.go`, with raw results preserved in `benchmark_m1_p3.txt`. The measurements establish a program-parser baseline, not end-to-end frontend or compiler throughput.
 
+### Canonical frontend optimization (post-M1-P3)
+
+Following M1-P3, the existing lexer and parser were consolidated and optimized before beginning M1-P4. This work establishes the canonical implementation baseline for subsequent frontend development.
+
+The optimization was undertaken without intentionally changing the language's accepted syntax or observable parsing semantics. The existing correctness and robustness requirements remain applicable.
+
+**Recorded optimized measurements**
+
+| Workload | Result |
+|---|---:|
+| Lexer throughput | Approximately 261.6 MB/s |
+| Lexer allocation count | 2 allocs/op |
+| Parser, 1,000-operation chains | Approximately 76.0–99.4 µs |
+| Parser chain allocation count | 2,002 allocs/op |
+| Parser, 3,000-statement program | Approximately 664 µs |
+| Parser program allocation count | 13,028 allocs/op |
+| Expression-heavy complete frontend throughput | Approximately 34.5 MB/s |
+
+These measurements characterize specific benchmark workloads, not universal frontend throughput.
+
+The optimized 3,000-statement parser workload is approximately 34% faster than the original M1-P3 baseline of 1.007 ms, with approximately 48% fewer allocations than the original 25,015 allocs/op.
+
+Complete frontend benchmarks measure lexing, token collection, parsing, and AST construction. They must be distinguished from prepared-token parser benchmarks, which exclude lexical processing.
+
+Reproducible benchmark commands, workload definitions, recorded results, and the preliminary CPython frontend comparison are maintained in [`benchmarks/README.md`](../benchmarks/README.md).
+
+The optimized frontend is the baseline for M1-P4 conformance testing and the subsequent M1-P5 integration and performance regression review.
+
 ### Complexity and measured lexer performance
 
 For source length `N`, the lexer operates in O(N) time overall. Its auxiliary working space is O(d + q), where `d` is indentation depth and `q` is the maximum number of pending tokens, excluding source storage and returned tokens retained by callers.
@@ -311,29 +362,6 @@ Benchmarks were performed on linux/amd64 with an Intel Core Ultra 7 155H process
 A separate scaling benchmark, using repeated source samples from 138 bytes to 138 KB, showed approximately linear execution time and constant allocation counts for the tested bounded-indentation workload.
 
 These measurements characterize the lexer baseline before the latest keyword additions, not the performance of the future parser, compiler, or virtual machine. Benchmarks are maintained in `internal/lexer/lexer_bench_test.go`.
-
-### Expression parser complexity and performance (M1-P2)
-
-The Pratt expression parser consumes tokens without backtracking and has expected O(n) parsing time for an expression containing n tokens. AST memory grows proportionally to the number of expression nodes. Recursive parsing introduces additional stack usage proportional to expression nesting depth.
-
-The initial M1-P2 benchmark suite measures parsing and AST construction from prepared token streams, excluding lexing and token generation. Five benchmark runs were collected on linux/amd64 using an Intel Core Ultra 7 155H processor.
-
-| Benchmark | Input size | Median time | Memory per parse | Allocations per parse |
-|---|---:|---:|---:|---:|
-| Simple arithmetic | 2 operators | ~287 ns | 496 B | 8 |
-| Mixed precedence | 3 operators | ~394 ns | 688 B | 11 |
-| Additive chain | 100 operators | ~12.42 µs | 19,314 B | 302 |
-| Additive chain | 1,000 operators | ~115.63 µs | ~192 KB | 3,002 |
-| Exponentiation chain | 100 operators | ~13.11 µs | 19,314 B | 302 |
-| Exponentiation chain | 1,000 operators | ~135.02 µs | ~192 KB | 3,002 |
-| Nested parentheses | 100 levels | ~14.38 µs | 12,913 B | 202 |
-| Nested parentheses | 1,000 levels | ~160.87 µs | ~128 KB | 2,002 |
-
-The tested workloads demonstrate approximately linear execution-time and allocation scaling. Stress tests with 1,000 nested parentheses and 1,000 exponentiation operators also pass.
-
-No production-code optimisation was justified by the initial measurements. Recursive nesting remains a potential robustness concern for unusually deep or adversarial inputs; no universal nesting limit has been established.
-
-Benchmarks are maintained in `internal/parser/expression_bench_test.go`. These results establish an expression-parser baseline rather than full frontend or compiler throughput.
 
 ## Runtime value model
 
