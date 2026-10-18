@@ -91,14 +91,21 @@ The order may change where dependencies demand it. In particular, implement enou
 - Added reproducible benchmark documentation and a preliminary comparison with CPython's frontend.
 - Merged the canonical frontend optimization into `main`.
 
-**Current checkpoint:** M1-P4 — Syntax diagnostics and conformance. M1-P5 remains the subsequent integration and milestone-closure checkpoint.
+**M1-P4 — Syntax diagnostics and conformance: Completed**
 
-**Remaining M1 checkpoints**
+- Added 29 source-based conformance fixtures: 9 valid programs, 8 malformed programs, 8 diagnostic edge cases, and 4 lexer/parser boundary cases.
+- Verified supported statement forms, arithmetic expressions, statement boundaries, source spans, EOF diagnostics, multiline error locations, nested expression diagnostic propagation, and deterministic fail-fast behavior.
+- Confirmed that malformed programs do not return successful partial ASTs.
+- Passed `go test ./...`, `go test -race ./...`, and `go vet ./...`.
+- Preserved the canonical frontend implementation without production-code changes.
 
-- **M1-P4 — Syntax diagnostics and conformance:** Verify malformed syntax, source locations, and positive/negative grammar fixtures.
-- **M1-P5 — Frontend integration and milestone closure:** Complete lexer–parser integration, end-to-end tests, benchmarks, documentation, and release audit.
+**Current checkpoint:** M1-P5 — Frontend integration and milestone closure.
 
-M1 remains in progress. The canonical lexer and parser support the implemented arithmetic, literal, binding, assignment, and output syntax, with complete-program AST construction and structured fail-fast diagnostics. Integrated frontend benchmarks exercise lexing through AST construction, but formal end-to-end conformance and integration validation remain scheduled for M1-P4 and M1-P5. Eloque cannot yet execute source programs.
+**Remaining M1 checkpoint**
+
+- **M1-P5 — Frontend integration and milestone closure:** Complete production lexer–parser integration, end-to-end tests, performance regression review, documentation, and release audit.
+
+M1 remains in progress. The canonical lexer and parser support the implemented arithmetic, literal, binding, assignment, and output syntax, with complete-program AST construction and structured fail-fast diagnostics. M1-P4 established broader source-based syntax conformance using lexer-generated tokens. Integrated frontend benchmarks already exercise lexing through AST construction, but a formal production integration entry point and final end-to-end validation remain scheduled for M1-P5. Eloque cannot yet execute source programs.
 
 ## Public release planning
 
@@ -202,6 +209,6 @@ Eloque intends to use Semantic Versioning as a guideline:
 - [x] Establish the initial structured, fail-fast parser diagnostic contract.
 - [x] Implement expression parsing with the agreed precedence and associativity rules (M1-P2).
 - [x] Implement statement and complete-program parsing (M1-P3).
-- [ ] Complete syntax diagnostics and frontend conformance fixtures (M1-P4).
+- [x] Complete syntax diagnostics and frontend conformance fixtures (M1-P4).
 - [ ] Integrate and validate the complete frontend (M1-P5).
 - [ ] Expand grammar and static-checking rules alongside subsequent executable features.

@@ -1,6 +1,6 @@
 # Eloque Architecture
 
-**Status:** Early implementation — Milestone 1 (Frontend foundations) in progress. The lexer, foundational AST structures, parser infrastructure, Pratt arithmetic expression parser, and initial `let`, `change`, and `say` statement/program parser are implemented and tested. Following M1-P3, the existing lexer and parser underwent a canonical frontend consolidation and performance optimization, now merged into `main`. The frontend supports both prepared-token parser benchmarks and integrated lexer-to-AST benchmark workloads. Broader syntax conformance (M1-P4) and formal lexer–parser integration validation (M1-P5) remain pending. Static analysis, bytecode compilation, and VM execution are not yet implemented. The working language name, `.elq` extension, and CLI command remain provisional.
+**Status:** Early implementation — Milestone 1 (Frontend foundations) in progress. The lexer, foundational AST structures, parser infrastructure, Pratt arithmetic expression parser, and `let`, `change`, and `say` statement/program parser are implemented and tested. Following M1-P3, the existing lexer and parser underwent canonical frontend consolidation and performance optimization, now merged into `main`. M1-P4 completed broader syntax diagnostics and positive/negative conformance testing, adding 29 source-based fixtures covering valid and malformed programs, accurate source locations, structured diagnostic metadata, fail-fast error propagation, and lexer/parser error boundaries. The conformance suite and existing Go tests, race detection, and static analysis checks passed without requiring production-code changes. The parser continues to consume prepared token streams; production lexer–parser integration, formal end-to-end validation, performance regression review, and milestone closure remain scheduled for M1-P5. Static analysis, bytecode compilation, and VM execution are not yet implemented. The working language name, `.elq` extension, and CLI command remain provisional.
 
 ## Goals and boundaries
 
@@ -91,7 +91,7 @@ The lexer, foundational AST structures, parser infrastructure, arithmetic expres
 
 M1-P1 established the shared source-location model, AST foundations, token navigation, and structured syntax diagnostics. M1-P2 introduced Pratt-based arithmetic expression parsing, including precedence, associativity, grouping, and source-extent tracking. M1-P3 extends the parser to support `let`, `change`, and `say` statements and complete programs.
 
-The parser currently operates on prepared token streams. Lexer–parser integration and broader frontend conformance remain scheduled for M1-P5. Eloque cannot yet compile or execute source programs.
+The parser currently operates on prepared token streams. M1-P4 has completed broader syntax conformance and diagnostic verification using lexer-generated tokens in test fixtures. Production lexer–parser integration and formal end-to-end frontend validation remain scheduled for M1-P5.
 
 ### Lexer functionality
 
@@ -342,7 +342,7 @@ Complete frontend benchmarks measure lexing, token collection, parsing, and AST 
 
 Reproducible benchmark commands, workload definitions, recorded results, and the preliminary CPython frontend comparison are maintained in [`benchmarks/README.md`](../benchmarks/README.md).
 
-The optimized frontend is the baseline for M1-P4 conformance testing and the subsequent M1-P5 integration and performance regression review.
+The optimized frontend served as the baseline for M1-P4 conformance testing and remains the canonical implementation for M1-P5 production integration, end-to-end validation, and performance regression review.
 
 ### Complexity and measured lexer performance
 

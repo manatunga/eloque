@@ -185,8 +185,8 @@ At each milestone, inspect items whose triggers have arrived. Record the decisio
 - **Method:** Define stable error codes, severity, file/line/column/spans, related locations and optional suggested fixes.
 - **Criterion:** Diagnostics are actionable, deterministic and easy to parse without requiring prose interpretation.
 - **Evidence:** Pending.
-- **M1 progress:** Tokens and AST nodes use shared half-open source spans. M1-P2 established expression source-location tracking, including the distinction between semantic AST node locations and complete syntactic grouping extents. M1-P3 extends source-span preservation and structured fail-fast diagnostics to `let`, `change`, and `say` statements and complete-program parsing. Tests verify statement and program spans, missing required syntax, unsupported statement starters, missing statement separators, expected/actual token metadata, nested expression diagnostic propagation, and errors occurring after previously valid statements. Malformed programs do not produce successful partial program ASTs.
-- **Next action:** Complete broader syntax diagnostics and conformance coverage in M1-P4, followed by lexer–parser integration and frontend validation in M1-P5. Introduce checker diagnostics alongside semantic analysis in M2. Multi-error recovery remains deferred, and the broader machine-readable diagnostic schema should be finalised before M8 tooling.
+- **M1 progress:** Tokens and AST nodes use shared half-open source spans. M1-P2 established expression source-location tracking, including the distinction between semantic AST node locations and complete syntactic grouping extents. M1-P3 extended source-span preservation and structured fail-fast diagnostics to `let`, `change`, and `say` statements and complete-program parsing. M1-P4 completed broader positive and negative frontend syntax conformance coverage with 29 additional fixtures covering valid programs, malformed syntax, EOF diagnostics, multiline source locations, nested expression errors, first-error behavior, and lexer/parser error boundaries. Tests verify diagnostic messages, source spans, expected/actual token metadata, and rejection of malformed programs without returning successful partial ASTs. Full Go tests, race detection, and `go vet` passed.
+- **Next action:** Complete production lexer–parser integration, end-to-end frontend validation, and diagnostic regression review in M1-P5. Extend diagnostics to name resolution and static type checking in M2. Multi-error recovery remains deferred under D-037, and the broader machine-readable diagnostic schema remains scheduled for review before M8 tooling.
 
 ### TB-020 — Sandboxed execution budgets
 - **Status:** Committed long-term capability; design review required.
@@ -248,7 +248,7 @@ See [`benchmarks/README.md`](../benchmarks/README.md) for reproduction instructi
 - [x] **Post-M1-P3:** Complete canonical lexer/parser
   optimization, establish updated performance baselines,
   and preserve reproducible benchmark evidence.
-- [ ] **M1-P4:** Complete broader syntax diagnostics and positive/negative frontend conformance fixtures.
+- [x] **M1-P4:** Complete broader syntax diagnostics and positive/negative frontend conformance fixtures.
 - [ ] **M1-P5:** Complete lexer–parser integration, end-to-end frontend validation, and performance regression review.
 - [ ] **M2:** Extend TB-019 diagnostics to name resolution and static type checking.
 - [ ] **Before M2:** TB-008 values, TB-012 checker, TB-013 numeric behavior, TB-011 scope.
