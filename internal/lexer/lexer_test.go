@@ -255,7 +255,8 @@ func TestMarkTokenStart(t *testing.T) {
 }
 
 func TestMakeToken(t *testing.T) {
-	lexer := New("let age")
+	source := "let age"
+	lexer := New(source)
 	lexer.markTokenStart()
 	lexer.advance()
 	lexer.advance()
@@ -265,14 +266,16 @@ func TestMakeToken(t *testing.T) {
 	if token1.Kind != TokenLet {
 		t.Errorf("expected kind %s, got %s", TokenLet, token1.Kind)
 	}
-	if token1.Lexeme != "let" {
-		t.Errorf("expected lexeme %q, got %q", "let", token1.Lexeme)
+	gotLexemeToken1 := source[token1.Start:token1.End]
+	if gotLexemeToken1 != "let" {
+		t.Errorf("expected lexeme %q, got %q", "let", gotLexemeToken1)
 	}
-	if token1.Span.Start.Line != 1 {
-		t.Errorf("expected start line %d, got %d", 1, token1.Span.Start.Line)
+	startToken1 := tokenPosition(source, token1.Start)
+	if startToken1.Line != 1 {
+		t.Errorf("expected start line %d, got %d", 1, startToken1.Line)
 	}
-	if token1.Span.Start.Column != 1 {
-		t.Errorf("expected start column %d, got %d", 1, token1.Span.Start.Column)
+	if startToken1.Column != 1 {
+		t.Errorf("expected start column %d, got %d", 1, startToken1.Column)
 	}
 
 	if lexer.current != 3 {
@@ -295,14 +298,15 @@ func TestMakeToken(t *testing.T) {
 	if token2.Kind != TokenIdent {
 		t.Errorf("expected kind %s, got %s", TokenIdent, token2.Kind)
 	}
-	if token2.Lexeme != "age" {
-		t.Errorf("expected lexeme %q, got %q", "age", token2.Lexeme)
+	gotLexemeToken2 := source[token2.Start:token2.End]
+	if gotLexemeToken2 != "age" {
+		t.Errorf("expected lexeme %q, got %q", "age", gotLexemeToken2)
 	}
-	if token2.Span.Start.Line != 1 {
-		t.Errorf("expected start line %d, got %d", 1, token2.Span.Start.Line)
+	if testTokenSpan(lexer.source, token2).Start.Line != 1 {
+		t.Errorf("expected start line %d, got %d", 1, testTokenSpan(lexer.source, token2).Start.Line)
 	}
-	if token2.Span.Start.Column != 5 {
-		t.Errorf("expected start column %d, got %d", 5, token2.Span.Start.Column)
+	if testTokenSpan(lexer.source, token2).Start.Column != 5 {
+		t.Errorf("expected start column %d, got %d", 5, testTokenSpan(lexer.source, token2).Start.Column)
 	}
 }
 
@@ -349,14 +353,14 @@ func TestNewlineToken(t *testing.T) {
 	if token.Kind != TokenNewline {
 		t.Errorf("expected kind %s, got %s", TokenNewline, token.Kind)
 	}
-	if token.Lexeme != "\n" {
-		t.Errorf("expected lexeme %q, got %q", "\n", token.Lexeme)
+	if testTokenLexeme(lexer.source, token) != "\n" {
+		t.Errorf("expected lexeme %q, got %q", "\n", testTokenLexeme(lexer.source, token))
 	}
-	if token.Span.Start.Line != 1 {
-		t.Errorf("expected start line %d, got %d", 1, token.Span.Start.Line)
+	if testTokenSpan(lexer.source, token).Start.Line != 1 {
+		t.Errorf("expected start line %d, got %d", 1, testTokenSpan(lexer.source, token).Start.Line)
 	}
-	if token.Span.Start.Column != 1 {
-		t.Errorf("expected start column %d, got %d", 1, token.Span.Start.Column)
+	if testTokenSpan(lexer.source, token).Start.Column != 1 {
+		t.Errorf("expected start column %d, got %d", 1, testTokenSpan(lexer.source, token).Start.Column)
 	}
 
 	if lexer.current != 1 {
@@ -385,7 +389,7 @@ func TestNextToken(t *testing.T) {
 	for _, tC := range testCases {
 		t.Run(tC.input, func(t *testing.T) {
 			lexer := New(tC.input)
-			token, err := lexer.nextToken()
+			token, err := lexer.NextToken()
 
 			if err != nil {
 				t.Fatalf("unexpected lexical error: %v", err)
@@ -393,14 +397,14 @@ func TestNextToken(t *testing.T) {
 			if token.Kind != tC.expectedKind {
 				t.Errorf("input %q: expected kind %s, got %s", tC.input, tC.expectedKind, token.Kind)
 			}
-			if token.Lexeme != tC.expectedLexeme {
-				t.Errorf("input %q: expected lexeme %q, got %q", tC.input, tC.expectedLexeme, token.Lexeme)
+			if testTokenLexeme(lexer.source, token) != tC.expectedLexeme {
+				t.Errorf("input %q: expected lexeme %q, got %q", tC.input, tC.expectedLexeme, testTokenLexeme(lexer.source, token))
 			}
-			if token.Span.Start.Line != tC.expectedLine {
-				t.Errorf("input %q: expected start line %d, got %d", tC.input, tC.expectedLine, token.Span.Start.Line)
+			if testTokenSpan(lexer.source, token).Start.Line != tC.expectedLine {
+				t.Errorf("input %q: expected start line %d, got %d", tC.input, tC.expectedLine, testTokenSpan(lexer.source, token).Start.Line)
 			}
-			if token.Span.Start.Column != tC.expectedColumn {
-				t.Errorf("input %q: expected start column %d, got %d", tC.input, tC.expectedColumn, token.Span.Start.Column)
+			if testTokenSpan(lexer.source, token).Start.Column != tC.expectedColumn {
+				t.Errorf("input %q: expected start column %d, got %d", tC.input, tC.expectedColumn, testTokenSpan(lexer.source, token).Start.Column)
 			}
 		})
 	}
@@ -423,21 +427,21 @@ func TestNextTokenSequence(t *testing.T) {
 	}
 	lexer := New("let player_1 be\nsay player_1")
 	for _, tC := range testCases {
-		token, err := lexer.nextToken()
+		token, err := lexer.NextToken()
 		if err != nil {
 			t.Fatalf("unexpected lexical error: %v", err)
 		}
 		if token.Kind != tC.expectedKind {
 			t.Errorf("expected kind %s, got %s", tC.expectedKind, token.Kind)
 		}
-		if token.Lexeme != tC.expectedLexeme {
-			t.Errorf("expected lexeme %q, got %q", tC.expectedLexeme, token.Lexeme)
+		if testTokenLexeme(lexer.source, token) != tC.expectedLexeme {
+			t.Errorf("expected lexeme %q, got %q", tC.expectedLexeme, testTokenLexeme(lexer.source, token))
 		}
-		if token.Span.Start.Line != tC.expectedLine {
-			t.Errorf("expected start line %d, got %d", tC.expectedLine, token.Span.Start.Line)
+		if testTokenSpan(lexer.source, token).Start.Line != tC.expectedLine {
+			t.Errorf("expected start line %d, got %d", tC.expectedLine, testTokenSpan(lexer.source, token).Start.Line)
 		}
-		if token.Span.Start.Column != tC.expectedColumn {
-			t.Errorf("expected start column %d, got %d", tC.expectedColumn, token.Span.Start.Column)
+		if testTokenSpan(lexer.source, token).Start.Column != tC.expectedColumn {
+			t.Errorf("expected start column %d, got %d", tC.expectedColumn, testTokenSpan(lexer.source, token).Start.Column)
 		}
 	}
 }
@@ -515,21 +519,21 @@ func TestNextTokenIntegerSequence(t *testing.T) {
 	}
 	lexer := New("let age be 20")
 	for _, tC := range testCases {
-		token, err := lexer.nextToken()
+		token, err := lexer.NextToken()
 		if err != nil {
 			t.Fatalf("unexpected lexical error: %v", err)
 		}
 		if token.Kind != tC.expectedKind {
 			t.Errorf("expected kind %s, got %s", tC.expectedKind, token.Kind)
 		}
-		if token.Lexeme != tC.expectedLexeme {
-			t.Errorf("expected lexeme %q, got %q", tC.expectedLexeme, token.Lexeme)
+		if testTokenLexeme(lexer.source, token) != tC.expectedLexeme {
+			t.Errorf("expected lexeme %q, got %q", tC.expectedLexeme, testTokenLexeme(lexer.source, token))
 		}
-		if token.Span.Start.Line != tC.expectedLine {
-			t.Errorf("expected start line %d, got %d", tC.expectedLine, token.Span.Start.Line)
+		if testTokenSpan(lexer.source, token).Start.Line != tC.expectedLine {
+			t.Errorf("expected start line %d, got %d", tC.expectedLine, testTokenSpan(lexer.source, token).Start.Line)
 		}
-		if token.Span.Start.Column != tC.expectedColumn {
-			t.Errorf("expected start column %d, got %d", tC.expectedColumn, token.Span.Start.Column)
+		if testTokenSpan(lexer.source, token).Start.Column != tC.expectedColumn {
+			t.Errorf("expected start column %d, got %d", tC.expectedColumn, testTokenSpan(lexer.source, token).Start.Column)
 		}
 	}
 }
@@ -562,13 +566,13 @@ func TestNextTokenUnexpectedCharacter(t *testing.T) {
 	lexer := New("let age be @")
 
 	for i := 0; i < 3; i++ {
-		_, err := lexer.nextToken()
+		_, err := lexer.NextToken()
 		if err != nil {
 			t.Fatalf("unexpected error before invalid character: %v", err)
 		}
 	}
 
-	token, err := lexer.nextToken()
+	token, err := lexer.NextToken()
 	if err == nil {
 		t.Fatal("expected lexical error, got nil")
 	}
@@ -598,13 +602,13 @@ func TestNextTokenLeadingZero(t *testing.T) {
 	lexer := New("let age be 007")
 
 	for i := 0; i < 3; i++ {
-		_, err := lexer.nextToken()
+		_, err := lexer.NextToken()
 		if err != nil {
 			t.Fatalf("unexpected error before invalid integer literal: %v", err)
 		}
 	}
 
-	token, err := lexer.nextToken()
+	token, err := lexer.NextToken()
 	if err == nil {
 		t.Fatal("expected lexical error, got nil")
 	}
@@ -651,13 +655,13 @@ func TestNextTokenInvalidIntegerSuffix(t *testing.T) {
 			lexer := New(tC.input)
 
 			for i := 0; i < tC.expectedValidTokens; i++ {
-				_, err := lexer.nextToken()
+				_, err := lexer.NextToken()
 				if err != nil {
 					t.Fatalf("unexpected error before invalid integer literal: %v", err)
 				}
 			}
 
-			token, err := lexer.nextToken()
+			token, err := lexer.NextToken()
 			if err == nil {
 				t.Fatal("expected lexical error, got nil")
 			}
@@ -700,7 +704,7 @@ func TestNextTokenValidIntegers(t *testing.T) {
 		t.Run(tC.input, func(t *testing.T) {
 			lexer := New(tC.input)
 
-			token, err := lexer.nextToken()
+			token, err := lexer.NextToken()
 			if err != nil {
 				t.Fatalf("unexpected lexical error: %v", err)
 			}
@@ -708,14 +712,14 @@ func TestNextTokenValidIntegers(t *testing.T) {
 			if token.Kind != TokenInt {
 				t.Errorf("expected kind %s, got %s", TokenInt, token.Kind)
 			}
-			if token.Lexeme != tC.expectedLexeme {
-				t.Errorf("expected lexeme %q, got %q", tC.expectedLexeme, token.Lexeme)
+			if testTokenLexeme(lexer.source, token) != tC.expectedLexeme {
+				t.Errorf("expected lexeme %q, got %q", tC.expectedLexeme, testTokenLexeme(lexer.source, token))
 			}
-			if token.Span.Start.Line != 1 {
-				t.Errorf("expected start line %d, got %d", 1, token.Span.Start.Line)
+			if testTokenSpan(lexer.source, token).Start.Line != 1 {
+				t.Errorf("expected start line %d, got %d", 1, testTokenSpan(lexer.source, token).Start.Line)
 			}
-			if token.Span.Start.Column != 1 {
-				t.Errorf("expected start column %d, got %d", 1, token.Span.Start.Column)
+			if testTokenSpan(lexer.source, token).Start.Column != 1 {
+				t.Errorf("expected start column %d, got %d", 1, testTokenSpan(lexer.source, token).Start.Column)
 			}
 		})
 	}
@@ -725,12 +729,12 @@ func TestPopPendingToken(t *testing.T) {
 	l := New("")
 
 	first := Token{
-		Kind: TokenDedent,
-		Span: Span{Start: Position{Line: 3, Column: 1}, End: Position{Line: 3, Column: 1}},
+		Kind:  TokenDedent,
+		Start: 0, End: 0,
 	}
 	second := Token{
-		Kind: TokenDedent,
-		Span: Span{Start: Position{Line: 3, Column: 1}, End: Position{Line: 3, Column: 1}},
+		Kind:  TokenDedent,
+		Start: 0, End: 0,
 	}
 
 	l.pendingTokens = []Token{first, second}
@@ -743,9 +747,9 @@ func TestPopPendingToken(t *testing.T) {
 		if token.Kind != TokenDedent {
 			t.Errorf("pop %d: expected DEDENT, got %q", i+1, token.Kind)
 		}
-		if token.Span.Start != first.Span.Start {
+		if token.Start != first.Start || token.End != first.End {
 			t.Errorf("pop %d: expected position %+v, got %+v",
-				i+1, first.Span.Start, token.Span.Start)
+				i+1, first, token)
 		}
 	}
 
@@ -790,22 +794,17 @@ func TestPopPendingTokenReusesStorage(t *testing.T) {
 }
 
 func TestNextTokenPendingTokens(t *testing.T) {
-	l := New("say")
+	source := "say"
+	l := New(source)
 
-	first := Token{
-		Kind: TokenDedent,
-		Span: Span{Start: Position{Line: 2, Column: 1}, End: Position{Line: 2, Column: 1}},
-	}
-	second := Token{
-		Kind: TokenIndent,
-		Span: Span{Start: Position{Line: 3, Column: 5}, End: Position{Line: 3, Column: 5}},
-	}
+	first := Token{Kind: TokenDedent, Start: 0, End: 0}
+	second := Token{Kind: TokenIndent, Start: 0, End: 0}
 
 	l.pendingTokens = []Token{first, second}
 
-	expected := []Token{
-		first,
-		second,
+	expected := []expectedToken{
+		{Kind: TokenDedent, Span: Span{Start: Position{Line: 1, Column: 1}, End: Position{Line: 1, Column: 1}}},
+		{Kind: TokenIndent, Span: Span{Start: Position{Line: 1, Column: 1}, End: Position{Line: 1, Column: 1}}},
 		{
 			Kind:   TokenSay,
 			Lexeme: "say",
@@ -814,14 +813,12 @@ func TestNextTokenPendingTokens(t *testing.T) {
 	}
 
 	for i, want := range expected {
-		got, err := l.nextToken()
+		got, err := l.NextToken()
 		if err != nil {
 			t.Fatalf("token %d: unexpected error: %v", i+1, err)
 		}
 
-		if got != want {
-			t.Errorf("token %d: expected %+v, got %+v", i+1, want, got)
-		}
+		assertToken(t, source, got, want)
 
 		if i < 2 && l.current != 0 {
 			t.Errorf(
@@ -929,7 +926,7 @@ func TestIsValidIndentationWidth(t *testing.T) {
 
 			if got != tc.expected {
 				t.Errorf(
-					"isValidIndentationWidth(%d): expected %t, got %t",
+					"isValidIndentationWidthTest(%d): expected %t, got %t",
 					tc.width,
 					tc.expected,
 					got,
@@ -944,7 +941,7 @@ func TestProcessIndentation(t *testing.T) {
 		initialStack   []int
 		width          int
 		expectedStack  []int
-		expectedTokens []Token
+		expectedTokens []expectedToken
 		wantError      bool
 	}{
 		{
@@ -952,7 +949,7 @@ func TestProcessIndentation(t *testing.T) {
 			initialStack:  []int{0},
 			width:         4,
 			expectedStack: []int{0, 4},
-			expectedTokens: []Token{
+			expectedTokens: []expectedToken{
 				{Kind: TokenIndent, Span: Span{Start: Position{Line: 2, Column: 5}, End: Position{Line: 2, Column: 5}}},
 			},
 		},
@@ -961,7 +958,7 @@ func TestProcessIndentation(t *testing.T) {
 			initialStack:  []int{0, 4},
 			width:         8,
 			expectedStack: []int{0, 4, 8},
-			expectedTokens: []Token{
+			expectedTokens: []expectedToken{
 				{Kind: TokenIndent, Span: Span{Start: Position{Line: 2, Column: 5}, End: Position{Line: 2, Column: 5}}},
 			},
 		},
@@ -1011,10 +1008,13 @@ func TestProcessIndentation(t *testing.T) {
 					l.pendingTokens, tt.expectedTokens)
 			}
 
-			for i, token := range tt.expectedTokens {
-				if l.pendingTokens[i] != token {
-					t.Errorf("pendingTokens[%d] = %+v, want %+v",
-						i, l.pendingTokens[i], token)
+			for i, expected := range tt.expectedTokens {
+				actual := l.pendingTokens[i]
+				if actual.Kind != expected.Kind {
+					t.Errorf("pendingTokens[%d].Kind = %v, want %v", i, actual.Kind, expected.Kind)
+				}
+				if actual.Start != actual.End {
+					t.Errorf("pendingTokens[%d] = %+v, want a zero-width indentation token", i, actual)
 				}
 			}
 		})
@@ -1069,7 +1069,8 @@ func TestProcessIndentationDedent(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			l := New("")
+			source := ""
+			l := New(source)
 			l.line = 3
 			l.column = tt.width + 1
 			l.indentStack = append([]int(nil), tt.initialStack...)
@@ -1095,18 +1096,9 @@ func TestProcessIndentationDedent(t *testing.T) {
 					t.Errorf("token %d kind = %s, want DEDENT", i, token.Kind)
 				}
 
-				expectedPosition := Position{
-					Line:   3,
-					Column: tt.width + 1,
-				}
-
-				if token.Span.Start != expectedPosition {
-					t.Errorf("token %d position = %+v, want %+v",
-						i, token.Span.Start, expectedPosition)
-				}
-
-				if token.Lexeme != "" {
-					t.Errorf("token %d lexeme = %q, want empty", i, token.Lexeme)
+				gotLexeme := source[token.Start:token.End]
+				if gotLexeme != "" {
+					t.Errorf("token %d lexeme = %q, want empty", i, gotLexeme)
 				}
 			}
 		})
@@ -1118,7 +1110,7 @@ func TestNextTokenIndentation(t *testing.T) {
 
 	l := New(source)
 
-	expected := []Token{
+	expected := []expectedToken{
 		{Kind: TokenSay, Lexeme: "say", Span: Span{Start: Position{Line: 1, Column: 1}, End: Position{Line: 1, Column: 4}}},
 		{Kind: TokenInt, Lexeme: "1", Span: Span{Start: Position{Line: 1, Column: 5}, End: Position{Line: 1, Column: 6}}},
 		{Kind: TokenNewline, Lexeme: "\n", Span: Span{Start: Position{Line: 1, Column: 6}, End: Position{Line: 2, Column: 1}}},
@@ -1140,13 +1132,11 @@ func TestNextTokenIndentation(t *testing.T) {
 	}
 
 	for i, want := range expected {
-		got, err := l.nextToken()
+		got, err := l.NextToken()
 		if err != nil {
 			t.Fatalf("token %d: unexpected error: %v", i, err)
 		}
-		if got != want {
-			t.Errorf("token %d: got %+v, want %+v", i, got, want)
-		}
+		assertToken(t, source, got, want)
 	}
 }
 
@@ -1164,7 +1154,7 @@ func TestNextTokenBlankLinesPreserveIndentation(t *testing.T) {
 	}
 
 	for i, want := range expectedKinds {
-		got, err := l.nextToken()
+		got, err := l.NextToken()
 		if err != nil {
 			t.Fatalf("token %d: unexpected error: %v", i, err)
 		}
@@ -1243,7 +1233,7 @@ func TestNextTokenEOFDedentation(t *testing.T) {
 			l := New(tt.source)
 
 			for i, want := range tt.expectedKinds {
-				got, err := l.nextToken()
+				got, err := l.NextToken()
 				if err != nil {
 					t.Fatalf("token %d: unexpected error: %v", i, err)
 				}
@@ -1297,7 +1287,7 @@ func TestNextTokenRejectsTabs(t *testing.T) {
 			l := New(tt.source)
 
 			for {
-				token, err := l.nextToken()
+				token, err := l.NextToken()
 				if err != nil {
 					lexErr, ok := err.(*LexError)
 					if !ok {
@@ -1460,7 +1450,7 @@ func TestNextTokenComments(t *testing.T) {
 			l := New(tt.source)
 
 			for i, want := range tt.expectedKinds {
-				got, err := l.nextToken()
+				got, err := l.NextToken()
 				if err != nil {
 					t.Fatalf("token %d: unexpected error: %v", i, err)
 				}
@@ -1546,7 +1536,7 @@ func TestNextTokenIgnoredLinesAndIndentationBoundaries(t *testing.T) {
 			l := New(tt.source)
 
 			for i, want := range tt.expected {
-				got, err := l.nextToken()
+				got, err := l.NextToken()
 				if err != nil {
 					t.Fatalf("token %d: unexpected error: %v", i, err)
 				}
@@ -1571,7 +1561,7 @@ func TestNextTokenIgnoredLinesAndIndentationBoundaries(t *testing.T) {
 				t.Errorf("pendingTokens = %v, want empty", l.pendingTokens)
 			}
 
-			got, err := l.nextToken()
+			got, err := l.NextToken()
 			if err != nil {
 				t.Fatalf("repeated EOF: unexpected error: %v", err)
 			}
@@ -1624,9 +1614,10 @@ func TestTokenKindString(t *testing.T) {
 }
 
 func TestNextTokenColon(t *testing.T) {
-	l := New("say:")
+	source := "say:"
+	l := New(source)
 
-	expected := []Token{
+	expected := []expectedToken{
 		{
 			Kind:   TokenSay,
 			Lexeme: "say",
@@ -1645,14 +1636,12 @@ func TestNextTokenColon(t *testing.T) {
 	}
 
 	for i, want := range expected {
-		got, err := l.nextToken()
+		got, err := l.NextToken()
 		if err != nil {
 			t.Fatalf("token %d: unexpected error: %v", i, err)
 		}
 
-		if got != want {
-			t.Errorf("token %d: got %+v, want %+v", i, got, want)
-		}
+		assertToken(t, source, got, want)
 	}
 }
 
@@ -1660,12 +1649,12 @@ func TestNextTokenParentheses(t *testing.T) {
 	tests := []struct {
 		name     string
 		source   string
-		expected []Token
+		expected []expectedToken
 	}{
 		{
 			name:   "parentheses around integer",
 			source: "say (42)",
-			expected: []Token{
+			expected: []expectedToken{
 				{Kind: TokenSay, Lexeme: "say", Span: Span{Start: Position{Line: 1, Column: 1}, End: Position{Line: 1, Column: 4}}},
 				{Kind: TokenLeftParen, Lexeme: "(", Span: Span{Start: Position{Line: 1, Column: 5}, End: Position{Line: 1, Column: 6}}},
 				{Kind: TokenInt, Lexeme: "42", Span: Span{Start: Position{Line: 1, Column: 6}, End: Position{Line: 1, Column: 8}}},
@@ -1676,7 +1665,7 @@ func TestNextTokenParentheses(t *testing.T) {
 		{
 			name:   "empty parentheses",
 			source: "()",
-			expected: []Token{
+			expected: []expectedToken{
 				{Kind: TokenLeftParen, Lexeme: "(", Span: Span{Start: Position{Line: 1, Column: 1}, End: Position{Line: 1, Column: 2}}},
 				{Kind: TokenRightParen, Lexeme: ")", Span: Span{Start: Position{Line: 1, Column: 2}, End: Position{Line: 1, Column: 3}}},
 				{Kind: TokenEOF, Lexeme: "", Span: Span{Start: Position{Line: 1, Column: 3}, End: Position{Line: 1, Column: 3}}},
@@ -1685,7 +1674,7 @@ func TestNextTokenParentheses(t *testing.T) {
 		{
 			name:   "nested parentheses",
 			source: "((7))",
-			expected: []Token{
+			expected: []expectedToken{
 				{Kind: TokenLeftParen, Lexeme: "(", Span: Span{Start: Position{Line: 1, Column: 1}, End: Position{Line: 1, Column: 2}}},
 				{Kind: TokenLeftParen, Lexeme: "(", Span: Span{Start: Position{Line: 1, Column: 2}, End: Position{Line: 1, Column: 3}}},
 				{Kind: TokenInt, Lexeme: "7", Span: Span{Start: Position{Line: 1, Column: 3}, End: Position{Line: 1, Column: 4}}},
@@ -1697,7 +1686,7 @@ func TestNextTokenParentheses(t *testing.T) {
 		{
 			name:   "parentheses on separate lines",
 			source: "(\n)",
-			expected: []Token{
+			expected: []expectedToken{
 				{Kind: TokenLeftParen, Lexeme: "(", Span: Span{Start: Position{Line: 1, Column: 1}, End: Position{Line: 1, Column: 2}}},
 				{Kind: TokenRightParen, Lexeme: ")", Span: Span{Start: Position{Line: 2, Column: 1}, End: Position{Line: 2, Column: 2}}},
 				{Kind: TokenEOF, Lexeme: "", Span: Span{Start: Position{Line: 2, Column: 2}, End: Position{Line: 2, Column: 2}}},
@@ -1706,7 +1695,7 @@ func TestNextTokenParentheses(t *testing.T) {
 		{
 			name:   "multiline parenthesized expression",
 			source: "say (\n    42\n)",
-			expected: []Token{
+			expected: []expectedToken{
 				{Kind: TokenSay, Lexeme: "say", Span: Span{Start: Position{Line: 1, Column: 1}, End: Position{Line: 1, Column: 4}}},
 				{Kind: TokenLeftParen, Lexeme: "(", Span: Span{Start: Position{Line: 1, Column: 5}, End: Position{Line: 1, Column: 6}}},
 				{Kind: TokenInt, Lexeme: "42", Span: Span{Start: Position{Line: 2, Column: 5}, End: Position{Line: 2, Column: 7}}},
@@ -1717,7 +1706,7 @@ func TestNextTokenParentheses(t *testing.T) {
 		{
 			name:   "nested multiline parentheses",
 			source: "say (\n    (42)\n)",
-			expected: []Token{
+			expected: []expectedToken{
 				{Kind: TokenSay, Lexeme: "say", Span: Span{Start: Position{Line: 1, Column: 1}, End: Position{Line: 1, Column: 4}}},
 				{Kind: TokenLeftParen, Lexeme: "(", Span: Span{Start: Position{Line: 1, Column: 5}, End: Position{Line: 1, Column: 6}}},
 				{Kind: TokenLeftParen, Lexeme: "(", Span: Span{Start: Position{Line: 2, Column: 5}, End: Position{Line: 2, Column: 6}}},
@@ -1730,7 +1719,7 @@ func TestNextTokenParentheses(t *testing.T) {
 		{
 			name:   "comments inside parentheses",
 			source: "say (\n    # explanation\n    42\n)",
-			expected: []Token{
+			expected: []expectedToken{
 				{Kind: TokenSay, Lexeme: "say", Span: Span{Start: Position{Line: 1, Column: 1}, End: Position{Line: 1, Column: 4}}},
 				{Kind: TokenLeftParen, Lexeme: "(", Span: Span{Start: Position{Line: 1, Column: 5}, End: Position{Line: 1, Column: 6}}},
 				{Kind: TokenInt, Lexeme: "42", Span: Span{Start: Position{Line: 3, Column: 5}, End: Position{Line: 3, Column: 7}}},
@@ -1741,7 +1730,7 @@ func TestNextTokenParentheses(t *testing.T) {
 		{
 			name:   "restore indentation after closing parenthesis",
 			source: "say:\n    say (\n        42\n    )\n    say 7\nsay 8",
-			expected: []Token{
+			expected: []expectedToken{
 				{Kind: TokenSay, Lexeme: "say", Span: Span{Start: Position{Line: 1, Column: 1}, End: Position{Line: 1, Column: 4}}},
 				{Kind: TokenColon, Lexeme: ":", Span: Span{Start: Position{Line: 1, Column: 4}, End: Position{Line: 1, Column: 5}}},
 				{Kind: TokenNewline, Lexeme: "\n", Span: Span{Start: Position{Line: 1, Column: 5}, End: Position{Line: 2, Column: 1}}},
@@ -1763,7 +1752,7 @@ func TestNextTokenParentheses(t *testing.T) {
 		{
 			name:   "closing parenthesis followed by normal newline",
 			source: "say (\n    42)\nsay 7",
-			expected: []Token{
+			expected: []expectedToken{
 				{Kind: TokenSay, Lexeme: "say", Span: Span{Start: Position{Line: 1, Column: 1}, End: Position{Line: 1, Column: 4}}},
 				{Kind: TokenLeftParen, Lexeme: "(", Span: Span{Start: Position{Line: 1, Column: 5}, End: Position{Line: 1, Column: 6}}},
 				{Kind: TokenInt, Lexeme: "42", Span: Span{Start: Position{Line: 2, Column: 5}, End: Position{Line: 2, Column: 7}}},
@@ -1777,7 +1766,7 @@ func TestNextTokenParentheses(t *testing.T) {
 		{
 			name:   "closing parenthesis followed by tokens on same line",
 			source: "say (\n    42) say 7",
-			expected: []Token{
+			expected: []expectedToken{
 				{Kind: TokenSay, Lexeme: "say", Span: Span{Start: Position{Line: 1, Column: 1}, End: Position{Line: 1, Column: 4}}},
 				{Kind: TokenLeftParen, Lexeme: "(", Span: Span{Start: Position{Line: 1, Column: 5}, End: Position{Line: 1, Column: 6}}},
 				{Kind: TokenInt, Lexeme: "42", Span: Span{Start: Position{Line: 2, Column: 5}, End: Position{Line: 2, Column: 7}}},
@@ -1794,14 +1783,12 @@ func TestNextTokenParentheses(t *testing.T) {
 			l := New(tt.source)
 
 			for i, want := range tt.expected {
-				got, err := l.nextToken()
+				got, err := l.NextToken()
 				if err != nil {
 					t.Fatalf("token %d: unexpected error: %v", i, err)
 				}
 
-				if got != want {
-					t.Errorf("token %d: got %+v, want %+v", i, got, want)
-				}
+				assertToken(t, tt.source, got, want)
 			}
 		})
 	}
@@ -1823,7 +1810,7 @@ func TestNextTokenInlineCommentsInsideParentheses(t *testing.T) {
 	l := New(source)
 
 	for i, want := range expected {
-		got, err := l.nextToken()
+		got, err := l.NextToken()
 		if err != nil {
 			t.Fatalf("token %d: unexpected error: %v", i, err)
 		}
@@ -1870,7 +1857,7 @@ func TestNextTokenParenDepth(t *testing.T) {
 			l := New(tt.source)
 
 			for i, want := range tt.expectedDepth {
-				token, err := l.nextToken()
+				token, err := l.NextToken()
 				if err != nil {
 					t.Fatalf("token %d: unexpected error: %v", i, err)
 				}
@@ -1937,7 +1924,7 @@ func TestNextTokenUnclosedOpeningParenthesis(t *testing.T) {
 			l := New(tt.source)
 
 			for {
-				token, err := l.nextToken()
+				token, err := l.NextToken()
 				if err != nil {
 					lexErr, ok := err.(*LexError)
 					if !ok {
@@ -2018,7 +2005,7 @@ func TestNextTokenUnmatchedClosingParenthesis(t *testing.T) {
 			l := New(tt.source)
 
 			for {
-				token, err := l.nextToken()
+				token, err := l.NextToken()
 				if err != nil {
 					lexErr, ok := err.(*LexError)
 					if !ok {
@@ -2058,12 +2045,12 @@ func TestNextTokenPlus(t *testing.T) {
 	tests := []struct {
 		name     string
 		source   string
-		expected []Token
+		expected []expectedToken
 	}{
 		{
 			name:   "addition with spaces",
 			source: "say 10 + 5",
-			expected: []Token{
+			expected: []expectedToken{
 				{Kind: TokenSay, Lexeme: "say", Span: Span{Start: Position{Line: 1, Column: 1}, End: Position{Line: 1, Column: 4}}},
 				{Kind: TokenInt, Lexeme: "10", Span: Span{Start: Position{Line: 1, Column: 5}, End: Position{Line: 1, Column: 7}}},
 				{Kind: TokenPlus, Lexeme: "+", Span: Span{Start: Position{Line: 1, Column: 8}, End: Position{Line: 1, Column: 9}}},
@@ -2074,7 +2061,7 @@ func TestNextTokenPlus(t *testing.T) {
 		{
 			name:   "addition without spaces",
 			source: "1+2",
-			expected: []Token{
+			expected: []expectedToken{
 				{Kind: TokenInt, Lexeme: "1", Span: Span{Start: Position{Line: 1, Column: 1}, End: Position{Line: 1, Column: 2}}},
 				{Kind: TokenPlus, Lexeme: "+", Span: Span{Start: Position{Line: 1, Column: 2}, End: Position{Line: 1, Column: 3}}},
 				{Kind: TokenInt, Lexeme: "2", Span: Span{Start: Position{Line: 1, Column: 3}, End: Position{Line: 1, Column: 4}}},
@@ -2084,7 +2071,7 @@ func TestNextTokenPlus(t *testing.T) {
 		{
 			name:   "consecutive plus operators",
 			source: "1++2",
-			expected: []Token{
+			expected: []expectedToken{
 				{Kind: TokenInt, Lexeme: "1", Span: Span{Start: Position{Line: 1, Column: 1}, End: Position{Line: 1, Column: 2}}},
 				{Kind: TokenPlus, Lexeme: "+", Span: Span{Start: Position{Line: 1, Column: 2}, End: Position{Line: 1, Column: 3}}},
 				{Kind: TokenPlus, Lexeme: "+", Span: Span{Start: Position{Line: 1, Column: 3}, End: Position{Line: 1, Column: 4}}},
@@ -2095,7 +2082,7 @@ func TestNextTokenPlus(t *testing.T) {
 		{
 			name:   "addition across lines",
 			source: "say 1\nsay 2+3",
-			expected: []Token{
+			expected: []expectedToken{
 				{Kind: TokenSay, Lexeme: "say", Span: Span{Start: Position{Line: 1, Column: 1}, End: Position{Line: 1, Column: 4}}},
 				{Kind: TokenInt, Lexeme: "1", Span: Span{Start: Position{Line: 1, Column: 5}, End: Position{Line: 1, Column: 6}}},
 				{Kind: TokenNewline, Lexeme: "\n", Span: Span{Start: Position{Line: 1, Column: 6}, End: Position{Line: 2, Column: 1}}},
@@ -2113,14 +2100,12 @@ func TestNextTokenPlus(t *testing.T) {
 			l := New(tt.source)
 
 			for i, want := range tt.expected {
-				got, err := l.nextToken()
+				got, err := l.NextToken()
 				if err != nil {
 					t.Fatalf("token %d: unexpected error: %v", i, err)
 				}
 
-				if got != want {
-					t.Errorf("token %d: got %+v, want %+v", i, got, want)
-				}
+				assertToken(t, tt.source, got, want)
 			}
 		})
 	}
@@ -2130,12 +2115,12 @@ func TestNextTokenMinus(t *testing.T) {
 	tests := []struct {
 		name     string
 		source   string
-		expected []Token
+		expected []expectedToken
 	}{
 		{
 			name:   "subtraction with spaces",
 			source: "say 10 - 3",
-			expected: []Token{
+			expected: []expectedToken{
 				{Kind: TokenSay, Lexeme: "say", Span: Span{Start: Position{Line: 1, Column: 1}, End: Position{Line: 1, Column: 4}}},
 				{Kind: TokenInt, Lexeme: "10", Span: Span{Start: Position{Line: 1, Column: 5}, End: Position{Line: 1, Column: 7}}},
 				{Kind: TokenMinus, Lexeme: "-", Span: Span{Start: Position{Line: 1, Column: 8}, End: Position{Line: 1, Column: 9}}},
@@ -2146,7 +2131,7 @@ func TestNextTokenMinus(t *testing.T) {
 		{
 			name:   "subtraction without spaces",
 			source: "10-3",
-			expected: []Token{
+			expected: []expectedToken{
 				{Kind: TokenInt, Lexeme: "10", Span: Span{Start: Position{Line: 1, Column: 1}, End: Position{Line: 1, Column: 3}}},
 				{Kind: TokenMinus, Lexeme: "-", Span: Span{Start: Position{Line: 1, Column: 3}, End: Position{Line: 1, Column: 4}}},
 				{Kind: TokenInt, Lexeme: "3", Span: Span{Start: Position{Line: 1, Column: 4}, End: Position{Line: 1, Column: 5}}},
@@ -2156,7 +2141,7 @@ func TestNextTokenMinus(t *testing.T) {
 		{
 			name:   "unary negation",
 			source: "say -7",
-			expected: []Token{
+			expected: []expectedToken{
 				{Kind: TokenSay, Lexeme: "say", Span: Span{Start: Position{Line: 1, Column: 1}, End: Position{Line: 1, Column: 4}}},
 				{Kind: TokenMinus, Lexeme: "-", Span: Span{Start: Position{Line: 1, Column: 5}, End: Position{Line: 1, Column: 6}}},
 				{Kind: TokenInt, Lexeme: "7", Span: Span{Start: Position{Line: 1, Column: 6}, End: Position{Line: 1, Column: 7}}},
@@ -2166,7 +2151,7 @@ func TestNextTokenMinus(t *testing.T) {
 		{
 			name:   "consecutive minus operators",
 			source: "10--3",
-			expected: []Token{
+			expected: []expectedToken{
 				{Kind: TokenInt, Lexeme: "10", Span: Span{Start: Position{Line: 1, Column: 1}, End: Position{Line: 1, Column: 3}}},
 				{Kind: TokenMinus, Lexeme: "-", Span: Span{Start: Position{Line: 1, Column: 3}, End: Position{Line: 1, Column: 4}}},
 				{Kind: TokenMinus, Lexeme: "-", Span: Span{Start: Position{Line: 1, Column: 4}, End: Position{Line: 1, Column: 5}}},
@@ -2177,7 +2162,7 @@ func TestNextTokenMinus(t *testing.T) {
 		{
 			name:   "addition and subtraction",
 			source: "1+2-3",
-			expected: []Token{
+			expected: []expectedToken{
 				{Kind: TokenInt, Lexeme: "1", Span: Span{Start: Position{Line: 1, Column: 1}, End: Position{Line: 1, Column: 2}}},
 				{Kind: TokenPlus, Lexeme: "+", Span: Span{Start: Position{Line: 1, Column: 2}, End: Position{Line: 1, Column: 3}}},
 				{Kind: TokenInt, Lexeme: "2", Span: Span{Start: Position{Line: 1, Column: 3}, End: Position{Line: 1, Column: 4}}},
@@ -2193,14 +2178,12 @@ func TestNextTokenMinus(t *testing.T) {
 			l := New(tt.source)
 
 			for i, want := range tt.expected {
-				got, err := l.nextToken()
+				got, err := l.NextToken()
 				if err != nil {
 					t.Fatalf("token %d: unexpected error: %v", i, err)
 				}
 
-				if got != want {
-					t.Errorf("token %d: got %+v, want %+v", i, got, want)
-				}
+				assertToken(t, tt.source, got, want)
 			}
 		})
 	}
@@ -2210,12 +2193,12 @@ func TestNextTokenStar(t *testing.T) {
 	tests := []struct {
 		name     string
 		source   string
-		expected []Token
+		expected []expectedToken
 	}{
 		{
 			name:   "multiplication with spaces",
 			source: "say 4 * 5",
-			expected: []Token{
+			expected: []expectedToken{
 				{Kind: TokenSay, Lexeme: "say", Span: Span{Start: Position{Line: 1, Column: 1}, End: Position{Line: 1, Column: 4}}},
 				{Kind: TokenInt, Lexeme: "4", Span: Span{Start: Position{Line: 1, Column: 5}, End: Position{Line: 1, Column: 6}}},
 				{Kind: TokenStar, Lexeme: "*", Span: Span{Start: Position{Line: 1, Column: 7}, End: Position{Line: 1, Column: 8}}},
@@ -2226,7 +2209,7 @@ func TestNextTokenStar(t *testing.T) {
 		{
 			name:   "multiplication without spaces",
 			source: "2*3",
-			expected: []Token{
+			expected: []expectedToken{
 				{Kind: TokenInt, Lexeme: "2", Span: Span{Start: Position{Line: 1, Column: 1}, End: Position{Line: 1, Column: 2}}},
 				{Kind: TokenStar, Lexeme: "*", Span: Span{Start: Position{Line: 1, Column: 2}, End: Position{Line: 1, Column: 3}}},
 				{Kind: TokenInt, Lexeme: "3", Span: Span{Start: Position{Line: 1, Column: 3}, End: Position{Line: 1, Column: 4}}},
@@ -2236,7 +2219,7 @@ func TestNextTokenStar(t *testing.T) {
 		{
 			name:   "multiplication with unary minus",
 			source: "2*-3",
-			expected: []Token{
+			expected: []expectedToken{
 				{Kind: TokenInt, Lexeme: "2", Span: Span{Start: Position{Line: 1, Column: 1}, End: Position{Line: 1, Column: 2}}},
 				{Kind: TokenStar, Lexeme: "*", Span: Span{Start: Position{Line: 1, Column: 2}, End: Position{Line: 1, Column: 3}}},
 				{Kind: TokenMinus, Lexeme: "-", Span: Span{Start: Position{Line: 1, Column: 3}, End: Position{Line: 1, Column: 4}}},
@@ -2247,7 +2230,7 @@ func TestNextTokenStar(t *testing.T) {
 		{
 			name:   "exponentiation operator",
 			source: "2**3",
-			expected: []Token{
+			expected: []expectedToken{
 				{Kind: TokenInt, Lexeme: "2", Span: Span{Start: Position{Line: 1, Column: 1}, End: Position{Line: 1, Column: 2}}},
 				{Kind: TokenPower, Lexeme: "**", Span: Span{Start: Position{Line: 1, Column: 2}, End: Position{Line: 1, Column: 4}}},
 				{Kind: TokenInt, Lexeme: "3", Span: Span{Start: Position{Line: 1, Column: 4}, End: Position{Line: 1, Column: 5}}},
@@ -2257,7 +2240,7 @@ func TestNextTokenStar(t *testing.T) {
 		{
 			name:   "mixed arithmetic operators",
 			source: "1+2*3-4",
-			expected: []Token{
+			expected: []expectedToken{
 				{Kind: TokenInt, Lexeme: "1", Span: Span{Start: Position{Line: 1, Column: 1}, End: Position{Line: 1, Column: 2}}},
 				{Kind: TokenPlus, Lexeme: "+", Span: Span{Start: Position{Line: 1, Column: 2}, End: Position{Line: 1, Column: 3}}},
 				{Kind: TokenInt, Lexeme: "2", Span: Span{Start: Position{Line: 1, Column: 3}, End: Position{Line: 1, Column: 4}}},
@@ -2271,7 +2254,7 @@ func TestNextTokenStar(t *testing.T) {
 		{
 			name:   "power followed by multiplication",
 			source: "2***3",
-			expected: []Token{
+			expected: []expectedToken{
 				{Kind: TokenInt, Lexeme: "2", Span: Span{Start: Position{Line: 1, Column: 1}, End: Position{Line: 1, Column: 2}}},
 				{Kind: TokenPower, Lexeme: "**", Span: Span{Start: Position{Line: 1, Column: 2}, End: Position{Line: 1, Column: 4}}},
 				{Kind: TokenStar, Lexeme: "*", Span: Span{Start: Position{Line: 1, Column: 4}, End: Position{Line: 1, Column: 5}}},
@@ -2282,7 +2265,7 @@ func TestNextTokenStar(t *testing.T) {
 		{
 			name:   "consecutive power operators",
 			source: "2****3",
-			expected: []Token{
+			expected: []expectedToken{
 				{Kind: TokenInt, Lexeme: "2", Span: Span{Start: Position{Line: 1, Column: 1}, End: Position{Line: 1, Column: 2}}},
 				{Kind: TokenPower, Lexeme: "**", Span: Span{Start: Position{Line: 1, Column: 2}, End: Position{Line: 1, Column: 4}}},
 				{Kind: TokenPower, Lexeme: "**", Span: Span{Start: Position{Line: 1, Column: 4}, End: Position{Line: 1, Column: 6}}},
@@ -2293,7 +2276,7 @@ func TestNextTokenStar(t *testing.T) {
 		{
 			name:   "power with unary minus",
 			source: "2**-3",
-			expected: []Token{
+			expected: []expectedToken{
 				{Kind: TokenInt, Lexeme: "2", Span: Span{Start: Position{Line: 1, Column: 1}, End: Position{Line: 1, Column: 2}}},
 				{Kind: TokenPower, Lexeme: "**", Span: Span{Start: Position{Line: 1, Column: 2}, End: Position{Line: 1, Column: 4}}},
 				{Kind: TokenMinus, Lexeme: "-", Span: Span{Start: Position{Line: 1, Column: 4}, End: Position{Line: 1, Column: 5}}},
@@ -2308,14 +2291,12 @@ func TestNextTokenStar(t *testing.T) {
 			l := New(tt.source)
 
 			for i, want := range tt.expected {
-				got, err := l.nextToken()
+				got, err := l.NextToken()
 				if err != nil {
 					t.Fatalf("token %d: unexpected error: %v", i, err)
 				}
 
-				if got != want {
-					t.Errorf("token %d: got %+v, want %+v", i, got, want)
-				}
+				assertToken(t, tt.source, got, want)
 			}
 		})
 	}
@@ -2325,12 +2306,12 @@ func TestNextTokenDivision(t *testing.T) {
 	tests := []struct {
 		name     string
 		source   string
-		expected []Token
+		expected []expectedToken
 	}{
 		{
 			name:   "ordinary division",
 			source: "8/2",
-			expected: []Token{
+			expected: []expectedToken{
 				{Kind: TokenInt, Lexeme: "8", Span: Span{Start: Position{Line: 1, Column: 1}, End: Position{Line: 1, Column: 2}}},
 				{Kind: TokenSlash, Lexeme: "/", Span: Span{Start: Position{Line: 1, Column: 2}, End: Position{Line: 1, Column: 3}}},
 				{Kind: TokenInt, Lexeme: "2", Span: Span{Start: Position{Line: 1, Column: 3}, End: Position{Line: 1, Column: 4}}},
@@ -2340,7 +2321,7 @@ func TestNextTokenDivision(t *testing.T) {
 		{
 			name:   "floor division",
 			source: "8//2",
-			expected: []Token{
+			expected: []expectedToken{
 				{Kind: TokenInt, Lexeme: "8", Span: Span{Start: Position{Line: 1, Column: 1}, End: Position{Line: 1, Column: 2}}},
 				{Kind: TokenFloorDiv, Lexeme: "//", Span: Span{Start: Position{Line: 1, Column: 2}, End: Position{Line: 1, Column: 4}}},
 				{Kind: TokenInt, Lexeme: "2", Span: Span{Start: Position{Line: 1, Column: 4}, End: Position{Line: 1, Column: 5}}},
@@ -2350,7 +2331,7 @@ func TestNextTokenDivision(t *testing.T) {
 		{
 			name:   "division with spaces",
 			source: "say 12 / 3",
-			expected: []Token{
+			expected: []expectedToken{
 				{Kind: TokenSay, Lexeme: "say", Span: Span{Start: Position{Line: 1, Column: 1}, End: Position{Line: 1, Column: 4}}},
 				{Kind: TokenInt, Lexeme: "12", Span: Span{Start: Position{Line: 1, Column: 5}, End: Position{Line: 1, Column: 7}}},
 				{Kind: TokenSlash, Lexeme: "/", Span: Span{Start: Position{Line: 1, Column: 8}, End: Position{Line: 1, Column: 9}}},
@@ -2361,7 +2342,7 @@ func TestNextTokenDivision(t *testing.T) {
 		{
 			name:   "floor division with spaces",
 			source: "say 12 // 3",
-			expected: []Token{
+			expected: []expectedToken{
 				{Kind: TokenSay, Lexeme: "say", Span: Span{Start: Position{Line: 1, Column: 1}, End: Position{Line: 1, Column: 4}}},
 				{Kind: TokenInt, Lexeme: "12", Span: Span{Start: Position{Line: 1, Column: 5}, End: Position{Line: 1, Column: 7}}},
 				{Kind: TokenFloorDiv, Lexeme: "//", Span: Span{Start: Position{Line: 1, Column: 8}, End: Position{Line: 1, Column: 10}}},
@@ -2372,7 +2353,7 @@ func TestNextTokenDivision(t *testing.T) {
 		{
 			name:   "three consecutive slashes",
 			source: "8///2",
-			expected: []Token{
+			expected: []expectedToken{
 				{Kind: TokenInt, Lexeme: "8", Span: Span{Start: Position{Line: 1, Column: 1}, End: Position{Line: 1, Column: 2}}},
 				{Kind: TokenFloorDiv, Lexeme: "//", Span: Span{Start: Position{Line: 1, Column: 2}, End: Position{Line: 1, Column: 4}}},
 				{Kind: TokenSlash, Lexeme: "/", Span: Span{Start: Position{Line: 1, Column: 4}, End: Position{Line: 1, Column: 5}}},
@@ -2383,7 +2364,7 @@ func TestNextTokenDivision(t *testing.T) {
 		{
 			name:   "four consecutive slashes",
 			source: "8////2",
-			expected: []Token{
+			expected: []expectedToken{
 				{Kind: TokenInt, Lexeme: "8", Span: Span{Start: Position{Line: 1, Column: 1}, End: Position{Line: 1, Column: 2}}},
 				{Kind: TokenFloorDiv, Lexeme: "//", Span: Span{Start: Position{Line: 1, Column: 2}, End: Position{Line: 1, Column: 4}}},
 				{Kind: TokenFloorDiv, Lexeme: "//", Span: Span{Start: Position{Line: 1, Column: 4}, End: Position{Line: 1, Column: 6}}},
@@ -2394,7 +2375,7 @@ func TestNextTokenDivision(t *testing.T) {
 		{
 			name:   "division with unary minus",
 			source: "8/-2",
-			expected: []Token{
+			expected: []expectedToken{
 				{Kind: TokenInt, Lexeme: "8", Span: Span{Start: Position{Line: 1, Column: 1}, End: Position{Line: 1, Column: 2}}},
 				{Kind: TokenSlash, Lexeme: "/", Span: Span{Start: Position{Line: 1, Column: 2}, End: Position{Line: 1, Column: 3}}},
 				{Kind: TokenMinus, Lexeme: "-", Span: Span{Start: Position{Line: 1, Column: 3}, End: Position{Line: 1, Column: 4}}},
@@ -2405,7 +2386,7 @@ func TestNextTokenDivision(t *testing.T) {
 		{
 			name:   "mixed division and multiplication",
 			source: "8//2*3/4",
-			expected: []Token{
+			expected: []expectedToken{
 				{Kind: TokenInt, Lexeme: "8", Span: Span{Start: Position{Line: 1, Column: 1}, End: Position{Line: 1, Column: 2}}},
 				{Kind: TokenFloorDiv, Lexeme: "//", Span: Span{Start: Position{Line: 1, Column: 2}, End: Position{Line: 1, Column: 4}}},
 				{Kind: TokenInt, Lexeme: "2", Span: Span{Start: Position{Line: 1, Column: 4}, End: Position{Line: 1, Column: 5}}},
@@ -2423,14 +2404,12 @@ func TestNextTokenDivision(t *testing.T) {
 			l := New(tt.source)
 
 			for i, want := range tt.expected {
-				got, err := l.nextToken()
+				got, err := l.NextToken()
 				if err != nil {
 					t.Fatalf("token %d: unexpected error: %v", i, err)
 				}
 
-				if got != want {
-					t.Errorf("token %d: got %+v, want %+v", i, got, want)
-				}
+				assertToken(t, tt.source, got, want)
 			}
 		})
 	}
@@ -2440,12 +2419,12 @@ func TestNextTokenPercent(t *testing.T) {
 	tests := []struct {
 		name     string
 		source   string
-		expected []Token
+		expected []expectedToken
 	}{
 		{
 			name:   "remainder without spaces",
 			source: "7%3",
-			expected: []Token{
+			expected: []expectedToken{
 				{Kind: TokenInt, Lexeme: "7", Span: Span{Start: Position{Line: 1, Column: 1}, End: Position{Line: 1, Column: 2}}},
 				{Kind: TokenPercent, Lexeme: "%", Span: Span{Start: Position{Line: 1, Column: 2}, End: Position{Line: 1, Column: 3}}},
 				{Kind: TokenInt, Lexeme: "3", Span: Span{Start: Position{Line: 1, Column: 3}, End: Position{Line: 1, Column: 4}}},
@@ -2455,7 +2434,7 @@ func TestNextTokenPercent(t *testing.T) {
 		{
 			name:   "remainder with spaces",
 			source: "say 7 % 3",
-			expected: []Token{
+			expected: []expectedToken{
 				{Kind: TokenSay, Lexeme: "say", Span: Span{Start: Position{Line: 1, Column: 1}, End: Position{Line: 1, Column: 4}}},
 				{Kind: TokenInt, Lexeme: "7", Span: Span{Start: Position{Line: 1, Column: 5}, End: Position{Line: 1, Column: 6}}},
 				{Kind: TokenPercent, Lexeme: "%", Span: Span{Start: Position{Line: 1, Column: 7}, End: Position{Line: 1, Column: 8}}},
@@ -2466,7 +2445,7 @@ func TestNextTokenPercent(t *testing.T) {
 		{
 			name:   "negative dividend",
 			source: "-7%3",
-			expected: []Token{
+			expected: []expectedToken{
 				{Kind: TokenMinus, Lexeme: "-", Span: Span{Start: Position{Line: 1, Column: 1}, End: Position{Line: 1, Column: 2}}},
 				{Kind: TokenInt, Lexeme: "7", Span: Span{Start: Position{Line: 1, Column: 2}, End: Position{Line: 1, Column: 3}}},
 				{Kind: TokenPercent, Lexeme: "%", Span: Span{Start: Position{Line: 1, Column: 3}, End: Position{Line: 1, Column: 4}}},
@@ -2477,7 +2456,7 @@ func TestNextTokenPercent(t *testing.T) {
 		{
 			name:   "consecutive percent characters",
 			source: "7%%3",
-			expected: []Token{
+			expected: []expectedToken{
 				{Kind: TokenInt, Lexeme: "7", Span: Span{Start: Position{Line: 1, Column: 1}, End: Position{Line: 1, Column: 2}}},
 				{Kind: TokenPercent, Lexeme: "%", Span: Span{Start: Position{Line: 1, Column: 2}, End: Position{Line: 1, Column: 3}}},
 				{Kind: TokenPercent, Lexeme: "%", Span: Span{Start: Position{Line: 1, Column: 3}, End: Position{Line: 1, Column: 4}}},
@@ -2488,7 +2467,7 @@ func TestNextTokenPercent(t *testing.T) {
 		{
 			name:   "floor division and remainder",
 			source: "8//3%2",
-			expected: []Token{
+			expected: []expectedToken{
 				{Kind: TokenInt, Lexeme: "8", Span: Span{Start: Position{Line: 1, Column: 1}, End: Position{Line: 1, Column: 2}}},
 				{Kind: TokenFloorDiv, Lexeme: "//", Span: Span{Start: Position{Line: 1, Column: 2}, End: Position{Line: 1, Column: 4}}},
 				{Kind: TokenInt, Lexeme: "3", Span: Span{Start: Position{Line: 1, Column: 4}, End: Position{Line: 1, Column: 5}}},
@@ -2500,7 +2479,7 @@ func TestNextTokenPercent(t *testing.T) {
 		{
 			name:   "mixed arithmetic operators",
 			source: "2**3%5+1",
-			expected: []Token{
+			expected: []expectedToken{
 				{Kind: TokenInt, Lexeme: "2", Span: Span{Start: Position{Line: 1, Column: 1}, End: Position{Line: 1, Column: 2}}},
 				{Kind: TokenPower, Lexeme: "**", Span: Span{Start: Position{Line: 1, Column: 2}, End: Position{Line: 1, Column: 4}}},
 				{Kind: TokenInt, Lexeme: "3", Span: Span{Start: Position{Line: 1, Column: 4}, End: Position{Line: 1, Column: 5}}},
@@ -2518,14 +2497,12 @@ func TestNextTokenPercent(t *testing.T) {
 			l := New(tt.source)
 
 			for i, want := range tt.expected {
-				got, err := l.nextToken()
+				got, err := l.NextToken()
 				if err != nil {
 					t.Fatalf("token %d: unexpected error: %v", i, err)
 				}
 
-				if got != want {
-					t.Errorf("token %d: got %+v, want %+v", i, got, want)
-				}
+				assertToken(t, tt.source, got, want)
 			}
 		})
 	}
@@ -2535,12 +2512,12 @@ func TestNextTokenString(t *testing.T) {
 	tests := []struct {
 		name     string
 		source   string
-		expected []Token
+		expected []expectedToken
 	}{
 		{
 			name:   "double-quoted string",
 			source: `say "Hello"`,
-			expected: []Token{
+			expected: []expectedToken{
 				{Kind: TokenSay, Lexeme: "say", Span: Span{Start: Position{Line: 1, Column: 1}, End: Position{Line: 1, Column: 4}}},
 				{Kind: TokenString, Lexeme: `"Hello"`, Span: Span{Start: Position{Line: 1, Column: 5}, End: Position{Line: 1, Column: 12}}},
 				{Kind: TokenEOF, Lexeme: "", Span: Span{Start: Position{Line: 1, Column: 12}, End: Position{Line: 1, Column: 12}}},
@@ -2549,7 +2526,7 @@ func TestNextTokenString(t *testing.T) {
 		{
 			name:   "single-quoted string",
 			source: "say 'Hello'",
-			expected: []Token{
+			expected: []expectedToken{
 				{Kind: TokenSay, Lexeme: "say", Span: Span{Start: Position{Line: 1, Column: 1}, End: Position{Line: 1, Column: 4}}},
 				{Kind: TokenString, Lexeme: "'Hello'", Span: Span{Start: Position{Line: 1, Column: 5}, End: Position{Line: 1, Column: 12}}},
 				{Kind: TokenEOF, Lexeme: "", Span: Span{Start: Position{Line: 1, Column: 12}, End: Position{Line: 1, Column: 12}}},
@@ -2558,7 +2535,7 @@ func TestNextTokenString(t *testing.T) {
 		{
 			name:   "empty double-quoted string",
 			source: `""`,
-			expected: []Token{
+			expected: []expectedToken{
 				{Kind: TokenString, Lexeme: `""`, Span: Span{Start: Position{Line: 1, Column: 1}, End: Position{Line: 1, Column: 3}}},
 				{Kind: TokenEOF, Lexeme: "", Span: Span{Start: Position{Line: 1, Column: 3}, End: Position{Line: 1, Column: 3}}},
 			},
@@ -2566,7 +2543,7 @@ func TestNextTokenString(t *testing.T) {
 		{
 			name:   "empty single-quoted string",
 			source: "''",
-			expected: []Token{
+			expected: []expectedToken{
 				{Kind: TokenString, Lexeme: "''", Span: Span{Start: Position{Line: 1, Column: 1}, End: Position{Line: 1, Column: 3}}},
 				{Kind: TokenEOF, Lexeme: "", Span: Span{Start: Position{Line: 1, Column: 3}, End: Position{Line: 1, Column: 3}}},
 			},
@@ -2574,7 +2551,7 @@ func TestNextTokenString(t *testing.T) {
 		{
 			name:   "single quote inside double quotes",
 			source: `"It's fine"`,
-			expected: []Token{
+			expected: []expectedToken{
 				{Kind: TokenString, Lexeme: `"It's fine"`, Span: Span{Start: Position{Line: 1, Column: 1}, End: Position{Line: 1, Column: 12}}},
 				{Kind: TokenEOF, Lexeme: "", Span: Span{Start: Position{Line: 1, Column: 12}, End: Position{Line: 1, Column: 12}}},
 			},
@@ -2582,7 +2559,7 @@ func TestNextTokenString(t *testing.T) {
 		{
 			name:   "double quote inside single quotes",
 			source: `'She said "Hi"'`,
-			expected: []Token{
+			expected: []expectedToken{
 				{Kind: TokenString, Lexeme: `'She said "Hi"'`, Span: Span{Start: Position{Line: 1, Column: 1}, End: Position{Line: 1, Column: 16}}},
 				{Kind: TokenEOF, Lexeme: "", Span: Span{Start: Position{Line: 1, Column: 16}, End: Position{Line: 1, Column: 16}}},
 			},
@@ -2590,7 +2567,7 @@ func TestNextTokenString(t *testing.T) {
 		{
 			name:   "comment marker inside string",
 			source: `"hello # world"`,
-			expected: []Token{
+			expected: []expectedToken{
 				{Kind: TokenString, Lexeme: `"hello # world"`, Span: Span{Start: Position{Line: 1, Column: 1}, End: Position{Line: 1, Column: 16}}},
 				{Kind: TokenEOF, Lexeme: "", Span: Span{Start: Position{Line: 1, Column: 16}, End: Position{Line: 1, Column: 16}}},
 			},
@@ -2598,7 +2575,7 @@ func TestNextTokenString(t *testing.T) {
 		{
 			name:   "operators inside string",
 			source: `"a + b * c / d"`,
-			expected: []Token{
+			expected: []expectedToken{
 				{Kind: TokenString, Lexeme: `"a + b * c / d"`, Span: Span{Start: Position{Line: 1, Column: 1}, End: Position{Line: 1, Column: 16}}},
 				{Kind: TokenEOF, Lexeme: "", Span: Span{Start: Position{Line: 1, Column: 16}, End: Position{Line: 1, Column: 16}}},
 			},
@@ -2606,7 +2583,7 @@ func TestNextTokenString(t *testing.T) {
 		{
 			name:   "adjacent strings",
 			source: `"hello"'world'`,
-			expected: []Token{
+			expected: []expectedToken{
 				{Kind: TokenString, Lexeme: `"hello"`, Span: Span{Start: Position{Line: 1, Column: 1}, End: Position{Line: 1, Column: 8}}},
 				{Kind: TokenString, Lexeme: "'world'", Span: Span{Start: Position{Line: 1, Column: 8}, End: Position{Line: 1, Column: 15}}},
 				{Kind: TokenEOF, Lexeme: "", Span: Span{Start: Position{Line: 1, Column: 15}, End: Position{Line: 1, Column: 15}}},
@@ -2619,13 +2596,11 @@ func TestNextTokenString(t *testing.T) {
 			l := New(tt.source)
 
 			for i, want := range tt.expected {
-				got, err := l.nextToken()
+				got, err := l.NextToken()
 				if err != nil {
 					t.Fatalf("token %d: unexpected error: %v", i, err)
 				}
-				if got != want {
-					t.Errorf("token %d: got %+v, want %+v", i, got, want)
-				}
+				assertToken(t, tt.source, got, want)
 			}
 		})
 	}
@@ -2680,7 +2655,7 @@ func TestNextTokenUnterminatedString(t *testing.T) {
 
 			var err error
 			for {
-				token, scanErr := l.nextToken()
+				token, scanErr := l.NextToken()
 				if scanErr != nil {
 					err = scanErr
 					break
@@ -2760,29 +2735,27 @@ func TestNextTokenStringEscapes(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			l := New(tt.source)
 
-			got, err := l.nextToken()
+			got, err := l.NextToken()
 			if err != nil {
 				t.Fatalf("unexpected lexical error: %v", err)
 			}
 
-			want := Token{
+			want := expectedToken{
 				Kind:   TokenString,
 				Lexeme: tt.source,
 				Span:   Span{Start: Position{Line: 1, Column: 1}, End: Position{Line: 1, Column: len(tt.source) + 1}},
 			}
-			if got != want {
-				t.Errorf("got %+v, want %+v", got, want)
-			}
+			assertToken(t, tt.source, got, want)
 
-			eof, err := l.nextToken()
+			eof, err := l.NextToken()
 			if err != nil {
 				t.Fatalf("unexpected error after string: %v", err)
 			}
 			if eof.Kind != TokenEOF {
 				t.Errorf("expected EOF after string, got %s", eof.Kind)
 			}
-			if eof.Span.Start != (Position{Line: 1, Column: len(tt.source) + 1}) {
-				t.Errorf("EOF position: got %+v, want column %d", eof.Span.Start, len(tt.source)+1)
+			if testTokenSpan(l.source, eof).Start != (Position{Line: 1, Column: len(tt.source) + 1}) {
+				t.Errorf("EOF position: got %+v, want column %d", testTokenSpan(l.source, eof).Start, len(tt.source)+1)
 			}
 		})
 	}
@@ -2851,7 +2824,7 @@ func TestNextTokenInvalidStringEscapes(t *testing.T) {
 
 			var err error
 			for {
-				token, scanErr := l.nextToken()
+				token, scanErr := l.NextToken()
 				if scanErr != nil {
 					err = scanErr
 					break
@@ -2911,12 +2884,12 @@ func TestNextTokenSpans(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			l := New(tt.source)
 			for i, want := range tt.spans {
-				token, err := l.nextToken()
+				token, err := l.NextToken()
 				if err != nil {
 					t.Fatalf("token %d: unexpected error: %v", i, err)
 				}
-				if token.Span != want {
-					t.Errorf("token %d (%s): span = %+v, want %+v", i, token.Kind, token.Span, want)
+				if testTokenSpan(l.source, token) != want {
+					t.Errorf("token %d (%s): span = %+v, want %+v", i, token.Kind, testTokenSpan(l.source, token), want)
 				}
 
 			}

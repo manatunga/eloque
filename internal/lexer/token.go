@@ -105,12 +105,17 @@ type Position = source.Position
 type Span = source.Span
 
 // Token represents a recognized unit of Eloque source code.
-// Kind identifies its lexical category, and Lexeme preserves the
-// original source text. Span records its half-open source range.
+//
+// Start and End are byte offsets into the original source text.
+// They describe a half-open range: Start is inclusive and End is exclusive.
+// Kind identifies the token's lexical category.
+//
+// Lexemes and line/column positions are derived from the source text
+// when needed rather than stored in each token.
 type Token struct {
-	Kind   TokenKind
-	Lexeme string
-	Span   Span
+	Start uint32
+	End   uint32
+	Kind  TokenKind
 }
 
 // lookupIdentifier determines whether a scanned word is a reserved keyword.

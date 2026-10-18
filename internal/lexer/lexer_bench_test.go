@@ -29,7 +29,7 @@ say 0
 		l := New(source)
 
 		for {
-			token, err := l.nextToken()
+			token, err := l.NextToken()
 			if err != nil {
 				b.Fatal(err)
 			}
@@ -61,7 +61,7 @@ say result
 		l := New(source)
 
 		for {
-			token, err := l.nextToken()
+			token, err := l.NextToken()
 			if err != nil {
 				b.Fatal(err)
 			}
@@ -106,7 +106,7 @@ say 0
 				l := New(source)
 
 				for {
-					token, err := l.nextToken()
+					token, err := l.NextToken()
 					if err != nil {
 						b.Fatal(err)
 					}

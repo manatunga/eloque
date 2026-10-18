@@ -2,6 +2,7 @@ package parser
 
 import (
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/manatunga/eloque/internal/ast"
@@ -9,10 +10,71 @@ import (
 	"github.com/manatunga/eloque/internal/source"
 )
 
+// statementLegacyToken preserves the original test fixtures during the
+// compact-token migration. Production tokens are created with source offsets.
+type statementLegacyToken struct {
+	Kind   lexer.TokenKind
+	Lexeme string
+	Span   source.Span
+}
+
+func newStatementLegacyParser(old []statementLegacyToken) *Parser {
+	var text strings.Builder
+	tokens := make([]lexer.Token, 0, len(old))
+	for _, item := range old {
+		// Explicit spans in the original fixtures are 1-based line/column.
+		if item.Span.Start.Line > 0 {
+			for line := 1; line < item.Span.Start.Line; line++ {
+				// Only advance to the requested line if necessary.
+				if strings.Count(text.String(), "\n") < line {
+					text.WriteByte('\n')
+				}
+			}
+			lastNewline := strings.LastIndex(text.String(), "\n")
+			column := text.Len() - lastNewline
+			for column < item.Span.Start.Column {
+				text.WriteByte(' ')
+				column++
+			}
+		} else if text.Len() > 0 && item.Kind != lexer.TokenNewline && item.Kind != lexer.TokenEOF {
+			text.WriteByte(' ')
+		}
+		start := uint32(text.Len())
+		lexeme := item.Lexeme
+		if lexeme == "" {
+			switch item.Kind {
+			case lexer.TokenIdent:
+				lexeme = "x"
+			case lexer.TokenInt:
+				lexeme = "0"
+			case lexer.TokenNewline:
+				lexeme = "\n"
+			case lexer.TokenEOF:
+				lexeme = ""
+			}
+		}
+		if item.Span.Start.Line > 0 && item.Kind == lexer.TokenEOF {
+			// EOF has no source text; its position is represented by start.
+			lexeme = ""
+		}
+		text.WriteString(lexeme)
+		end := uint32(text.Len())
+		if item.Span.Start.Line > 0 && item.Span.End.Line == item.Span.Start.Line && item.Span.End.Column > item.Span.Start.Column {
+			width := uint32(item.Span.End.Column - item.Span.Start.Column)
+			if end < start+width {
+				text.WriteString(strings.Repeat(" ", int(start+width-end)))
+				end = start + width
+			}
+		}
+		tokens = append(tokens, lexer.Token{Kind: item.Kind, Start: start, End: end})
+	}
+	return New(text.String(), tokens)
+}
+
 func TestParseLetStatement(t *testing.T) {
 	tests := []struct {
 		name       string
-		tokens     []lexer.Token
+		tokens     []statementLegacyToken
 		wantName   string
 		wantValue  string
 		wantNext   lexer.TokenKind
@@ -20,7 +82,7 @@ func TestParseLetStatement(t *testing.T) {
 	}{
 		{
 			name: "integer initializer",
-			tokens: []lexer.Token{
+			tokens: []statementLegacyToken{
 				{Kind: lexer.TokenLet, Lexeme: "let"},
 				{Kind: lexer.TokenIdent, Lexeme: "age"},
 				{Kind: lexer.TokenBe, Lexeme: "be"},
@@ -34,7 +96,7 @@ func TestParseLetStatement(t *testing.T) {
 		},
 		{
 			name: "arithmetic initializer",
-			tokens: []lexer.Token{
+			tokens: []statementLegacyToken{
 				{Kind: lexer.TokenLet, Lexeme: "let"},
 				{Kind: lexer.TokenIdent, Lexeme: "result"},
 				{Kind: lexer.TokenBe, Lexeme: "be"},
@@ -52,7 +114,7 @@ func TestParseLetStatement(t *testing.T) {
 		},
 		{
 			name: "newline remains unconsumed",
-			tokens: []lexer.Token{
+			tokens: []statementLegacyToken{
 				{Kind: lexer.TokenLet, Lexeme: "let"},
 				{Kind: lexer.TokenIdent, Lexeme: "count"},
 				{Kind: lexer.TokenBe, Lexeme: "be"},
@@ -69,7 +131,7 @@ func TestParseLetStatement(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			p := New(tt.tokens)
+			p := newStatementLegacyParser(tt.tokens)
 
 			statement, diagnostic := p.parseLetStatement()
 			if diagnostic != nil {
@@ -101,7 +163,7 @@ func TestParseLetStatement(t *testing.T) {
 }
 
 func TestParseLetStatementGroupingSpan(t *testing.T) {
-	p := New([]lexer.Token{
+	p := newStatementLegacyParser([]statementLegacyToken{
 		{
 			Kind: lexer.TokenLet, Lexeme: "let",
 			Span: source.Span{
@@ -180,7 +242,7 @@ func TestParseLetStatementGroupingSpan(t *testing.T) {
 func TestParseLetStatementDiagnostics(t *testing.T) {
 	tests := []struct {
 		name         string
-		tokens       []lexer.Token
+		tokens       []statementLegacyToken
 		wantMessage  string
 		wantExpected []lexer.TokenKind
 		wantActual   lexer.TokenKind
@@ -188,7 +250,7 @@ func TestParseLetStatementDiagnostics(t *testing.T) {
 	}{
 		{
 			name: "missing identifier",
-			tokens: []lexer.Token{
+			tokens: []statementLegacyToken{
 				{Kind: lexer.TokenLet, Lexeme: "let"},
 				{Kind: lexer.TokenBe, Lexeme: "be"},
 				{Kind: lexer.TokenInt, Lexeme: "20"},
@@ -201,7 +263,7 @@ func TestParseLetStatementDiagnostics(t *testing.T) {
 		},
 		{
 			name: "missing be keyword",
-			tokens: []lexer.Token{
+			tokens: []statementLegacyToken{
 				{Kind: lexer.TokenLet, Lexeme: "let"},
 				{Kind: lexer.TokenIdent, Lexeme: "age"},
 				{Kind: lexer.TokenInt, Lexeme: "20"},
@@ -214,7 +276,7 @@ func TestParseLetStatementDiagnostics(t *testing.T) {
 		},
 		{
 			name: "missing initializer at EOF",
-			tokens: []lexer.Token{
+			tokens: []statementLegacyToken{
 				{Kind: lexer.TokenLet, Lexeme: "let"},
 				{Kind: lexer.TokenIdent, Lexeme: "age"},
 				{Kind: lexer.TokenBe, Lexeme: "be"},
@@ -230,7 +292,7 @@ func TestParseLetStatementDiagnostics(t *testing.T) {
 		},
 		{
 			name: "missing initializer at newline",
-			tokens: []lexer.Token{
+			tokens: []statementLegacyToken{
 				{Kind: lexer.TokenLet, Lexeme: "let"},
 				{Kind: lexer.TokenIdent, Lexeme: "age"},
 				{Kind: lexer.TokenBe, Lexeme: "be"},
@@ -249,7 +311,7 @@ func TestParseLetStatementDiagnostics(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			p := New(tt.tokens)
+			p := newStatementLegacyParser(tt.tokens)
 
 			statement, diagnostic := p.parseLetStatement()
 			if diagnostic == nil {
@@ -285,7 +347,7 @@ func TestParseLetStatementDiagnostics(t *testing.T) {
 func TestParseChangeStatement(t *testing.T) {
 	tests := []struct {
 		name       string
-		tokens     []lexer.Token
+		tokens     []statementLegacyToken
 		wantName   string
 		wantValue  string
 		wantNext   lexer.TokenKind
@@ -293,7 +355,7 @@ func TestParseChangeStatement(t *testing.T) {
 	}{
 		{
 			name: "integer assignment",
-			tokens: []lexer.Token{
+			tokens: []statementLegacyToken{
 				{Kind: lexer.TokenChange, Lexeme: "change"},
 				{Kind: lexer.TokenIdent, Lexeme: "age"},
 				{Kind: lexer.TokenTo, Lexeme: "to"},
@@ -307,7 +369,7 @@ func TestParseChangeStatement(t *testing.T) {
 		},
 		{
 			name: "arithmetic reassignment",
-			tokens: []lexer.Token{
+			tokens: []statementLegacyToken{
 				{Kind: lexer.TokenChange, Lexeme: "change"},
 				{Kind: lexer.TokenIdent, Lexeme: "age"},
 				{Kind: lexer.TokenTo, Lexeme: "to"},
@@ -323,7 +385,7 @@ func TestParseChangeStatement(t *testing.T) {
 		},
 		{
 			name: "newline remains unconsumed",
-			tokens: []lexer.Token{
+			tokens: []statementLegacyToken{
 				{Kind: lexer.TokenChange, Lexeme: "change"},
 				{Kind: lexer.TokenIdent, Lexeme: "count"},
 				{Kind: lexer.TokenTo, Lexeme: "to"},
@@ -340,7 +402,7 @@ func TestParseChangeStatement(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			p := New(tt.tokens)
+			p := newStatementLegacyParser(tt.tokens)
 
 			statement, diagnostic := p.parseChangeStatement()
 			if diagnostic != nil {
@@ -372,7 +434,7 @@ func TestParseChangeStatement(t *testing.T) {
 }
 
 func TestParseChangeStatementGroupingSpan(t *testing.T) {
-	p := New([]lexer.Token{
+	p := newStatementLegacyParser([]statementLegacyToken{
 		{
 			Kind: lexer.TokenChange, Lexeme: "change",
 			Span: source.Span{
@@ -460,7 +522,7 @@ func TestParseChangeStatementDiagnostics(t *testing.T) {
 
 	tests := []struct {
 		name         string
-		tokens       []lexer.Token
+		tokens       []statementLegacyToken
 		wantMessage  string
 		wantExpected []lexer.TokenKind
 		wantActual   lexer.TokenKind
@@ -468,7 +530,7 @@ func TestParseChangeStatementDiagnostics(t *testing.T) {
 	}{
 		{
 			name: "missing identifier",
-			tokens: []lexer.Token{
+			tokens: []statementLegacyToken{
 				{Kind: lexer.TokenChange, Lexeme: "change"},
 				{Kind: lexer.TokenTo, Lexeme: "to"},
 				{Kind: lexer.TokenInt, Lexeme: "20"},
@@ -481,7 +543,7 @@ func TestParseChangeStatementDiagnostics(t *testing.T) {
 		},
 		{
 			name: "missing to keyword",
-			tokens: []lexer.Token{
+			tokens: []statementLegacyToken{
 				{Kind: lexer.TokenChange, Lexeme: "change"},
 				{Kind: lexer.TokenIdent, Lexeme: "age"},
 				{Kind: lexer.TokenInt, Lexeme: "20"},
@@ -494,7 +556,7 @@ func TestParseChangeStatementDiagnostics(t *testing.T) {
 		},
 		{
 			name: "missing expression at EOF",
-			tokens: []lexer.Token{
+			tokens: []statementLegacyToken{
 				{Kind: lexer.TokenChange, Lexeme: "change"},
 				{Kind: lexer.TokenIdent, Lexeme: "age"},
 				{Kind: lexer.TokenTo, Lexeme: "to"},
@@ -507,7 +569,7 @@ func TestParseChangeStatementDiagnostics(t *testing.T) {
 		},
 		{
 			name: "missing expression at newline",
-			tokens: []lexer.Token{
+			tokens: []statementLegacyToken{
 				{Kind: lexer.TokenChange, Lexeme: "change"},
 				{Kind: lexer.TokenIdent, Lexeme: "age"},
 				{Kind: lexer.TokenTo, Lexeme: "to"},
@@ -523,7 +585,7 @@ func TestParseChangeStatementDiagnostics(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			p := New(tt.tokens)
+			p := newStatementLegacyParser(tt.tokens)
 
 			statement, diagnostic := p.parseChangeStatement()
 			if diagnostic == nil {
@@ -559,14 +621,14 @@ func TestParseChangeStatementDiagnostics(t *testing.T) {
 func TestParseSayStatement(t *testing.T) {
 	tests := []struct {
 		name       string
-		tokens     []lexer.Token
+		tokens     []statementLegacyToken
 		wantValue  string
 		wantNext   lexer.TokenKind
 		wantCursor int
 	}{
 		{
 			name: "string literal",
-			tokens: []lexer.Token{
+			tokens: []statementLegacyToken{
 				{Kind: lexer.TokenSay, Lexeme: "say"},
 				{Kind: lexer.TokenString, Lexeme: `"Hello, world!"`},
 				{Kind: lexer.TokenEOF},
@@ -577,7 +639,7 @@ func TestParseSayStatement(t *testing.T) {
 		},
 		{
 			name: "identifier",
-			tokens: []lexer.Token{
+			tokens: []statementLegacyToken{
 				{Kind: lexer.TokenSay, Lexeme: "say"},
 				{Kind: lexer.TokenIdent, Lexeme: "age"},
 				{Kind: lexer.TokenEOF},
@@ -588,7 +650,7 @@ func TestParseSayStatement(t *testing.T) {
 		},
 		{
 			name: "arithmetic precedence",
-			tokens: []lexer.Token{
+			tokens: []statementLegacyToken{
 				{Kind: lexer.TokenSay, Lexeme: "say"},
 				{Kind: lexer.TokenInt, Lexeme: "2"},
 				{Kind: lexer.TokenPlus, Lexeme: "+"},
@@ -603,7 +665,7 @@ func TestParseSayStatement(t *testing.T) {
 		},
 		{
 			name: "newline remains unconsumed",
-			tokens: []lexer.Token{
+			tokens: []statementLegacyToken{
 				{Kind: lexer.TokenSay, Lexeme: "say"},
 				{Kind: lexer.TokenIdent, Lexeme: "result"},
 				{Kind: lexer.TokenNewline, Lexeme: "\n"},
@@ -617,7 +679,7 @@ func TestParseSayStatement(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			p := New(tt.tokens)
+			p := newStatementLegacyParser(tt.tokens)
 
 			statement, diagnostic := p.parseSayStatement()
 			if diagnostic != nil {
@@ -645,7 +707,7 @@ func TestParseSayStatement(t *testing.T) {
 }
 
 func TestParseSayStatementGroupingSpan(t *testing.T) {
-	p := New([]lexer.Token{
+	p := newStatementLegacyParser([]statementLegacyToken{
 		{
 			Kind: lexer.TokenSay, Lexeme: "say",
 			Span: source.Span{
@@ -722,13 +784,13 @@ func TestParseSayStatementGroupingSpan(t *testing.T) {
 func TestParseSayStatementDiagnostics(t *testing.T) {
 	tests := []struct {
 		name       string
-		tokens     []lexer.Token
+		tokens     []statementLegacyToken
 		wantActual lexer.TokenKind
 		wantCursor int
 	}{
 		{
 			name: "missing expression at EOF",
-			tokens: []lexer.Token{
+			tokens: []statementLegacyToken{
 				{Kind: lexer.TokenSay, Lexeme: "say"},
 				{Kind: lexer.TokenEOF},
 			},
@@ -737,7 +799,7 @@ func TestParseSayStatementDiagnostics(t *testing.T) {
 		},
 		{
 			name: "missing expression at newline",
-			tokens: []lexer.Token{
+			tokens: []statementLegacyToken{
 				{Kind: lexer.TokenSay, Lexeme: "say"},
 				{Kind: lexer.TokenNewline, Lexeme: "\n"},
 				{Kind: lexer.TokenEOF},
@@ -747,7 +809,7 @@ func TestParseSayStatementDiagnostics(t *testing.T) {
 		},
 		{
 			name: "invalid expression starter",
-			tokens: []lexer.Token{
+			tokens: []statementLegacyToken{
 				{Kind: lexer.TokenSay, Lexeme: "say"},
 				{Kind: lexer.TokenStar, Lexeme: "*"},
 				{Kind: lexer.TokenInt, Lexeme: "5"},
@@ -760,7 +822,7 @@ func TestParseSayStatementDiagnostics(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			p := New(tt.tokens)
+			p := newStatementLegacyParser(tt.tokens)
 
 			statement, diagnostic := p.parseSayStatement()
 			if diagnostic == nil {
@@ -791,12 +853,12 @@ func TestParseSayStatementDiagnostics(t *testing.T) {
 func TestParseStatementDispatch(t *testing.T) {
 	tests := []struct {
 		name     string
-		tokens   []lexer.Token
+		tokens   []statementLegacyToken
 		wantType ast.Statement
 	}{
 		{
 			name: "let declaration",
-			tokens: []lexer.Token{
+			tokens: []statementLegacyToken{
 				{Kind: lexer.TokenLet, Lexeme: "let"},
 				{Kind: lexer.TokenIdent, Lexeme: "age"},
 				{Kind: lexer.TokenBe, Lexeme: "be"},
@@ -807,7 +869,7 @@ func TestParseStatementDispatch(t *testing.T) {
 		},
 		{
 			name: "change assignment",
-			tokens: []lexer.Token{
+			tokens: []statementLegacyToken{
 				{Kind: lexer.TokenChange, Lexeme: "change"},
 				{Kind: lexer.TokenIdent, Lexeme: "age"},
 				{Kind: lexer.TokenTo, Lexeme: "to"},
@@ -818,7 +880,7 @@ func TestParseStatementDispatch(t *testing.T) {
 		},
 		{
 			name: "say output",
-			tokens: []lexer.Token{
+			tokens: []statementLegacyToken{
 				{Kind: lexer.TokenSay, Lexeme: "say"},
 				{Kind: lexer.TokenIdent, Lexeme: "age"},
 				{Kind: lexer.TokenEOF},
@@ -829,7 +891,7 @@ func TestParseStatementDispatch(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			p := New(tt.tokens)
+			p := newStatementLegacyParser(tt.tokens)
 
 			statement, diagnostic := p.parseStatement()
 			if diagnostic != nil {
@@ -872,7 +934,11 @@ func TestParseStatementUnsupportedStarter(t *testing.T) {
 				End:   source.Position{Line: 2, Column: 4},
 			}
 
-			p := New([]lexer.Token{
+			if tt.kind == lexer.TokenNewline {
+				span.End = source.Position{Line: 3, Column: 1}
+			}
+
+			p := newStatementLegacyParser([]statementLegacyToken{
 				{Kind: tt.kind, Span: span},
 				{Kind: lexer.TokenEOF},
 			})

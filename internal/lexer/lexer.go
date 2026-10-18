@@ -1,20 +1,16 @@
 package lexer
 
 // Lexer maintains the state required to tokenize Eloque source code.
-// start marks the beginning of the current token, while current points
-// to the next unread byte. Line and column positions are 1-based.
-// indentStack records active indentation widths in spaces.
-// The first entry is always 0, representing the top-level scope.
-// atLineStart indicates that the lexer has not yet processed
-// the indentation of the current physical source line.
-// pendingTokens stores tokens generated ahead of time, such as multiple
-// DEDENT tokens, until nextToken returns them in their original order.
-// pendingIndex identifies the next unread token in pendingTokens.
-// Once the queue is drained, both the index and slice length are reset,
-// allowing the existing backing array to be reused.
-// parenDepth tracks the number of unmatched opening parentheses.
-// parenPositions records their source positions so an unclosed
-// parenthesis can be reported accurately at EOF.
+//
+// The start and current fields track byte offsets into the source.
+// Line and column positions are 1-based and are maintained for lexical
+// error reporting.
+//
+// indentStack tracks active indentation levels, while pendingTokens
+// queues structural tokens such as INDENT and DEDENT.
+//
+// parenDepth and parenPositions track unmatched opening parentheses.
+// Newlines inside parentheses are ignored during tokenization.
 type Lexer struct {
 	source         string
 	start          int
@@ -30,7 +26,7 @@ type Lexer struct {
 	parenPositions []Position
 }
 
-// New creates a lexer for the provided source text.
+// New creates a lexer for the provided Eloque source text.
 // Scanning begins at byte offset 0, line 1, column 1.
 func New(source string) *Lexer {
 	return &Lexer{
@@ -60,6 +56,12 @@ func (l *Lexer) advance() byte {
 	return currentByte
 }
 
+// isAtEnd reports whether the cursor has reached or passed
+// the end of the source text.
+func (l *Lexer) isAtEnd() bool {
+	return l.current >= len(l.source)
+}
+
 // peek returns the next unread byte without advancing the cursor.
 // It returns 0 when the lexer has reached EOF.
 func (l *Lexer) peek() byte {
@@ -67,12 +69,6 @@ func (l *Lexer) peek() byte {
 		return 0
 	}
 	return l.source[l.current]
-}
-
-// isAtEnd reports whether the cursor has reached or passed
-// the end of the source text.
-func (l *Lexer) isAtEnd() bool {
-	return l.current >= len(l.source)
 }
 
 // isIdentifierStart reports whether a byte can begin an Eloque identifier.
@@ -118,16 +114,12 @@ func (l *Lexer) markTokenStart() {
 	}
 }
 
-// makeToken constructs a token from the source range [start, current).
-// The token retains its original lexeme and saved starting position.
+// makeToken constructs a compact token using source byte offsets.
 func (l *Lexer) makeToken(kind TokenKind) Token {
 	return Token{
-		Kind:   kind,
-		Lexeme: l.source[l.start:l.current],
-		Span: Span{
-			Start: l.startPosition,
-			End:   Position{Line: l.line, Column: l.column},
-		},
+		Start: uint32(l.start),
+		End:   uint32(l.current),
+		Kind:  kind,
 	}
 }
 
@@ -214,13 +206,10 @@ func (l *Lexer) processIndentation(width int) error {
 	currentIndent := l.indentStack[len(l.indentStack)-1]
 	if width > currentIndent {
 		l.indentStack = append(l.indentStack, width)
-		position := Position{Line: l.line, Column: l.column}
 		l.pendingTokens = append(l.pendingTokens, Token{
-			Kind: TokenIndent,
-			Span: Span{
-				Start: position,
-				End:   position,
-			},
+			Start: uint32(l.current),
+			End:   uint32(l.current),
+			Kind:  TokenIndent,
 		})
 	}
 	if width < currentIndent {
@@ -237,13 +226,10 @@ func (l *Lexer) processIndentation(width int) error {
 		dedentCount := len(l.indentStack) - 1 - index
 		l.indentStack = l.indentStack[:index+1]
 		for range dedentCount {
-			position := Position{Line: l.line, Column: l.column}
 			l.pendingTokens = append(l.pendingTokens, Token{
-				Kind: TokenDedent,
-				Span: Span{
-					Start: position,
-					End:   position,
-				},
+				Start: uint32(l.current),
+				End:   uint32(l.current),
+				Kind:  TokenDedent,
 			})
 		}
 	}
@@ -300,14 +286,14 @@ func (l *Lexer) scanString(quote byte) (Token, error) {
 	return l.makeToken(TokenString), nil
 }
 
-// nextToken returns the next token in source order, emitting queued
+// NextToken returns the next token in source order, emitting queued
 // structural tokens before scanning additional source text. At the start
 // of a non-blank line, it measures and processes indentation before
 // scanning ordinary tokens. It skips horizontal spaces, preserves
 // newlines, and validates integer literals. Invalid input returns a
 // zero-value token and a positioned lexical error; callers should stop
 // tokenization when an error occurs.
-func (l *Lexer) nextToken() (Token, error) {
+func (l *Lexer) NextToken() (Token, error) {
 	if token, ok := l.popPendingToken(); ok {
 		return token, nil
 	}
@@ -447,9 +433,4 @@ func (l *Lexer) nextToken() (Token, error) {
 		Position: l.startPosition,
 		Message:  "unexpected character",
 	}
-}
-
-// NextToken returns the next token from the production lexer.
-func (l *Lexer) NextToken() (Token, error) {
-	return l.nextToken()
 }

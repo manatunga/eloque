@@ -8,9 +8,9 @@ import (
 )
 
 func TestExpectSuccess(t *testing.T) {
-	p := New([]lexer.Token{
-		{Kind: lexer.TokenBe, Lexeme: "be"},
-		{Kind: lexer.TokenEOF},
+	p := New("be", []lexer.Token{
+		{Kind: lexer.TokenBe, Start: 0, End: 2},
+		{Kind: lexer.TokenEOF, Start: 2, End: 2},
 	})
 
 	token, diagnostic := p.expect(
@@ -37,13 +37,11 @@ func TestExpectFailure(t *testing.T) {
 		End:   source.Position{Line: 1, Column: 14},
 	}
 
-	p := New([]lexer.Token{
-		{
-			Kind:   lexer.TokenInt,
-			Lexeme: "42",
-			Span:   span,
-		},
-		{Kind: lexer.TokenEOF},
+	sourceText := "           42"
+
+	p := New(sourceText, []lexer.Token{
+		{Kind: lexer.TokenInt, Start: 11, End: 13},
+		{Kind: lexer.TokenEOF, Start: 13, End: 13},
 	})
 
 	token, diagnostic := p.expect(
@@ -88,8 +86,8 @@ func TestExpectUnexpectedEOF(t *testing.T) {
 		End:   source.Position{Line: 2, Column: 1},
 	}
 
-	p := New([]lexer.Token{
-		{Kind: lexer.TokenEOF, Span: eofSpan},
+	p := New("\n", []lexer.Token{
+		{Kind: lexer.TokenEOF, Start: 1, End: 1},
 	})
 
 	_, diagnostic := p.expect(

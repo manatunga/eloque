@@ -8,11 +8,11 @@ import (
 
 func TestParserPeek(t *testing.T) {
 	tokens := []lexer.Token{
-		{Kind: lexer.TokenInt, Lexeme: "42"},
-		{Kind: lexer.TokenEOF},
+		{Kind: lexer.TokenInt, Start: 0, End: 2},
+		{Kind: lexer.TokenEOF, Start: 2, End: 2},
 	}
 
-	p := New(tokens)
+	p := New("42", tokens)
 
 	if got := p.peek(); got.Kind != lexer.TokenInt {
 		t.Errorf("peek() = %v, want INT", got.Kind)
@@ -25,12 +25,12 @@ func TestParserPeek(t *testing.T) {
 
 func TestParserAdvance(t *testing.T) {
 	tokens := []lexer.Token{
-		{Kind: lexer.TokenInt, Lexeme: "42"},
-		{Kind: lexer.TokenNewline},
-		{Kind: lexer.TokenEOF},
+		{Kind: lexer.TokenInt, Start: 0, End: 2},
+		{Kind: lexer.TokenNewline, Start: 2, End: 3},
+		{Kind: lexer.TokenEOF, Start: 3, End: 3},
 	}
 
-	p := New(tokens)
+	p := New("42\n", tokens)
 
 	if got := p.advance(); got.Kind != lexer.TokenInt {
 		t.Errorf("first advance() = %v, want INT", got.Kind)
@@ -54,9 +54,9 @@ func TestParserAdvance(t *testing.T) {
 }
 
 func TestParserCheck(t *testing.T) {
-	p := New([]lexer.Token{
-		{Kind: lexer.TokenLet},
-		{Kind: lexer.TokenEOF},
+	p := New("let", []lexer.Token{
+		{Kind: lexer.TokenLet, Start: 0, End: 3},
+		{Kind: lexer.TokenEOF, Start: 3, End: 3},
 	})
 
 	if !p.check(lexer.TokenLet) {
@@ -73,10 +73,10 @@ func TestParserCheck(t *testing.T) {
 }
 
 func TestParserMatch(t *testing.T) {
-	p := New([]lexer.Token{
-		{Kind: lexer.TokenPlus},
-		{Kind: lexer.TokenInt, Lexeme: "5"},
-		{Kind: lexer.TokenEOF},
+	p := New("+5", []lexer.Token{
+		{Kind: lexer.TokenPlus, Start: 0, End: 1},
+		{Kind: lexer.TokenInt, Start: 1, End: 2},
+		{Kind: lexer.TokenEOF, Start: 2, End: 2},
 	})
 
 	if p.match(lexer.TokenMinus, lexer.TokenStar) {
@@ -105,9 +105,9 @@ func TestParserMatch(t *testing.T) {
 }
 
 func TestParserMatchNoKinds(t *testing.T) {
-	p := New([]lexer.Token{
-		{Kind: lexer.TokenInt, Lexeme: "42"},
-		{Kind: lexer.TokenEOF},
+	p := New("42", []lexer.Token{
+		{Kind: lexer.TokenInt, Start: 0, End: 2},
+		{Kind: lexer.TokenEOF, Start: 2, End: 2},
 	})
 
 	if p.match() {
@@ -120,8 +120,8 @@ func TestParserMatchNoKinds(t *testing.T) {
 }
 
 func TestParserMatchEOF(t *testing.T) {
-	p := New([]lexer.Token{
-		{Kind: lexer.TokenEOF},
+	p := New("", []lexer.Token{
+		{Kind: lexer.TokenEOF, Start: 0, End: 0},
 	})
 
 	if !p.match(lexer.TokenEOF) {

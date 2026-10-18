@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+
+	"github.com/manatunga/eloque/internal/ast"
+	"github.com/manatunga/eloque/internal/lexer"
 )
 
 // frontendWorkload describes a valid Eloque source-generation scenario.
@@ -118,7 +121,36 @@ func buildMixedWorkload(count int) string {
 	return builder.String()
 }
 
-// BenchmarkFrontendWorkloads compares complete lexing and parsing
+var frontendProgramSink *ast.Program
+
+// parseFrontend lexes and parses an Eloque source program.
+func parseFrontend(text string) (*ast.Program, error) {
+	l := lexer.New(text)
+	tokens := make([]lexer.Token, 0, len(text)/4)
+
+	for {
+		token, err := l.NextToken()
+		if err != nil {
+			return nil, err
+		}
+
+		tokens = append(tokens, token)
+
+		if token.Kind == lexer.TokenEOF {
+			break
+		}
+	}
+
+	p := New(text, tokens)
+	program, diagnostic := p.parseProgram()
+	if diagnostic != nil {
+		return nil, fmt.Errorf("syntax error: %v", diagnostic)
+	}
+
+	return program, nil
+}
+
+// BenchmarkFrontendWorkloads measures complete lexing and parsing
 // across different source-code profiles and program sizes.
 func BenchmarkFrontendWorkloads(b *testing.B) {
 	sizes := []int{10, 100, 1000}
@@ -128,14 +160,12 @@ func BenchmarkFrontendWorkloads(b *testing.B) {
 			text := workload.build(size)
 
 			b.Run(
-				fmt.Sprintf("%s/N%d/Full", workload.name, size),
+				fmt.Sprintf("%s/N%d", workload.name, size),
 				func(b *testing.B) {
-					program, diagnostic, err := parseFullFrontend(text)
-					if err != nil || diagnostic != nil {
-						b.Fatalf(
-							"invalid benchmark source: lexical=%v syntax=%v",
-							err, diagnostic,
-						)
+					// Validate the generated source before timing.
+					program, err := parseFrontend(text)
+					if err != nil {
+						b.Fatalf("invalid benchmark source: %v", err)
 					}
 					frontendProgramSink = program
 
@@ -144,41 +174,9 @@ func BenchmarkFrontendWorkloads(b *testing.B) {
 					b.ResetTimer()
 
 					for b.Loop() {
-						program, diagnostic, err := parseFullFrontend(text)
-						if err != nil || diagnostic != nil {
-							b.Fatalf(
-								"frontend failed: lexical=%v syntax=%v",
-								err, diagnostic,
-							)
-						}
-						frontendProgramSink = program
-					}
-				},
-			)
-
-			b.Run(
-				fmt.Sprintf("%s/N%d/Compact", workload.name, size),
-				func(b *testing.B) {
-					program, diagnostic, err := parseCompactFrontend(text)
-					if err != nil || diagnostic != nil {
-						b.Fatalf(
-							"invalid benchmark source: lexical=%v syntax=%v",
-							err, diagnostic,
-						)
-					}
-					frontendProgramSink = program
-
-					b.ReportAllocs()
-					b.SetBytes(int64(len(text)))
-					b.ResetTimer()
-
-					for b.Loop() {
-						program, diagnostic, err := parseCompactFrontend(text)
-						if err != nil || diagnostic != nil {
-							b.Fatalf(
-								"frontend failed: lexical=%v syntax=%v",
-								err, diagnostic,
-							)
+						program, err := parseFrontend(text)
+						if err != nil {
+							b.Fatalf("frontend failed: %v", err)
 						}
 						frontendProgramSink = program
 					}
