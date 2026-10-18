@@ -1,0 +1,30 @@
+goos: linux
+goarch: amd64
+pkg: github.com/manatunga/eloque/internal/lexer
+cpu: Intel(R) Core(TM) Ultra 7 155H
+BenchmarkTokenEmission/Full-22  	1000000000	         0.7924 ns/op	       0 B/op	       0 allocs/op
+BenchmarkTokenEmission/Full-22  	1000000000	         0.8296 ns/op	       0 B/op	       0 allocs/op
+BenchmarkTokenEmission/Full-22  	1000000000	         0.8068 ns/op	       0 B/op	       0 allocs/op
+BenchmarkTokenEmission/Compact-22         	1000000000	         0.7429 ns/op	       0 B/op	       0 allocs/op
+BenchmarkTokenEmission/Compact-22         	1000000000	         0.7695 ns/op	       0 B/op	       0 allocs/op
+BenchmarkTokenEmission/Compact-22         	1000000000	         0.7951 ns/op	       0 B/op	       0 allocs/op
+BenchmarkNextToken-22                     	 1969412	       608.0 ns/op	 226.97 MB/s	      48 B/op	       2 allocs/op
+BenchmarkNextToken-22                     	 1907419	       614.6 ns/op	 224.53 MB/s	      48 B/op	       2 allocs/op
+BenchmarkNextToken-22                     	 2075736	       586.5 ns/op	 235.28 MB/s	      48 B/op	       2 allocs/op
+BenchmarkNextTokenFlat-22                 	 2871361	       421.5 ns/op	 192.17 MB/s	      32 B/op	       1 allocs/op
+BenchmarkNextTokenFlat-22                 	 2895032	       415.2 ns/op	 195.07 MB/s	      32 B/op	       1 allocs/op
+BenchmarkNextTokenFlat-22                 	 2959749	       406.0 ns/op	 199.52 MB/s	      32 B/op	       1 allocs/op
+BenchmarkNextTokenScaling/x1-22           	 2069727	       603.8 ns/op	 228.54 MB/s	      48 B/op	       2 allocs/op
+BenchmarkNextTokenScaling/x1-22           	 1926649	       625.7 ns/op	 220.54 MB/s	      48 B/op	       2 allocs/op
+BenchmarkNextTokenScaling/x1-22           	 2015031	       624.2 ns/op	 221.09 MB/s	      48 B/op	       2 allocs/op
+BenchmarkNextTokenScaling/x10-22          	  220454	      5845 ns/op	 236.12 MB/s	      48 B/op	       2 allocs/op
+BenchmarkNextTokenScaling/x10-22          	  197858	      5907 ns/op	 233.61 MB/s	      48 B/op	       2 allocs/op
+BenchmarkNextTokenScaling/x10-22          	  200572	      5991 ns/op	 230.34 MB/s	      48 B/op	       2 allocs/op
+BenchmarkNextTokenScaling/x100-22         	   20524	     58986 ns/op	 233.96 MB/s	      48 B/op	       2 allocs/op
+BenchmarkNextTokenScaling/x100-22         	   20600	     56915 ns/op	 242.47 MB/s	      48 B/op	       2 allocs/op
+BenchmarkNextTokenScaling/x100-22         	   21100	     56438 ns/op	 244.52 MB/s	      48 B/op	       2 allocs/op
+BenchmarkNextTokenScaling/x1000-22        	    2022	    585041 ns/op	 235.88 MB/s	      48 B/op	       2 allocs/op
+BenchmarkNextTokenScaling/x1000-22        	    2124	    584770 ns/op	 235.99 MB/s	      48 B/op	       2 allocs/op
+BenchmarkNextTokenScaling/x1000-22        	    1959	    567181 ns/op	 243.31 MB/s	      48 B/op	       2 allocs/op
+PASS
+ok  	github.com/manatunga/eloque/internal/lexer	26.458s

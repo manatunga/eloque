@@ -1,0 +1,15 @@
+Declarations   N=10    tokenize=      12,828 ns/op frontend=      19,122 ns/op
+Declarations   N=100   tokenize=     114,520 ns/op frontend=     188,260 ns/op
+Declarations   N=1000  tokenize=   1,331,427 ns/op frontend=   2,198,585 ns/op
+Expressions    N=10    tokenize=      55,862 ns/op frontend=      76,713 ns/op
+Expressions    N=100   tokenize=     498,176 ns/op frontend=     815,728 ns/op
+Expressions    N=1000  tokenize=   5,756,425 ns/op frontend=   8,919,695 ns/op
+Strings        N=10    tokenize=      18,518 ns/op frontend=      33,310 ns/op
+Strings        N=100   tokenize=     169,515 ns/op frontend=     314,018 ns/op
+Strings        N=1000  tokenize=   1,671,566 ns/op frontend=   3,654,962 ns/op
+Comments       N=10    tokenize=      21,404 ns/op frontend=      22,142 ns/op
+Comments       N=100   tokenize=     221,616 ns/op frontend=     197,032 ns/op
+Comments       N=1000  tokenize=   2,139,957 ns/op frontend=   2,215,048 ns/op
+Mixed          N=10    tokenize=      90,529 ns/op frontend=     132,294 ns/op
+Mixed          N=100   tokenize=     884,676 ns/op frontend=   1,553,773 ns/op
+Mixed          N=1000  tokenize=  12,071,538 ns/op frontend=  19,495,402 ns/op
