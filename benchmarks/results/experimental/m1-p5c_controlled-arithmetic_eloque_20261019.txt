@@ -1,0 +1,26 @@
+goos: linux
+goarch: amd64
+pkg: github.com/manatunga/eloque/internal/parser
+cpu: Intel(R) Core(TM) Ultra 7 155H
+BenchmarkControlledEloqueFrontend/N10-22         	  134600	      8929 ns/op	  50.40 MB/s	    8808 B/op	     144 allocs/op
+BenchmarkControlledEloqueFrontend/N10-22         	  124890	      9694 ns/op	  46.42 MB/s	    8808 B/op	     144 allocs/op
+BenchmarkControlledEloqueFrontend/N10-22         	  123495	      9682 ns/op	  46.48 MB/s	    8808 B/op	     144 allocs/op
+BenchmarkControlledEloqueFrontend/N10-22         	  124648	      9721 ns/op	  46.29 MB/s	    8808 B/op	     144 allocs/op
+BenchmarkControlledEloqueFrontend/N10-22         	  121014	      9820 ns/op	  45.83 MB/s	    8808 B/op	     144 allocs/op
+BenchmarkControlledEloqueFrontend/N100-22        	   12946	     91929 ns/op	  51.89 MB/s	   83693 B/op	    1320 allocs/op
+BenchmarkControlledEloqueFrontend/N100-22        	   13078	     92334 ns/op	  51.66 MB/s	   83694 B/op	    1320 allocs/op
+BenchmarkControlledEloqueFrontend/N100-22        	   12970	     93035 ns/op	  51.27 MB/s	   83694 B/op	    1320 allocs/op
+BenchmarkControlledEloqueFrontend/N100-22        	   13052	     92681 ns/op	  51.47 MB/s	   83694 B/op	    1320 allocs/op
+BenchmarkControlledEloqueFrontend/N100-22        	   13083	     91780 ns/op	  51.97 MB/s	   83695 B/op	    1320 allocs/op
+BenchmarkControlledEloqueFrontend/N1000-22       	    1177	   1028864 ns/op	  49.25 MB/s	  828809 B/op	   13027 allocs/op
+BenchmarkControlledEloqueFrontend/N1000-22       	    1104	   1057040 ns/op	  47.94 MB/s	  828797 B/op	   13027 allocs/op
+BenchmarkControlledEloqueFrontend/N1000-22       	    1120	   1069424 ns/op	  47.38 MB/s	  828797 B/op	   13027 allocs/op
+BenchmarkControlledEloqueFrontend/N1000-22       	    1120	   1070561 ns/op	  47.33 MB/s	  828796 B/op	   13027 allocs/op
+BenchmarkControlledEloqueFrontend/N1000-22       	    1136	   1077529 ns/op	  47.02 MB/s	  828797 B/op	   13027 allocs/op
+BenchmarkControlledEloqueFrontend/N10000-22      	     122	   9794501 ns/op	  54.79 MB/s	 8704033 B/op	  130041 allocs/op
+BenchmarkControlledEloqueFrontend/N10000-22      	     121	   9805602 ns/op	  54.73 MB/s	 8703990 B/op	  130041 allocs/op
+BenchmarkControlledEloqueFrontend/N10000-22      	     123	   9687106 ns/op	  55.40 MB/s	 8703986 B/op	  130041 allocs/op
+BenchmarkControlledEloqueFrontend/N10000-22      	     122	   9774148 ns/op	  54.91 MB/s	 8703990 B/op	  130041 allocs/op
+BenchmarkControlledEloqueFrontend/N10000-22      	     124	   9491070 ns/op	  56.54 MB/s	 8704032 B/op	  130041 allocs/op
+PASS
+ok  	github.com/manatunga/eloque/internal/parser	24.064s

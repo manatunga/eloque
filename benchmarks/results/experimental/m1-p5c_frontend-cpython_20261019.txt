@@ -1,0 +1,24 @@
+Python implementation: CPython
+Python version: 3.15.0rc2
+Python compiler: Clang 22.1.3
+
+Declarations   N=10    bytes=120      tokenize=      12,542 ns/op frontend=      17,982 ns/op
+Declarations   N=100   bytes=1380     tokenize=     123,220 ns/op frontend=     177,211 ns/op
+Declarations   N=1000  bytes=15780    tokenize=   1,272,327 ns/op frontend=   2,279,855 ns/op
+Declarations   N=10000 bytes=177780   tokenize=  17,739,713 ns/op frontend=  26,246,373 ns/op
+Expressions    N=10    bytes=350      tokenize=      55,345 ns/op frontend=      72,902 ns/op
+Expressions    N=100   bytes=3680     tokenize=     537,041 ns/op frontend=     685,598 ns/op
+Expressions    N=1000  bytes=38780    tokenize=   5,217,506 ns/op frontend=   7,111,395 ns/op
+Expressions    N=10000 bytes=407780   tokenize=  80,768,204 ns/op frontend= 121,289,103 ns/op
+Strings        N=10    bytes=640      tokenize=      19,251 ns/op frontend=      33,073 ns/op
+Strings        N=100   bytes=6490     tokenize=     178,251 ns/op frontend=     312,142 ns/op
+Strings        N=1000  bytes=65890    tokenize=   1,888,023 ns/op frontend=   2,895,679 ns/op
+Strings        N=10000 bytes=668890   tokenize=  22,184,191 ns/op frontend=  42,250,880 ns/op
+Comments       N=10    bytes=750      tokenize=      22,672 ns/op frontend=      20,110 ns/op
+Comments       N=100   bytes=7770     tokenize=     198,185 ns/op frontend=     203,991 ns/op
+Comments       N=1000  bytes=80670    tokenize=   2,304,660 ns/op frontend=   2,101,228 ns/op
+Comments       N=10000 bytes=836670   tokenize=  30,390,510 ns/op frontend=  28,506,282 ns/op
+Mixed          N=10    bytes=1080     tokenize=      92,614 ns/op frontend=     137,767 ns/op
+Mixed          N=100   bytes=11430    tokenize=     960,924 ns/op frontend=   1,361,417 ns/op
+Mixed          N=1000  bytes=121230   tokenize=  10,856,249 ns/op frontend=  15,174,173 ns/op
+Mixed          N=10000 bytes=1282230  tokenize= 141,551,710 ns/op frontend= 233,672,714 ns/op

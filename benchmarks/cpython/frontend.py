@@ -4,11 +4,12 @@ Benchmark CPython tokenization and AST parsing across frontend workloads.
 
 import ast
 import io
+import platform
 from statistics import median
 import tokenize
 from timeit import Timer
 
-SIZES = (10, 100, 1000)
+SIZES = (10, 100, 1000, 10000)
 REPEATS = 5
 
 
@@ -64,6 +65,11 @@ def benchmark(function, source: str) -> float:
     return median(timings) / iterations
 
 def main() -> None:
+    print(f"Python implementation: {platform.python_implementation()}")
+    print(f"Python version: {platform.python_version()}")
+    print(f"Python compiler: {platform.python_compiler()}")
+    print()
+
     workloads = {
         "Declarations": build_declarations,
         "Expressions": build_expressions,
@@ -82,6 +88,7 @@ def main() -> None:
             print(
                 f"{name:<14} "
                 f"N={size:<5} "
+                f"bytes={len(source.encode('utf-8')):<8} "
                 f"tokenize={token_ns:>12,.0f} ns/op "
                 f"frontend={frontend_ns:>12,.0f} ns/op"
             )

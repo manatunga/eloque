@@ -176,6 +176,36 @@ At each milestone, inspect items whose triggers have arrived. Record the decisio
 - **Criterion:** Coherent static checks and understandable errors.
 - **Evidence:** Pending.
 
+### TB-023 — Lexer–parser token delivery strategy
+
+- **Status:** Resolved for the M1 frontend.
+- **Baseline:** Eagerly buffered lexer tokens supplied to the parser.
+- **Trigger:** M1-P5-A lexer–parser integration experiments.
+- **Alternatives evaluated:** Complete token buffering, direct pull streaming,
+and bounded two-token lookahead.
+- **Decision:** Use direct pull streaming for the canonical frontend.
+The parser requests tokens incrementally through a token-source
+abstraction. Buffered delivery remains available for compatibility
+tests and comparative benchmarks.
+- **Rationale:** The implemented grammar does not require two-token
+lookahead. Direct streaming avoids full token-buffer allocation and
+avoids maintaining an unnecessary lookahead window.
+- **Evidence:** M1-P5-A token-delivery and complete-frontend
+experiments, followed by M1-P5-B production integration.
+In the 20-case integrated buffered-versus-streaming comparison,
+direct streaming was faster in 19 cases and allocated fewer
+bytes in all 20.
+Production integration and diagnostic regression tests passed.
+- **Criterion:** Preserve AST equivalence, lexical-error propagation,
+EOF behavior, and performance across representative workloads.
+- **Next action:** Retain buffered-versus-streaming regression
+benchmarks and repeat them when significant grammar changes
+are introduced. Reconsider bounded lookahead only if a concrete
+grammar requirement or measured performance regression justifies it.
+- **Next review trigger:** A future grammar feature demonstrably
+requires additional token lookahead, or profiling reveals a
+meaningful regression attributable to token delivery.
+
 ## Tooling, agents and execution safety
 
 ### TB-019 — Structured diagnostics

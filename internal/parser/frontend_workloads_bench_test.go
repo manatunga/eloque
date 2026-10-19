@@ -150,9 +150,9 @@ func parseFrontend(text string) (*ast.Program, error) {
 	return program, nil
 }
 
-// BenchmarkFrontendWorkloads measures complete lexing and parsing
-// across different source-code profiles and program sizes.
-func BenchmarkFrontendWorkloads(b *testing.B) {
+// BenchmarkBufferedFrontendWorkloads measures complete lexing
+// and parsing across different source-code profiles and program sizes.
+func BenchmarkBufferedFrontendWorkloads(b *testing.B) {
 	sizes := []int{10, 100, 1000}
 
 	for _, workload := range frontendWorkloads {
@@ -175,6 +175,44 @@ func BenchmarkFrontendWorkloads(b *testing.B) {
 
 					for b.Loop() {
 						program, err := parseFrontend(text)
+						if err != nil {
+							b.Fatalf("frontend failed: %v", err)
+						}
+						frontendProgramSink = program
+					}
+				},
+			)
+		}
+	}
+}
+
+// BenchmarkStreamingFrontendWorkloads measures the production
+// streaming frontend across representative Eloque programs.
+//
+// Each iteration includes incremental lexical analysis, parsing,
+// and AST construction through the canonical Parse entry point.
+func BenchmarkStreamingFrontendWorkloads(b *testing.B) {
+	sizes := []int{10, 100, 1000}
+
+	for _, workload := range frontendWorkloads {
+		for _, size := range sizes {
+			text := workload.build(size)
+
+			b.Run(
+				fmt.Sprintf("%s/N%d", workload.name, size),
+				func(b *testing.B) {
+					program, err := Parse(text)
+					if err != nil {
+						b.Fatalf("invalid benchmark source: %v", err)
+					}
+					frontendProgramSink = program
+
+					b.ReportAllocs()
+					b.SetBytes(int64(len(text)))
+					b.ResetTimer()
+
+					for b.Loop() {
+						program, err := Parse(text)
 						if err != nil {
 							b.Fatalf("frontend failed: %v", err)
 						}

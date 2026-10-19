@@ -151,8 +151,8 @@ func TestParseLetStatement(t *testing.T) {
 				t.Errorf("initializer tree = %q, want %q", got, tt.wantValue)
 			}
 
-			if p.current != tt.wantCursor {
-				t.Errorf("current = %d, want %d", p.current, tt.wantCursor)
+			if bufferedCursor(p) != tt.wantCursor {
+				t.Errorf("current = %d, want %d", bufferedCursor(p), tt.wantCursor)
 			}
 
 			if p.peek().Kind != tt.wantNext {
@@ -337,8 +337,8 @@ func TestParseLetStatementDiagnostics(t *testing.T) {
 					diagnostic.Actual, tt.wantActual)
 			}
 
-			if p.current != tt.wantCursor {
-				t.Errorf("current = %d, want %d", p.current, tt.wantCursor)
+			if bufferedCursor(p) != tt.wantCursor {
+				t.Errorf("current = %d, want %d", bufferedCursor(p), tt.wantCursor)
 			}
 		})
 	}
@@ -422,8 +422,8 @@ func TestParseChangeStatement(t *testing.T) {
 				t.Errorf("assignment expression = %q, want %q", got, tt.wantValue)
 			}
 
-			if p.current != tt.wantCursor {
-				t.Errorf("current = %d, want %d", p.current, tt.wantCursor)
+			if bufferedCursor(p) != tt.wantCursor {
+				t.Errorf("current = %d, want %d", bufferedCursor(p), tt.wantCursor)
 			}
 
 			if p.peek().Kind != tt.wantNext {
@@ -611,8 +611,8 @@ func TestParseChangeStatementDiagnostics(t *testing.T) {
 					diagnostic.Actual, tt.wantActual)
 			}
 
-			if p.current != tt.wantCursor {
-				t.Errorf("current = %d, want %d", p.current, tt.wantCursor)
+			if bufferedCursor(p) != tt.wantCursor {
+				t.Errorf("current = %d, want %d", bufferedCursor(p), tt.wantCursor)
 			}
 		})
 	}
@@ -695,8 +695,8 @@ func TestParseSayStatement(t *testing.T) {
 				t.Errorf("expression = %q, want %q", got, tt.wantValue)
 			}
 
-			if p.current != tt.wantCursor {
-				t.Errorf("current = %d, want %d", p.current, tt.wantCursor)
+			if bufferedCursor(p) != tt.wantCursor {
+				t.Errorf("current = %d, want %d", bufferedCursor(p), tt.wantCursor)
 			}
 
 			if p.peek().Kind != tt.wantNext {
@@ -843,8 +843,8 @@ func TestParseSayStatementDiagnostics(t *testing.T) {
 					diagnostic.Actual, tt.wantActual)
 			}
 
-			if p.current != tt.wantCursor {
-				t.Errorf("current = %d, want %d", p.current, tt.wantCursor)
+			if bufferedCursor(p) != tt.wantCursor {
+				t.Errorf("current = %d, want %d", bufferedCursor(p), tt.wantCursor)
 			}
 		})
 	}
@@ -970,8 +970,8 @@ func TestParseStatementUnsupportedStarter(t *testing.T) {
 					diagnostic.Actual, tt.kind)
 			}
 
-			if p.current != 0 {
-				t.Errorf("current = %d, want 0", p.current)
+			if bufferedCursor(p) != 0 {
+				t.Errorf("current = %d, want 0", bufferedCursor(p))
 			}
 		})
 	}

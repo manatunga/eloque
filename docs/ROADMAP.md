@@ -99,13 +99,65 @@ The order may change where dependencies demand it. In particular, implement enou
 - Passed `go test ./...`, `go test -race ./...`, and `go vet ./...`.
 - Preserved the canonical frontend implementation without production-code changes.
 
-**Current checkpoint:** M1-P5 — Frontend integration and milestone closure.
+**M1-P5-A — Lexer-to-parser token delivery architecture: Completed**
 
-**Remaining M1 checkpoint**
+- Evaluated eager token buffering, direct pull-based streaming, and bounded two-token lookahead.
+- Completed three performance experiments covering token delivery, integrated lexer/parser/AST processing, and lookahead overhead.
+- Selected direct streaming as the preferred production token-delivery architecture.
+- Verified AST equivalence across representative frontend workloads.
+- Passed targeted diagnostic regression tests, including source-position and lexical/syntax error interaction cases.
+- Recorded that the integrated streaming frontend was faster in 19 of 20 workload-size comparisons and allocated fewer bytes in all 20.
+- Deferred bounded lookahead until a concrete grammar requirement justifies it.
+- Retained eager buffering as a comparison and regression-testing implementation.
+- Production integration was subsequently completed in M1-P5-B,
+followed by cross-language benchmark validation in M1-P5-C.
 
-- **M1-P5 — Frontend integration and milestone closure:** Complete production lexer–parser integration, end-to-end tests, performance regression review, documentation, and release audit.
+**M1-P5-B — Production frontend integration: Completed**
 
-M1 remains in progress. The canonical lexer and parser support the implemented arithmetic, literal, binding, assignment, and output syntax, with complete-program AST construction and structured fail-fast diagnostics. M1-P4 established broader source-based syntax conformance using lexer-generated tokens. Integrated frontend benchmarks already exercise lexing through AST construction, but a formal production integration entry point and final end-to-end validation remain scheduled for M1-P5. Eloque cannot yet execute source programs.
+- Established `Parse(sourceText)` as the canonical frontend entry point.
+- Integrated direct pull-based token streaming through `tokenSource`.
+- Removed the parser's redundant independent token cursor.
+- Retained buffered parsing for regression testing and benchmarks.
+- Verified AST construction, lexical-error propagation, source
+  positions, EOF handling, and syntax diagnostics.
+- Passed integration tests, race detection, and static analysis.
+
+**M1-P5-C — Cross-language frontend benchmark validation: Completed**
+
+- Benchmarked Eloque's production streaming frontend against Go's
+  `go/parser.ParseFile` and CPython 3.15.0rc2 `ast.parse()`.
+- Evaluated five language-native workloads across four input sizes:
+  10, 100, 1,000, and 10,000.
+- Added controlled arithmetic benchmarks to reduce differences in
+  expression complexity across the three languages.
+- Observed the lowest frontend latency for Eloque in all measured
+  workload-size comparisons.
+- Recorded limitations involving grammar coverage, AST structure,
+  source sizes, and benchmark methodology.
+- Preserved benchmark results for future performance comparisons.
+
+**Milestone 1 — Lexer, Parser, and Frontend: Completed**
+
+M1-P1 through M1-P5 have been completed, establishing Eloque's
+foundational source-processing frontend.
+
+The canonical `Parse(sourceText)` entry point integrates incremental
+lexical analysis, direct pull-based token streaming, parsing, and
+complete-program AST construction.
+
+The frontend supports the implemented arithmetic, literal, binding,
+assignment, and output syntax, with source-aware diagnostics and
+fail-fast error handling.
+
+M1-P5 validated the production integration through end-to-end tests,
+race detection, static analysis, buffered-versus-streaming performance
+comparisons, and cross-language frontend benchmarks against Go and
+CPython 3.15.
+
+**Next milestone:** M2 — Refer to the milestone definition below.
+
+Eloque can parse supported source programs into an AST but cannot yet
+execute them.
 
 ## Public release planning
 

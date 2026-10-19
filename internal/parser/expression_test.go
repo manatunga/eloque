@@ -35,8 +35,8 @@ func TestParsePrimaryInteger(t *testing.T) {
 	if result.extent != span {
 		t.Errorf("extent = %+v, want %+v", result.extent, span)
 	}
-	if p.current != 1 {
-		t.Errorf("current = %d, want 1", p.current)
+	if bufferedCursor(p) != 1 {
+		t.Errorf("current = %d, want 1", bufferedCursor(p))
 	}
 }
 func TestParsePrimaryIdentifier(t *testing.T) {
@@ -65,8 +65,8 @@ func TestParsePrimaryIdentifier(t *testing.T) {
 	if result.extent != span {
 		t.Errorf("extent = %+v, want %+v", result.extent, span)
 	}
-	if p.current != 1 {
-		t.Errorf("current = %d, want 1", p.current)
+	if bufferedCursor(p) != 1 {
+		t.Errorf("current = %d, want 1", bufferedCursor(p))
 	}
 }
 func TestParsePrimaryString(t *testing.T) {
@@ -155,8 +155,8 @@ func TestParsePrimaryString(t *testing.T) {
 			if result.extent != span {
 				t.Errorf("extent = %+v, want %+v", result.extent, span)
 			}
-			if p.current != 1 {
-				t.Errorf("current = %d, want 1", p.current)
+			if bufferedCursor(p) != 1 {
+				t.Errorf("current = %d, want 1", bufferedCursor(p))
 			}
 		})
 	}
@@ -269,8 +269,8 @@ func TestParsePrimaryUnexpectedToken(t *testing.T) {
 			if *diagnostic.Actual != tt.kind {
 				t.Errorf("Actual = %v, want %v", *diagnostic.Actual, tt.kind)
 			}
-			if p.current != 0 {
-				t.Errorf("current = %d, want 0", p.current)
+			if bufferedCursor(p) != 0 {
+				t.Errorf("current = %d, want 0", bufferedCursor(p))
 			}
 		})
 	}
@@ -359,8 +359,8 @@ func TestParsePrimaryGrouping(t *testing.T) {
 			if result.extent != wantOuter {
 				t.Errorf("extent = %+v, want %+v", result.extent, wantOuter)
 			}
-			if p.current != len(tokens)-1 {
-				t.Errorf("current = %d, want %d", p.current, len(tokens)-1)
+			if bufferedCursor(p) != len(tokens)-1 {
+				t.Errorf("current = %d, want %d", bufferedCursor(p), len(tokens)-1)
 			}
 		})
 	}
@@ -494,8 +494,8 @@ func TestParseBinaryArithmetic(t *testing.T) {
 			if right.Value != "3" {
 				t.Errorf("Right.Value = %q, want %q", right.Value, "3")
 			}
-			if p.current != 3 {
-				t.Errorf("current = %d, want 3", p.current)
+			if bufferedCursor(p) != 3 {
+				t.Errorf("current = %d, want 3", bufferedCursor(p))
 			}
 		})
 	}
@@ -756,8 +756,8 @@ func TestParseBinaryMinimumBindingPower(t *testing.T) {
 	if integer.Value != "20" {
 		t.Errorf("Value = %q, want %q", integer.Value, "20")
 	}
-	if p.current != 1 {
-		t.Errorf("current = %d, want 1", p.current)
+	if bufferedCursor(p) != 1 {
+		t.Errorf("current = %d, want 1", bufferedCursor(p))
 	}
 	if p.peek().Kind != lexer.TokenPlus {
 		t.Errorf("next token = %v, want PLUS", p.peek().Kind)
@@ -798,8 +798,8 @@ func TestParseUnaryArithmetic(t *testing.T) {
 			if operand.Value != tt.value {
 				t.Errorf("Operand.Value = %q, want %q", operand.Value, tt.value)
 			}
-			if p.current != 2 {
-				t.Errorf("current = %d, want 2", p.current)
+			if bufferedCursor(p) != 2 {
+				t.Errorf("current = %d, want 2", bufferedCursor(p))
 			}
 		})
 	}
@@ -1061,8 +1061,8 @@ func TestParseExponentiation(t *testing.T) {
 	if !ok || right.Value != "3" {
 		t.Errorf("right operand = %#v, want integer 3", root.Right)
 	}
-	if p.current != 3 {
-		t.Errorf("current = %d, want 3", p.current)
+	if bufferedCursor(p) != 3 {
+		t.Errorf("current = %d, want 3", bufferedCursor(p))
 	}
 }
 func TestParseExponentiationAssociativity(t *testing.T) {
@@ -1514,8 +1514,8 @@ func TestParseExpressionBoundaries(t *testing.T) {
 						binary.Operator, tt.wantRootKind)
 				}
 			}
-			if p.current != tt.wantCurrent {
-				t.Errorf("current = %d, want %d", p.current, tt.wantCurrent)
+			if bufferedCursor(p) != tt.wantCurrent {
+				t.Errorf("current = %d, want %d", bufferedCursor(p), tt.wantCurrent)
 			}
 			if p.peek().Kind != tt.wantNextKind {
 				t.Errorf("next token = %v, want %v",

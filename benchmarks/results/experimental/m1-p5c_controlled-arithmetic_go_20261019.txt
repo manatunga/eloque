@@ -1,0 +1,26 @@
+goos: linux
+goarch: amd64
+pkg: github.com/manatunga/eloque/benchmarks/go
+cpu: Intel(R) Core(TM) Ultra 7 155H
+BenchmarkControlledGoFrontend/N10-22         	   68228	     18856 ns/op	  23.81 MB/s	   12249 B/op	     253 allocs/op
+BenchmarkControlledGoFrontend/N10-22         	   60230	     19962 ns/op	  22.49 MB/s	   12249 B/op	     253 allocs/op
+BenchmarkControlledGoFrontend/N10-22         	   63325	     18676 ns/op	  24.04 MB/s	   12249 B/op	     253 allocs/op
+BenchmarkControlledGoFrontend/N10-22         	   69289	     18528 ns/op	  24.23 MB/s	   12249 B/op	     253 allocs/op
+BenchmarkControlledGoFrontend/N10-22         	   63627	     19016 ns/op	  23.61 MB/s	   12249 B/op	     253 allocs/op
+BenchmarkControlledGoFrontend/N100-22        	    6555	    220252 ns/op	  20.02 MB/s	  107838 B/op	    2335 allocs/op
+BenchmarkControlledGoFrontend/N100-22        	    6250	    192581 ns/op	  22.89 MB/s	  107837 B/op	    2335 allocs/op
+BenchmarkControlledGoFrontend/N100-22        	    7650	    273498 ns/op	  16.12 MB/s	  107837 B/op	    2335 allocs/op
+BenchmarkControlledGoFrontend/N100-22        	    4057	    327929 ns/op	  13.44 MB/s	  107837 B/op	    2335 allocs/op
+BenchmarkControlledGoFrontend/N100-22        	    4359	    298363 ns/op	  14.78 MB/s	  107839 B/op	    2335 allocs/op
+BenchmarkControlledGoFrontend/N1000-22       	     352	   3417742 ns/op	  13.67 MB/s	 1100124 B/op	   23053 allocs/op
+BenchmarkControlledGoFrontend/N1000-22       	     384	   2895810 ns/op	  16.13 MB/s	 1100095 B/op	   23053 allocs/op
+BenchmarkControlledGoFrontend/N1000-22       	     625	   1912796 ns/op	  24.42 MB/s	 1100089 B/op	   23053 allocs/op
+BenchmarkControlledGoFrontend/N1000-22       	     502	   2349841 ns/op	  19.88 MB/s	 1100103 B/op	   23053 allocs/op
+BenchmarkControlledGoFrontend/N1000-22       	     657	   1777099 ns/op	  26.28 MB/s	 1100092 B/op	   23053 allocs/op
+BenchmarkControlledGoFrontend/N10000-22      	      67	  17808946 ns/op	  27.89 MB/s	11246686 B/op	  230126 allocs/op
+BenchmarkControlledGoFrontend/N10000-22      	      88	  17477415 ns/op	  28.42 MB/s	11246485 B/op	  230126 allocs/op
+BenchmarkControlledGoFrontend/N10000-22      	      67	  18661070 ns/op	  26.62 MB/s	11246372 B/op	  230126 allocs/op
+BenchmarkControlledGoFrontend/N10000-22      	      62	  18366542 ns/op	  27.04 MB/s	11246374 B/op	  230126 allocs/op
+BenchmarkControlledGoFrontend/N10000-22      	      68	  17274661 ns/op	  28.75 MB/s	11246365 B/op	  230126 allocs/op
+PASS
+ok  	github.com/manatunga/eloque/benchmarks/go	25.861s

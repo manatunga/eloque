@@ -6,7 +6,7 @@
 
 **Eloque** is a proposed general-purpose programming language with structured, conversational-English-inspired syntax and precise, statically checked semantics. It is intended to be approachable for beginners while providing predictable diagnostics and tooling for AI-assisted development.
 
-> **Status:** Early development — Milestone 1 (Frontend foundations) in progress. The lexer, initial AST structures, parser infrastructure, Pratt arithmetic expression parser, and initial statement and program parsers are implemented and tested. The parser supports `let` declarations, `change` assignments, and `say` statements containing the currently supported arithmetic expressions, identifiers, and literals. It constructs complete program ASTs from prepared token streams, with source spans and fail-fast syntax diagnostics. Lexer–parser integration and full frontend conformance remain pending. Eloque cannot yet execute source programs. The working name, `.elq` extension, and CLI name remain provisional. The examples below are **illustrative, not executable**.
+> **Status:** Early development — Milestone 1 (Frontend foundations completed. Eloque has a working lexer and parser with a canonical `Parse(sourceText)` entry point, direct pull-based token streaming complete-program AST construction, source spans, and structured fail-fast diagnostics. The implemented syntax includes arithmetic expressions, identifiers, literals, `let` declarations, `change` assignments, and `say` statements. Frontend integration, syntax conformance testing, and performance validation are complete. Eloque cannot yet execute source programs. The examples below are **illustrative, not executable**.
 
 ## A glimpse of Eloque
 
@@ -57,7 +57,7 @@ This example illustrates the intended language, including features that will arr
 
 ## Planned implementation
 
-Eloque is planned to be implemented in **Go**, with the following initial pipeline:
+Eloque is being implemented in **Go**. Its lexer, parser, and AST construction stages are operational; the remaining stages are planned:
 
 ```text
 .elq source
@@ -71,13 +71,18 @@ Bytecode compiler → Stack-based VM
 Program execution
 ```
 
-The first implementation milestones will establish the Go project, lexer, parser and source diagnostics, followed by a **small statically checked executable subset**. More advanced features such as collections, custom types, modules, exceptions and concurrency will be introduced incrementally.
+The initial milestones established the Go project, lexer, parser, AST construction, and source diagnostics.
+
+The next development phase will introduce the components needed for a **small statically checked executable subset**, including name resolution, type checking, bytecode compilation, and virtual-machine execution.
+
+More advanced features such as collections, custom types, modules, exceptions, and concurrency will be introduced incrementally.
 
 No installation instructions are provided yet because there is no working Eloque interpreter or compiler to install.
 
 ## Project status
 
-Eloque is in active development under **Milestone 1 — Frontend foundations**.
+Eloque has completed **Milestone 1 — Frontend foundations**
+and is preparing for the next implementation milestone.
 
 The following checkpoints are complete:
 
@@ -86,19 +91,33 @@ The following checkpoints are complete:
 - **M1-P2:** Pratt arithmetic expression parsing, including precedence, associativity, grouping, and source-location tracking.
 - **M1-P3:** `let`, `change`, and `say` statement parsing, complete-program AST construction, and fail-fast syntax diagnostics.
 - **Post-M1-P3 optimization:** Canonical lexer/parser consolidation, performance improvements, and updated frontend benchmarks.
+- **M1-P4:** Source-based syntax conformance testing, expanded diagnostic coverage, and validation of the implemented grammar.
+- **M1-P5-A:** Token-delivery architecture experiments comparing eager buffering, direct streaming, and bounded lookahead. Direct streaming was selected.
+- **M1-P5-B:** Production lexer–parser integration through `Parse(sourceText)`, with end-to-end regression validation.
+- **M1-P5-C:** Cross-language frontend benchmarking against Go and CPython 3.15.0rc2, including controlled arithmetic workloads.
 
-The current frontend can construct ASTs for the implemented syntax subset. Integrated benchmark workloads exercise lexing, token collection, parsing, and AST construction.
+The production frontend processes source text directly through `Parse(sourceText)`, incrementally requesting lexer tokens while constructing a complete-program AST.
 
-**Next checkpoint:** M1-P4 — Syntax diagnostics and conformance testing, followed by M1-P5 — Frontend integration and milestone closure.
+Buffered token delivery remains available as a reference implementation for regression testing and performance comparisons.
+
+**Current status:** Milestone 1 is complete. The production frontend supports lexing, parsing, and AST construction for the implemented syntax subset, with validated diagnostics and performance benchmarks.
+
+**Next milestone:** M2, as defined in the project roadmap.
 
 ### Performance benchmarks
 
-The optimized frontend has reproducible lexer, parser, and complete frontend benchmarks. Preliminary synthetic-workload comparisons with CPython 3.15.0rc2 are documented in [benchmarks/README.md](benchmarks/README.md).
+The production streaming frontend has reproducible lexer, parser, and complete-frontend benchmarks.
+
+M1-P5 validated the token-delivery architecture and compared Eloque's frontend against Go and CPython 3.15.0rc2 across synthetic language-native and controlled arithmetic workloads.
+
+Benchmark methodology, results, reproduction instructions, and limitations are documented in [benchmarks/README.md](benchmarks/README.md).
 
 These measurements concern frontend processing only. They do not demonstrate runtime execution performance or general superiority over Python.
 
 ### Implementation limitations
 
-Eloque cannot yet execute source programs. Name resolution, mandatory static type checking, bytecode compilation, and virtual-machine execution remain future milestones.
+Eloque's Milestone 1 frontend is complete, but the language cannot yet execute source programs.
+
+Name resolution, static type checking, bytecode compilation, and virtual-machine execution have not yet been implemented. The current frontend supports only the documented M1 syntax subset, not the full proposed language.
 
 The [language specification](docs/LANGUAGE_SPEC.md) describes the intended language, not the currently executable feature set. Syntax, release boundaries, and technical details may evolve before version 1.0.

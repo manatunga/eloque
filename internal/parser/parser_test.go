@@ -6,6 +6,14 @@ import (
 	"github.com/manatunga/eloque/internal/lexer"
 )
 
+// bufferedCursor returns the current token index of a buffered parser.
+//
+// This helper allows legacy parser tests to inspect token consumption
+// without requiring Parser to maintain a duplicate cursor field.
+func bufferedCursor(p *Parser) int {
+	return p.tokenSource.current
+}
+
 func TestParserPeek(t *testing.T) {
 	tokens := []lexer.Token{
 		{Kind: lexer.TokenInt, Start: 0, End: 2},
@@ -18,8 +26,8 @@ func TestParserPeek(t *testing.T) {
 		t.Errorf("peek() = %v, want INT", got.Kind)
 	}
 
-	if p.current != 0 {
-		t.Errorf("current = %d, want 0", p.current)
+	if bufferedCursor(p) != 0 {
+		t.Errorf("current = %d, want 0", bufferedCursor(p))
 	}
 }
 
@@ -48,8 +56,8 @@ func TestParserAdvance(t *testing.T) {
 		t.Errorf("repeated advance() = %v, want EOF", got.Kind)
 	}
 
-	if p.current != 2 {
-		t.Errorf("current = %d, want 2", p.current)
+	if bufferedCursor(p) != 2 {
+		t.Errorf("current = %d, want 2", bufferedCursor(p))
 	}
 }
 
@@ -67,7 +75,7 @@ func TestParserCheck(t *testing.T) {
 		t.Error("check(SAY) = true, want false")
 	}
 
-	if p.current != 0 {
+	if bufferedCursor(p) != 0 {
 		t.Error("check() unexpectedly consumed a token")
 	}
 }
@@ -83,7 +91,7 @@ func TestParserMatch(t *testing.T) {
 		t.Error("match() succeeded for an absent token kind")
 	}
 
-	if p.current != 0 {
+	if bufferedCursor(p) != 0 {
 		t.Error("failed match() advanced the cursor")
 	}
 
@@ -91,8 +99,8 @@ func TestParserMatch(t *testing.T) {
 		t.Error("match() failed to consume PLUS")
 	}
 
-	if p.current != 1 {
-		t.Errorf("current = %d, want 1", p.current)
+	if bufferedCursor(p) != 1 {
+		t.Errorf("current = %d, want 1", bufferedCursor(p))
 	}
 
 	if p.match(lexer.TokenPlus) {
@@ -114,8 +122,8 @@ func TestParserMatchNoKinds(t *testing.T) {
 		t.Error("match() succeeded without any token kinds")
 	}
 
-	if p.current != 0 {
-		t.Errorf("current = %d, want 0", p.current)
+	if bufferedCursor(p) != 0 {
+		t.Errorf("current = %d, want 0", bufferedCursor(p))
 	}
 }
 
@@ -128,8 +136,8 @@ func TestParserMatchEOF(t *testing.T) {
 		t.Fatal("match(EOF) = false, want true")
 	}
 
-	if p.current != 0 {
-		t.Errorf("current = %d, want 0", p.current)
+	if bufferedCursor(p) != 0 {
+		t.Errorf("current = %d, want 0", bufferedCursor(p))
 	}
 
 	if got := p.peek(); got.Kind != lexer.TokenEOF {

@@ -23,9 +23,8 @@ import (
 // source order and end with a terminal EOF token.
 type Parser struct {
 	source       string
-	tokens       []lexer.Token
+	tokenSource  tokenSource
 	lineOffsets  []int
-	current      int
 	positionLine int
 }
 
@@ -48,10 +47,21 @@ func buildLineOffsets(sourceText string) []int {
 
 // New constructs a parser for the given source text and token sequence.
 // Tokens must refer to byte offsets in sourceText and must end with EOF.
+
 func New(sourceText string, tokens []lexer.Token) *Parser {
 	return &Parser{
 		source:      sourceText,
-		tokens:      tokens,
+		tokenSource: newBufferedTokenSource(tokens),
+		lineOffsets: buildLineOffsets(sourceText),
+	}
+}
+
+// newStreamingParser constructs a parser whose tokens are
+// produced lazily by the existing lexer.
+func newStreamingParser(sourceText string) *Parser {
+	return &Parser{
+		source:      sourceText,
+		tokenSource: newStreamingTokenSource(sourceText),
 		lineOffsets: buildLineOffsets(sourceText),
 	}
 }
@@ -108,22 +118,17 @@ func (p *Parser) tokenSpan(token lexer.Token) source.Span {
 }
 
 // peek returns the current token without consuming it.
+//
+// Token navigation is delegated to the underlying token source,
+// regardless of whether tokens are buffered or streamed.
 func (p *Parser) peek() lexer.Token {
-	return p.tokens[p.current]
+	return p.tokenSource.peek()
 }
 
 // advance consumes and returns the current token.
-//
-// The cursor advances unless the current token is EOF. The terminal
-// EOF token remains available for subsequent inspection.
+// The token source owns cursor advancement and preserves EOF.
 func (p *Parser) advance() lexer.Token {
-	token := p.peek()
-
-	if token.Kind != lexer.TokenEOF {
-		p.current++
-	}
-
-	return token
+	return p.tokenSource.advance()
 }
 
 // check reports whether the current token has the specified kind.

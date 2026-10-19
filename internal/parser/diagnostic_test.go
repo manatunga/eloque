@@ -26,8 +26,8 @@ func TestExpectSuccess(t *testing.T) {
 		t.Errorf("token kind = %v, want BE", token.Kind)
 	}
 
-	if p.current != 1 {
-		t.Errorf("current = %d, want 1", p.current)
+	if bufferedCursor(p) != 1 {
+		t.Errorf("current = %d, want 1", bufferedCursor(p))
 	}
 }
 
@@ -75,7 +75,7 @@ func TestExpectFailure(t *testing.T) {
 		t.Errorf("actual = %v, want INT", diagnostic.Actual)
 	}
 
-	if p.current != 0 {
+	if bufferedCursor(p) != 0 {
 		t.Error("failed expect() advanced the cursor")
 	}
 }
@@ -108,7 +108,7 @@ func TestExpectUnexpectedEOF(t *testing.T) {
 		t.Errorf("actual = %v, want EOF", diagnostic.Actual)
 	}
 
-	if p.current != 0 {
+	if bufferedCursor(p) != 0 {
 		t.Error("unexpected EOF advanced the cursor")
 	}
 }

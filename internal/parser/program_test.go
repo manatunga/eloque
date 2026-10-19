@@ -51,8 +51,8 @@ func TestParseProgramEmpty(t *testing.T) {
 			if program.Span() != wantSpan {
 				t.Errorf("program span = %+v, want %+v", program.Span(), wantSpan)
 			}
-			if p.current != tt.wantCursor {
-				t.Errorf("cursor = %d, want %d", p.current, tt.wantCursor)
+			if bufferedCursor(p) != tt.wantCursor {
+				t.Errorf("cursor = %d, want %d", bufferedCursor(p), tt.wantCursor)
 			}
 			if p.peek().Kind != lexer.TokenEOF {
 				t.Errorf("next token = %v, want EOF", p.peek().Kind)
@@ -112,8 +112,8 @@ func TestParseProgramStatements(t *testing.T) {
 			if program.Span() != tt.wantSpan {
 				t.Errorf("program span = %+v, want %+v", program.Span(), tt.wantSpan)
 			}
-			if p.current != tt.wantCursor {
-				t.Errorf("cursor = %d, want %d", p.current, tt.wantCursor)
+			if bufferedCursor(p) != tt.wantCursor {
+				t.Errorf("cursor = %d, want %d", bufferedCursor(p), tt.wantCursor)
 			}
 			if p.peek().Kind != lexer.TokenEOF {
 				t.Errorf("next token = %v, want EOF", p.peek().Kind)
@@ -243,8 +243,8 @@ func TestParseProgramDiagnostics(t *testing.T) {
 			if diagnostic.Location != tt.wantLocation {
 				t.Errorf("Location = %+v, want %+v", diagnostic.Location, tt.wantLocation)
 			}
-			if p.current != tt.wantCursor {
-				t.Errorf("cursor = %d, want %d", p.current, tt.wantCursor)
+			if bufferedCursor(p) != tt.wantCursor {
+				t.Errorf("cursor = %d, want %d", bufferedCursor(p), tt.wantCursor)
 			}
 			if p.peek().Kind != tt.wantActual {
 				t.Errorf("next token = %v, want %v", p.peek().Kind, tt.wantActual)
@@ -276,8 +276,8 @@ func TestParseProgramNestedExpressionDiagnostic(t *testing.T) {
 	if diagnostic.Location != offendingSpan {
 		t.Errorf("Location = %+v, want %+v", diagnostic.Location, offendingSpan)
 	}
-	if p.current != 4 {
-		t.Errorf("cursor = %d, want 4", p.current)
+	if bufferedCursor(p) != 4 {
+		t.Errorf("cursor = %d, want 4", bufferedCursor(p))
 	}
 	if p.peek().Kind != lexer.TokenRightParen {
 		t.Errorf("next token = %v, want RIGHT_PAREN", p.peek().Kind)
@@ -320,8 +320,8 @@ func TestParseProgramDiagnosticAfterValidStatements(t *testing.T) {
 	if diagnostic.Location != eofSpan {
 		t.Errorf("Location = %+v, want %+v", diagnostic.Location, eofSpan)
 	}
-	if p.current != 11 {
-		t.Errorf("cursor = %d, want 11", p.current)
+	if bufferedCursor(p) != 11 {
+		t.Errorf("cursor = %d, want 11", bufferedCursor(p))
 	}
 	if p.peek().Kind != lexer.TokenEOF {
 		t.Errorf("next token = %v, want EOF", p.peek().Kind)

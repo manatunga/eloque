@@ -91,7 +91,59 @@ The lexer, foundational AST structures, parser infrastructure, arithmetic expres
 
 M1-P1 established the shared source-location model, AST foundations, token navigation, and structured syntax diagnostics. M1-P2 introduced Pratt-based arithmetic expression parsing, including precedence, associativity, grouping, and source-extent tracking. M1-P3 extends the parser to support `let`, `change`, and `say` statements and complete programs.
 
-The parser currently operates on prepared token streams. M1-P4 has completed broader syntax conformance and diagnostic verification using lexer-generated tokens in test fixtures. Production lexer–parser integration and formal end-to-end frontend validation remain scheduled for M1-P5.
+M1-P4 completed broader syntax conformance and diagnostic verification
+using lexer-generated tokens in test fixtures.
+
+M1-P5-B completed production lexer–parser integration. The canonical
+`Parse(sourceText)` entry point now performs incremental lexical analysis,
+parsing, and AST construction through direct pull-based token streaming.
+
+The parser obtains tokens through the `tokenSource` abstraction rather
+than requiring a preconstructed token slice. Buffered parsing remains
+available as a reference implementation for regression testing and
+comparative benchmarking.
+
+### M1-P5-A — Lexer-to-parser token delivery
+
+M1-P5-A evaluated three lexer-to-parser token-delivery strategies:
+eager buffering, direct pull-based streaming, and bounded two-token
+lookahead.
+
+Before production integration, the parser consumed prepared token
+streams. M1-P5-A selected direct streaming, which was subsequently
+integrated into the canonical frontend during M1-P5-B.
+
+**Selected architecture:** Direct pull-based token streaming.
+
+Under this design, the parser requests tokens incrementally from the lexer. The frontend does not need to construct and retain a complete token slice before parsing.
+
+The evaluation comprised three experiments:
+
+1. **Token-delivery benchmark:** Compared eager buffering with direct streaming independently of AST construction.
+2. **Frontend integration benchmark:** Compared eager buffering and direct streaming across five workload categories and four input sizes, including lexing, parsing, and AST construction.
+3. **Lookahead benchmark:** Compared direct streaming against bounded two-token lookahead and eager buffering.
+
+The integration benchmark showed that direct streaming was faster in 19 of 20 workload-size comparisons and allocated fewer bytes in all 20. The measured performance advantage was generally smaller than in the token-delivery-only experiment, emphasizing the importance of evaluating the complete frontend rather than relying exclusively on microbenchmarks.
+
+AST-equivalence tests and targeted diagnostic regression tests passed.
+
+**Architectural trade-offs:**
+
+- Direct streaming reduces intermediate token storage and avoids unnecessary lookahead work.
+- Eager buffering provides convenient random access to the token sequence.
+- Bounded lookahead remains an option for future grammar constructs requiring additional token inspection.
+
+**Implementation status:** The direct streaming architecture selected in
+M1-P5-A was integrated into the production frontend in M1-P5-B.
+The canonical `Parse(sourceText)` entry point now uses this architecture.
+
+M1-P5-C completed cross-language frontend benchmarking against Go's
+`go/parser` and CPython 3.15, including controlled arithmetic workloads.
+Production integration tests, race detection, and static analysis passed.
+
+The streaming implementation must preserve source locations, deterministic error reporting, EOF behavior, and the rule that malformed input cannot produce a successfully parsed program.
+
+The decision and future review triggers are tracked in `TECHNICAL_BACKLOG.md`.
 
 ### Lexer functionality
 
