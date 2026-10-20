@@ -1,0 +1,44 @@
+Experiment: H2 flat AST versus M1 interface AST
+Date: 2026-10-20
+Status: Experimental
+Command: go test ./internal/parser -run '^$' -bench '^BenchmarkParserM1H2$' -benchmem -benchtime=2s -count=5
+
+Git revision:
+eb82c1e78e288a23bdf5187532e59032bb225202
+
+Git status:
+ M internal/source/line_map.go
+ M internal/source/position.go
+?? benchmarks/results/experimental/h2_m1-vs-h2_parser_20261020.meta.txt
+?? benchmarks/results/experimental/h2_m1-vs-h2_parser_20261020.txt
+?? internal/ast/arena.go
+?? internal/ast/arena_invariants_test.go
+?? internal/ast/arena_test.go
+?? internal/ast/flat.go
+?? internal/ast/flat_test.go
+?? internal/ast/payload.go
+?? internal/ast/payload_test.go
+?? internal/ast/program.go
+?? internal/ast/program_test.go
+?? internal/parser/flat_benchmark_test.go
+?? internal/parser/flat_differential_test.go
+?? internal/parser/flat_expression.go
+?? internal/parser/flat_expression_test.go
+?? internal/parser/flat_parser.go
+?? internal/parser/flat_program.go
+?? internal/parser/flat_program_test.go
+?? internal/parser/flat_statement.go
+?? internal/parser/flat_statement_test.go
+
+Go version:
+go version go1.27.2 linux/amd64
+
+System:
+Linux Jan-Laptop 6.18.33.2-microsoft-standard-WSL2 #1 SMP PREEMPT_DYNAMIC Thu Jun 18 21:54:43 UTC 2026 x86_64 GNU/Linux
+
+CPU:
+Architecture:                            x86_64
+CPU(s):                                  22
+On-line CPU(s) list:                     0-21
+Model name:                              Intel(R) Core(TM) Ultra 7 155H
+NUMA node0 CPU(s):                       0-21

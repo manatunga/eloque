@@ -6,7 +6,7 @@
 
 **Eloque** is a proposed general-purpose programming language with structured, conversational-English-inspired syntax and precise, statically checked semantics. It is intended to be approachable for beginners while providing predictable diagnostics and tooling for AI-assisted development.
 
-> **Status:** Early development — Milestone 1 (Frontend foundations completed. Eloque has a working lexer and parser with a canonical `Parse(sourceText)` entry point, direct pull-based token streaming complete-program AST construction, source spans, and structured fail-fast diagnostics. The implemented syntax includes arithmetic expressions, identifiers, literals, `let` declarations, `change` assignments, and `say` statements. Frontend integration, syntax conformance testing, and performance validation are complete. Eloque cannot yet execute source programs. The examples below are **illustrative, not executable**.
+> **Status:** Early development — Milestone 1 and the post-M1 H2 frontend optimization are complete. Eloque has a working Go lexer and parser using direct pull-based token streaming and an arena-backed flat AST. The canonical `Parse(sourceText)` entry point supports the implemented arithmetic, literal, declaration, assignment, and output syntax, with source-aware fail-fast diagnostics. Name resolution, static type checking, bytecode compilation, and VM execution are not yet implemented. The examples below are **illustrative, not executable**.
 
 ## A glimpse of Eloque
 
@@ -55,29 +55,51 @@ This example illustrates the intended language, including features that will arr
 - [Roadmap](docs/ROADMAP.md) — incremental milestones and provisional releases
 - [Technical backlog](docs/TECHNICAL_BACKLOG.md) — deferred engineering decisions and review triggers
 
-## Planned implementation
+## Implementation architecture
 
-Eloque is being implemented in **Go**. Its lexer, parser, and AST construction stages are operational; the remaining stages are planned:
+Eloque is implemented in **Go**.
+
+Its production frontend is operational. The semantic analysis and execution stages are planned.
 
 ```text
-.elq source
-    ↓
-Lexer → Parser → AST
-    ↓
-Name resolution → Static type checker
-    ↓
-Bytecode compiler → Stack-based VM
-    ↓
+. elq source
+    |
+    v
+Lexer (direct token streaming)
+    |
+    v
+Parser (Pratt expressions)
+    |
+    v
+Arena-backed flat AST
+    |
+    v
+Name resolution             [planned]
+    |
+    v
+Static type checker         [planned]
+    |
+    v
+Bytecode compiler           [planned]
+    |
+    v
+Stack-based VM              [planned]
+    |
+    v
 Program execution
 ```
 
-The initial milestones established the Go project, lexer, parser, AST construction, and source diagnostics.
+The frontend packages are organized under `internal/frontend/`, with shared source-location utilities in `internal/source/`.
 
-The next development phase will introduce the components needed for a **small statically checked executable subset**, including name resolution, type checking, bytecode compilation, and virtual-machine execution.
+The production entry point is `parser.Parse(sourceText)`, returning `(*ast.FlatProgram, error)`.
 
-More advanced features such as collections, custom types, modules, exceptions, and concurrency will be introduced incrementally.
+The original M1 parser and interface-based AST remain available internally for regression testing and performance comparisons.
 
-No installation instructions are provided yet because there is no working Eloque interpreter or compiler to install.
+The next development phase, **M2 — First execution**, will implement the smallest statically checked executable subset, including name resolution, basic type checking, bytecode compilation, and VM execution.
+
+More advanced language features will be introduced incrementally.
+
+There are no installation instructions for executing Eloque programs yet because the runtime has not been implemented.
 
 ## Project status
 
@@ -95,28 +117,39 @@ The following checkpoints are complete:
 - **M1-P5-A:** Token-delivery architecture experiments comparing eager buffering, direct streaming, and bounded lookahead. Direct streaming was selected.
 - **M1-P5-B:** Production lexer–parser integration through `Parse(sourceText)`, with end-to-end regression validation.
 - **M1-P5-C:** Cross-language frontend benchmarking against Go and CPython 3.15.0rc2, including controlled arithmetic workloads.
+- **Post-M1 H2 optimization:** Replaced the production interface-based AST with an arena-backed flat AST, retained direct pull-based token streaming, preserved the legacy M1 parser for regression comparisons, and validated the new frontend using differential tests, arena-invariant tests, and controlled benchmarks.
+- **Frontend package migration:** Reorganized the lexer, parser, and AST packages under `internal/frontend/`, retaining shared source-location utilities in `internal/source/`.
 
-The production frontend processes source text directly through `Parse(sourceText)`, incrementally requesting lexer tokens while constructing a complete-program AST.
+The production frontend processes source text through `Parse(sourceText)`, incrementally requesting lexer tokens and constructing an arena-backed `FlatProgram`. The original M1 parser and buffered token-delivery implementation remain available as reference implementations.
 
-Buffered token delivery remains available as a reference implementation for regression testing and performance comparisons.
-
-**Current status:** Milestone 1 is complete. The production frontend supports lexing, parsing, and AST construction for the implemented syntax subset, with validated diagnostics and performance benchmarks.
+**Current status:** M1 and H2 are complete. M2 — First execution — is the next implementation milestone.
 
 **Next milestone:** M2, as defined in the project roadmap.
 
 ### Performance benchmarks
 
-The production streaming frontend has reproducible lexer, parser, and complete-frontend benchmarks.
+H2 is the current production frontend performance baseline.
 
-M1-P5 validated the token-delivery architecture and compared Eloque's frontend against Go and CPython 3.15.0rc2 across synthetic language-native and controlled arithmetic workloads.
+The official M1/H2 comparison measured five workload categories over ten benchmark runs. At 1,000 workload units, H2 recorded median speedups ranging from **1.01× to 1.77×**, with reduced allocation counts across the tested workloads.
 
-Benchmark methodology, results, reproduction instructions, and limitations are documented in [benchmarks/README.md](benchmarks/README.md).
+A separate controlled arithmetic benchmark at 10,000 units recorded:
 
-These measurements concern frontend processing only. They do not demonstrate runtime execution performance or general superiority over Python.
+| Implementation | Median latency |
+|---|---:|
+| Eloque H2 | 7.16 ms |
+| Go compiler syntax parser | 14.12 ms |
+| Go `go/parser` | 23.92 ms |
+| CPython 3.14.4 | 147.86 ms |
+
+These results describe synthetic frontend workloads. Different language grammars, AST representations, and benchmark harnesses limit direct comparability.
+
+They do not establish general compiler superiority or Eloque runtime performance.
+
+The official results, historical measurements, methodology, and limitations are documented in [benchmarks/README.md](benchmarks/README.md).
 
 ### Implementation limitations
 
-Eloque's Milestone 1 frontend is complete, but the language cannot yet execute source programs.
+Eloque's M1 frontend and H2 optimization are complete, but the language cannot yet execute source programs. Name resolution, static type checking, bytecode compilation, and VM execution remain unimplemented. The production frontend supports only the selected initial grammar, not the full proposed language.
 
 Name resolution, static type checking, bytecode compilation, and virtual-machine execution have not yet been implemented. The current frontend supports only the documented M1 syntax subset, not the full proposed language.
 

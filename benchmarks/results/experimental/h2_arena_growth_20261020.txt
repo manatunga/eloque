@@ -1,0 +1,36 @@
+goos: linux
+goarch: amd64
+pkg: github.com/manatunga/eloque/internal/ast
+cpu: Intel(R) Core(TM) Ultra 7 155H
+BenchmarkArenaNodeGrowth/Small/Dynamic-22 	 2039158	      1229 ns/op	    4080 B/op	       8 allocs/op
+BenchmarkArenaNodeGrowth/Small/Dynamic-22 	 1872120	      1328 ns/op	    4080 B/op	       8 allocs/op
+BenchmarkArenaNodeGrowth/Small/Dynamic-22 	 1909384	      1306 ns/op	    4080 B/op	       8 allocs/op
+BenchmarkArenaNodeGrowth/Small/Dynamic-22 	 1824490	      1339 ns/op	    4080 B/op	       8 allocs/op
+BenchmarkArenaNodeGrowth/Small/Dynamic-22 	 1813233	      1342 ns/op	    4080 B/op	       8 allocs/op
+BenchmarkArenaNodeGrowth/Small/Preallocated-22         	 5156241	       471.8 ns/op	    1792 B/op	       1 allocs/op
+BenchmarkArenaNodeGrowth/Small/Preallocated-22         	 5146219	       463.4 ns/op	    1792 B/op	       1 allocs/op
+BenchmarkArenaNodeGrowth/Small/Preallocated-22         	 5028037	       487.3 ns/op	    1792 B/op	       1 allocs/op
+BenchmarkArenaNodeGrowth/Small/Preallocated-22         	 4625457	       721.1 ns/op	    1792 B/op	       1 allocs/op
+BenchmarkArenaNodeGrowth/Small/Preallocated-22         	 4514998	       562.0 ns/op	    1792 B/op	       1 allocs/op
+BenchmarkArenaNodeGrowth/Medium/Dynamic-22             	  180765	     13463 ns/op	   50419 B/op	      12 allocs/op
+BenchmarkArenaNodeGrowth/Medium/Dynamic-22             	  182532	     13689 ns/op	   50419 B/op	      12 allocs/op
+BenchmarkArenaNodeGrowth/Medium/Dynamic-22             	  178773	     13272 ns/op	   50419 B/op	      12 allocs/op
+BenchmarkArenaNodeGrowth/Medium/Dynamic-22             	  189544	     13228 ns/op	   50420 B/op	      12 allocs/op
+BenchmarkArenaNodeGrowth/Medium/Dynamic-22             	  170580	     13649 ns/op	   50419 B/op	      12 allocs/op
+BenchmarkArenaNodeGrowth/Medium/Preallocated-22        	  541323	      4049 ns/op	   16384 B/op	       1 allocs/op
+BenchmarkArenaNodeGrowth/Medium/Preallocated-22        	  554156	      4091 ns/op	   16385 B/op	       1 allocs/op
+BenchmarkArenaNodeGrowth/Medium/Preallocated-22        	  605427	      4294 ns/op	   16384 B/op	       1 allocs/op
+BenchmarkArenaNodeGrowth/Medium/Preallocated-22        	  633808	      3962 ns/op	   16384 B/op	       1 allocs/op
+BenchmarkArenaNodeGrowth/Medium/Preallocated-22        	  632449	      4072 ns/op	   16385 B/op	       1 allocs/op
+BenchmarkArenaNodeGrowth/Large/Dynamic-22              	   14137	    169182 ns/op	  685336 B/op	      19 allocs/op
+BenchmarkArenaNodeGrowth/Large/Dynamic-22              	   15093	    160458 ns/op	  685324 B/op	      19 allocs/op
+BenchmarkArenaNodeGrowth/Large/Dynamic-22              	   14642	    199295 ns/op	  685325 B/op	      19 allocs/op
+BenchmarkArenaNodeGrowth/Large/Dynamic-22              	   14102	    164789 ns/op	  685321 B/op	      19 allocs/op
+BenchmarkArenaNodeGrowth/Large/Dynamic-22              	   10000	    215446 ns/op	  685321 B/op	      19 allocs/op
+BenchmarkArenaNodeGrowth/Large/Preallocated-22         	   49590	     47492 ns/op	  163846 B/op	       1 allocs/op
+BenchmarkArenaNodeGrowth/Large/Preallocated-22         	   52903	     41995 ns/op	  163846 B/op	       1 allocs/op
+BenchmarkArenaNodeGrowth/Large/Preallocated-22         	   61411	     42135 ns/op	  163846 B/op	       1 allocs/op
+BenchmarkArenaNodeGrowth/Large/Preallocated-22         	   51307	     40023 ns/op	  163846 B/op	       1 allocs/op
+BenchmarkArenaNodeGrowth/Large/Preallocated-22         	   59500	     40644 ns/op	  163845 B/op	       1 allocs/op
+PASS
+ok  	github.com/manatunga/eloque/internal/ast	92.482s

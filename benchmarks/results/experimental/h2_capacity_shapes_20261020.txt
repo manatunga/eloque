@@ -1,0 +1,54 @@
+goos: linux
+goarch: amd64
+pkg: github.com/manatunga/eloque/internal/parser
+cpu: Intel(R) Core(TM) Ultra 7 155H
+BenchmarkFlatParserCapacityBySourceShape/ExpressionDense/Baseline-22         	    1458	    797059 ns/op	 1614679 B/op	    1067 allocs/op
+BenchmarkFlatParserCapacityBySourceShape/ExpressionDense/Baseline-22         	    1534	    802854 ns/op	 1614641 B/op	    1067 allocs/op
+BenchmarkFlatParserCapacityBySourceShape/ExpressionDense/Baseline-22         	    1128	    916029 ns/op	 1614594 B/op	    1066 allocs/op
+BenchmarkFlatParserCapacityBySourceShape/ExpressionDense/BytesPer16-22       	    1062	    964148 ns/op	 1781278 B/op	    1055 allocs/op
+BenchmarkFlatParserCapacityBySourceShape/ExpressionDense/BytesPer16-22       	    1387	    922099 ns/op	 1781274 B/op	    1055 allocs/op
+BenchmarkFlatParserCapacityBySourceShape/ExpressionDense/BytesPer16-22       	    1340	    942110 ns/op	 1781273 B/op	    1055 allocs/op
+BenchmarkFlatParserCapacityBySourceShape/ExpressionDense/BytesPer8-22        	    1440	    925870 ns/op	 1723923 B/op	    1053 allocs/op
+BenchmarkFlatParserCapacityBySourceShape/ExpressionDense/BytesPer8-22        	    1334	    925278 ns/op	 1723921 B/op	    1053 allocs/op
+BenchmarkFlatParserCapacityBySourceShape/ExpressionDense/BytesPer8-22        	    1192	    870971 ns/op	 1723926 B/op	    1053 allocs/op
+BenchmarkFlatParserCapacityBySourceShape/ExpressionDense/BytesPer4-22        	    1371	    836385 ns/op	 1502710 B/op	    1051 allocs/op
+BenchmarkFlatParserCapacityBySourceShape/ExpressionDense/BytesPer4-22        	    1226	    946763 ns/op	 1502710 B/op	    1051 allocs/op
+BenchmarkFlatParserCapacityBySourceShape/ExpressionDense/BytesPer4-22        	    1420	    888495 ns/op	 1502719 B/op	    1051 allocs/op
+BenchmarkFlatParserCapacityBySourceShape/WhitespaceHeavy/Baseline-22         	    2781	    404284 ns/op	  174669 B/op	    1041 allocs/op
+BenchmarkFlatParserCapacityBySourceShape/WhitespaceHeavy/Baseline-22         	    2548	    435541 ns/op	  174667 B/op	    1041 allocs/op
+BenchmarkFlatParserCapacityBySourceShape/WhitespaceHeavy/Baseline-22         	    2686	    458030 ns/op	  174663 B/op	    1041 allocs/op
+BenchmarkFlatParserCapacityBySourceShape/WhitespaceHeavy/BytesPer16-22       	    2601	    456273 ns/op	  267623 B/op	    1028 allocs/op
+BenchmarkFlatParserCapacityBySourceShape/WhitespaceHeavy/BytesPer16-22       	    2713	    460022 ns/op	  267619 B/op	    1028 allocs/op
+BenchmarkFlatParserCapacityBySourceShape/WhitespaceHeavy/BytesPer16-22       	    2529	    459706 ns/op	  267621 B/op	    1028 allocs/op
+BenchmarkFlatParserCapacityBySourceShape/WhitespaceHeavy/BytesPer8-22        	    2523	    489149 ns/op	  472458 B/op	    1028 allocs/op
+BenchmarkFlatParserCapacityBySourceShape/WhitespaceHeavy/BytesPer8-22        	    2588	    457491 ns/op	  472461 B/op	    1028 allocs/op
+BenchmarkFlatParserCapacityBySourceShape/WhitespaceHeavy/BytesPer8-22        	    2359	    482744 ns/op	  472456 B/op	    1028 allocs/op
+BenchmarkFlatParserCapacityBySourceShape/WhitespaceHeavy/BytesPer4-22        	    2106	    552158 ns/op	  882079 B/op	    1028 allocs/op
+BenchmarkFlatParserCapacityBySourceShape/WhitespaceHeavy/BytesPer4-22        	    2185	    556626 ns/op	  882075 B/op	    1028 allocs/op
+BenchmarkFlatParserCapacityBySourceShape/WhitespaceHeavy/BytesPer4-22        	    2296	    531007 ns/op	  882081 B/op	    1028 allocs/op
+BenchmarkFlatParserCapacityBySourceShape/StringHeavy/Baseline-22             	    1370	    882334 ns/op	  417871 B/op	    2052 allocs/op
+BenchmarkFlatParserCapacityBySourceShape/StringHeavy/Baseline-22             	    1411	    861677 ns/op	  417873 B/op	    2052 allocs/op
+BenchmarkFlatParserCapacityBySourceShape/StringHeavy/Baseline-22             	    1384	    853637 ns/op	  417873 B/op	    2052 allocs/op
+BenchmarkFlatParserCapacityBySourceShape/StringHeavy/BytesPer16-22           	    1339	    845310 ns/op	  510846 B/op	    2039 allocs/op
+BenchmarkFlatParserCapacityBySourceShape/StringHeavy/BytesPer16-22           	    1375	    871207 ns/op	  510842 B/op	    2039 allocs/op
+BenchmarkFlatParserCapacityBySourceShape/StringHeavy/BytesPer16-22           	    1344	    872176 ns/op	  510838 B/op	    2039 allocs/op
+BenchmarkFlatParserCapacityBySourceShape/StringHeavy/BytesPer8-22            	    1336	    890168 ns/op	  715671 B/op	    2039 allocs/op
+BenchmarkFlatParserCapacityBySourceShape/StringHeavy/BytesPer8-22            	    1302	    951003 ns/op	  715658 B/op	    2039 allocs/op
+BenchmarkFlatParserCapacityBySourceShape/StringHeavy/BytesPer8-22            	     966	   1064083 ns/op	  715666 B/op	    2039 allocs/op
+BenchmarkFlatParserCapacityBySourceShape/StringHeavy/BytesPer4-22            	    1099	   1053441 ns/op	 1133453 B/op	    2039 allocs/op
+BenchmarkFlatParserCapacityBySourceShape/StringHeavy/BytesPer4-22            	    1243	   1062901 ns/op	 1133447 B/op	    2039 allocs/op
+BenchmarkFlatParserCapacityBySourceShape/StringHeavy/BytesPer4-22            	     948	   1068257 ns/op	 1133468 B/op	    2039 allocs/op
+BenchmarkFlatParserCapacityBySourceShape/StatementHeavy/Baseline-22          	    7671	    150167 ns/op	  174674 B/op	    1041 allocs/op
+BenchmarkFlatParserCapacityBySourceShape/StatementHeavy/Baseline-22          	    8149	    164877 ns/op	  174669 B/op	    1041 allocs/op
+BenchmarkFlatParserCapacityBySourceShape/StatementHeavy/Baseline-22          	    7196	    165507 ns/op	  174666 B/op	    1041 allocs/op
+BenchmarkFlatParserCapacityBySourceShape/StatementHeavy/BytesPer16-22        	    8178	    136300 ns/op	  158302 B/op	    1032 allocs/op
+BenchmarkFlatParserCapacityBySourceShape/StatementHeavy/BytesPer16-22        	    8582	    134957 ns/op	  158307 B/op	    1032 allocs/op
+BenchmarkFlatParserCapacityBySourceShape/StatementHeavy/BytesPer16-22        	    9086	    134042 ns/op	  158306 B/op	    1032 allocs/op
+BenchmarkFlatParserCapacityBySourceShape/StatementHeavy/BytesPer8-22         	    7929	    133417 ns/op	  153568 B/op	    1031 allocs/op
+BenchmarkFlatParserCapacityBySourceShape/StatementHeavy/BytesPer8-22         	    8990	    139834 ns/op	  153567 B/op	    1031 allocs/op
+BenchmarkFlatParserCapacityBySourceShape/StatementHeavy/BytesPer8-22         	    8326	    135770 ns/op	  153567 B/op	    1031 allocs/op
+BenchmarkFlatParserCapacityBySourceShape/StatementHeavy/BytesPer4-22         	    8593	    121990 ns/op	  120151 B/op	    1029 allocs/op
+BenchmarkFlatParserCapacityBySourceShape/StatementHeavy/BytesPer4-22         	    9723	    124285 ns/op	  120151 B/op	    1029 allocs/op
+BenchmarkFlatParserCapacityBySourceShape/StatementHeavy/BytesPer4-22         	    9706	    120652 ns/op	  120151 B/op	    1029 allocs/op
+PASS
+ok  	github.com/manatunga/eloque/internal/parser	65.340s

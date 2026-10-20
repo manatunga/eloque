@@ -3,13 +3,31 @@
 **Status:** Active design decision register, updated October 2026.
 **Normative language specification:** [LANGUAGE_SPEC.md](LANGUAGE_SPEC.md).
 
-This register records accepted design choices, provisional directions, deferred work, and selected implementation decisions. **Decided** means agreed, not necessarily implemented. **Provisional** requires further specification or validation. **Deferred** is deliberately postponed. **Implemented (M1)** identifies behavior or architecture established in the completed Milestone 1 frontend; it does not imply that Eloque programs can execute.
+This register records accepted design choices, provisional directions, deferred work, and selected implementation decisions. **Decided** means agreed, not necessarily implemented. **Provisional** requires further specification or validation. **Deferred** is deliberately postponed. **Implemented (M1)** identifies behavior or architecture established during Milestone 1. **Implemented (H2)** identifies the post-M1 frontend optimization and architectural migration. Neither status implies that Eloque programs can execute.
 
-## Milestone 1 implementation baseline
+## Current implementation baseline — M1 and H2
 
-M1 delivered a Go lexer, parser, AST construction, structured fail-fast lexical and syntax diagnostics, and the canonical `Parse(sourceText)` entry point. The supported initial subset includes literals, identifiers, arithmetic expressions, and `let`, `change`, and `say` statements. The canonical parser pulls tokens incrementally from the lexer; buffered parsing is retained for regression testing and benchmarks. **Static type checking, bytecode generation, and execution are not yet implemented.**
+Milestone 1 established Eloque's Go lexer, parser, AST construction, structured fail-fast lexical and syntax diagnostics, and canonical `Parse(sourceText)` entry point.
 
-M1-P5 comparisons found streaming faster than buffered parsing in **19 of 20** integrated cases and lower in allocated bytes in **20 of 20** cases. Controlled parsing comparisons against Go and CPython are frontend-only measurements; they do not establish runtime performance parity. See [benchmarks/README.md](../benchmarks/README.md) for methodology and results.
+The supported syntax subset includes literals, identifiers, arithmetic expressions, and `let`, `change`, and `say` statements.
+
+The post-M1 H2 optimization introduced an arena-backed flat AST and a new production parser implementation while preserving direct pull-based token streaming.
+
+The canonical `Parse(sourceText)` entry point now returns `(*ast.FlatProgram, error)`.
+
+The original M1 interface-based AST and parser remain available internally as legacy reference implementations for regression and performance comparisons.
+
+The frontend packages are organized under `internal/frontend/{ast,lexer,parser}`, while shared source-location utilities remain in `internal/source`.
+
+H2 was validated through correctness and differential testing, arena-invariant tests, and representative performance benchmarks.
+
+At 1,000 workload units, H2 recorded median improvements over M1 ranging from approximately 1.01× for strings to 1.77× for expressions, with lower allocation counts across the tested workloads.
+
+The controlled cross-language benchmarks concern frontend processing only and do not establish general compiler or runtime performance superiority.
+
+**Static type checking, bytecode generation, and execution are not yet implemented.**
+
+See [ARCHITECTURE.md](ARCHITECTURE.md) for the implementation structure, [ROADMAP.md](ROADMAP.md) for milestone progress, and [benchmarks/README.md](../benchmarks/README.md) for benchmark methodology and results.
 
 ## Current decisions
 
@@ -53,6 +71,8 @@ M1-P5 comparisons found streaming faster than buffered parsing in **19 of 20** i
 | D-036 | Decided; lexer implemented (M1) | `change`, `to`, `with`, and `giving` are reserved keywords with dedicated token kinds, not ordinary identifiers. One token kind may serve multiple grammatical contexts. |
 | D-037 | Implemented (M1) | Syntax parsing fails at the first error and returns a structured diagnostic with message, source span, and optional expected/actual token metadata. Malformed input must not be accepted as a valid program. Multi-error recovery may be reconsidered after synchronization and diagnostic-quality criteria are defined. |
 | D-038 | Implemented (M1) | The canonical `Parse(sourceText)` frontend consumes lexer tokens incrementally via `tokenSource`, without a redundant independent token cursor. Buffered parsing remains for regression tests and benchmarks. Future changes must preserve correctness, diagnostic quality, and reproducible performance baselines. |
+| D-039 | Implemented (H2) | Adopt an arena-backed flat AST as the canonical production representation. The parser constructs `FlatNode` and `FlatProgram` structures using arena-managed storage. Retain the original M1 interface-based AST and parser as legacy references for correctness and performance comparisons. This is an internal representation decision, not a language-semantic change. |
+| D-040 | Implemented (H2) | Organize the frontend under `internal/frontend/{ast,lexer,parser}` while retaining shared source-location utilities in `internal/source`. Preserve the canonical `Parse(sourceText)` entry point and direct pull-based token streaming. Future semantic analysis and backend packages should be introduced when their implementations begin rather than creating speculative empty package structures. |
 
 ## Superseded syntax and semantics
 
@@ -97,6 +117,7 @@ These are future tasks, **not unfinished M1 requirements**:
 - **Language features:** Specify exception taxonomy and cleanup precedence, module resolution, structural-interface diagnostics, and pattern exhaustiveness.
 - **Execution and tooling:** Define CLI behavior, sandbox budgets, and concurrency/ownership semantics as their implementation milestones approach.
 - **VM architecture:** Benchmark a functioning stack VM before reconsidering a register VM. Keep alternative backends and runtime optimization proposals as tracked future decisions rather than assuming they are adopted.
+- **Frontend representation and optimization:** Preserve H2's arena-backed flat AST as the production baseline. Revisit arena capacity and growth policies only when representative profiling demonstrates a meaningful opportunity. Evaluate any proposed optimization against correctness, allocation overhead, retained memory, small-program performance, and implementation complexity. The review is tracked under TB-025 in the technical backlog.
 
 ## Change process
 

@@ -1,504 +1,506 @@
 # Eloque Architecture
 
-**Status:** Early implementation — Milestone 1 (Frontend foundations) in progress. The lexer, foundational AST structures, parser infrastructure, Pratt arithmetic expression parser, and `let`, `change`, and `say` statement/program parser are implemented and tested. Following M1-P3, the existing lexer and parser underwent canonical frontend consolidation and performance optimization, now merged into `main`. M1-P4 completed broader syntax diagnostics and positive/negative conformance testing, adding 29 source-based fixtures covering valid and malformed programs, accurate source locations, structured diagnostic metadata, fail-fast error propagation, and lexer/parser error boundaries. The conformance suite and existing Go tests, race detection, and static analysis checks passed without requiring production-code changes. The parser continues to consume prepared token streams; production lexer–parser integration, formal end-to-end validation, performance regression review, and milestone closure remain scheduled for M1-P5. Static analysis, bytecode compilation, and VM execution are not yet implemented. The working language name, `.elq` extension, and CLI command remain provisional.
+**Status:** Milestone 1 completed. H2 frontend optimization completed and validated. Semantic analysis, bytecode compilation, and VM execution have not yet been implemented.
 
-## Goals and boundaries
+Eloque is a proposed general-purpose programming language with structured, conversational-English-inspired syntax, strict static typing, and an eventual native concurrency model.
 
-Eloque is a general-purpose, structured conversational language designed for novice readability, precise static analysis and eventual safe concurrency. The implementation is written in Go, beginning with a **stack-based bytecode virtual machine**. Language semantics must not depend on the bytecode representation.
+The compiler is being implemented in Go. Its production frontend now uses **direct pull-based lexical streaming, Pratt expression parsing, and an arena-backed flat abstract syntax tree (AST)**.
 
-This document describes the target architecture and the order in which it will be built. The [language specification](LANGUAGE_SPEC.md) governs syntax and observable behavior; [design decisions](DESIGN_DECISIONS.md) records settled and superseded choices.
+The previous M1 parser and interface-based AST remain available internally for regression testing and performance comparisons.
 
-## Compilation and execution pipeline
+Eloque can parse its implemented syntax subset but **cannot yet execute Eloque programs**.
+
+## 1. Architectural principles
+
+The implementation follows these principles:
+
+1. **Correctness before optimization.** Language semantics and diagnostic behavior must remain stable through internal representation changes.
+2. **Static checking before execution.** Programs containing unresolved type errors must not proceed to normal bytecode execution.
+3. **Explicit implementation boundaries.** The frontend, semantic analysis, and runtime have separate responsibilities.
+4. **Evidence-driven optimization.** Performance decisions require reproducible measurements and correctness validation.
+5. **Minimal premature abstraction.** New intermediate representations, backends, and optimization machinery should be introduced only when justified.
+6. **Backend-independent language semantics.** Observable Eloque behavior must not depend on a particular VM implementation.
+
+The [language specification](LANGUAGE_SPEC.md) defines intended syntax and semantics. The [design decisions](DESIGN_DECISIONS.md) records accepted and superseded decisions.
+
+## 2. Compilation and execution pipeline
+
+The intended complete pipeline is:
 
 ```text
-Source file (.elq)
-       |
-       v
-Lexer (tokens, indentation, source spans)
-       |
-       v
-Parser (AST and syntax diagnostics)
-       |
-       v
-Name resolution and semantic analysis
-       |
-       v
-Static type checker (mandatory for normal compilation)
-       |
-       v
-Bytecode compiler (constants, instructions, debug metadata)
-       |
-       v
-Stack-based Go VM
-       |
-       v
-Program output or typed runtime error
+Eloque source
+    |
+    v
+Lexer
+    |
+    v
+Parser
+    |
+    v
+Arena-backed flat AST
+    |
+    v
+Name resolution
+    |
+    v
+Static type checking
+    |
+    v
+Bytecode compilation
+    |
+    v
+Stack-based virtual machine
+    |
+    v
+Program execution
 ```
 
-**Static checking is not optional or gradual.** Eloque permits local type inference, but programs with unresolved type errors must not proceed to normal bytecode execution. A future `eloque check` command should run the frontend without executing user code. The initial lexer and parser use fail-fast diagnostics: the first lexical or syntax error terminates the corresponding operation. Multi-error collection and recovery are deferred until a dedicated frontend enhancement.
+**Implemented:** Lexical analysis, parsing, flat AST construction, source-aware diagnostics, and frontend integration.
 
-The implementation may initially recognize only a small subset of the full design. Unsupported syntax should be rejected clearly, never silently accepted with guessed semantics.
+**Not implemented:** Name resolution, static type checking, bytecode generation, virtual-machine execution, and runtime values.
 
-## Component responsibilities
+The current implementation accepts only a subset of the proposed language. Unsupported constructs must be rejected rather than assigned speculative semantics.
 
-| Component | Responsibility |
-|---|---|
-| CLI | Route `run`, future `check`, and eventual formatting/debugging commands |
-| Source manager | Track file names, line/column positions and source spans |
-| Lexer | Recognize identifiers, keywords, literals, operators, newlines, indentation and dedentation |
-| Parser | Construct AST nodes and report grammatical errors, including malformed conversational phrases |
-| Resolver | Bind names, enforce scope rules and detect undeclared names and prohibited shadowing |
-| Type checker | Infer eligible local types, validate explicit signatures, optional types, calls, operators and return paths |
-| Bytecode compiler | Lower validated AST into executable instructions and constant pools |
-| VM | Manage value stack, frames, instructions, calls, control flow and exception propagation |
-| Runtime | Represent values, implement built-ins and collection semantics, enforce checked operations and immutability |
-| Diagnostics | Render human-readable errors and provide a machine-readable structured form |
+## 3. Repository organization
 
-A single implementation package may initially handle more than one responsibility. Package boundaries should emerge from real dependencies rather than an elaborate empty directory tree.
+The frontend packages have been grouped under `internal/frontend/`.
 
-## Frontend constraints
+```text
+internal/
+├── frontend/
+│   ├── ast/
+│   ├── lexer/
+│   └── parser/
+└── source/
+```
 
-### Lexical and syntactic rules
+### Frontend packages
 
-- Four spaces per indentation level; tabs prohibited. Blank/comment-only lines do not change indentation.
-- A colon introduces an indented block; newlines ordinarily terminate statements.
-- The current lexer supports implicit line continuation inside matched parentheses. Continuation inside brackets and braces is part of the target language design and will be implemented alongside their respective collection syntax.
-- Keywords and conversational operator phrases have precise grammar; this is **not** natural-language parsing.
-- Prefer tokenizing individual words and recognizing multiword constructs in the parser.
-- Preserve source spans on tokens and AST nodes for precise diagnostics.
+**`internal/frontend/lexer`**
 
-### Name resolution and typing
+Responsible for lexical scanning, token generation, indentation handling, literal recognition, and lexical errors.
 
-- `let x be value` declares a mutable binding; `change x to value` updates it.
-- `let fixed` prohibits rebinding; `let frozen` requires deeply immutable values.
-- Names cannot shadow visible bindings in enclosing scopes.
-- Function parameters require `as Type`; functions returning values require `giving Type`.
-- Initialized local bindings can infer types. `none` is permitted only where an optional type is expected.
-- Type checking is a required compilation stage, including for CLI execution.
-- Any flow-sensitive narrowing must be invalidated where mutation or concurrency makes it unsafe.
+**`internal/frontend/parser`**
 
-### Evaluation
+Responsible for consuming lexer tokens, recognizing the implemented grammar, constructing the AST, and reporting syntax diagnostics.
 
-- Evaluate operands and function arguments left to right; `and`/`or` short-circuit.
-- Preserve lexical scope and deterministic sequential execution by default.
-- Top-level statements execute in source order.
-- Imports initialize modules once per execution; reject circular imports in the initial design.
-- No automatic `main` invocation.
+The package contains the production H2 implementation and retained legacy parsing components.
 
-## Current frontend implementation
+**`internal/frontend/ast`**
 
-The lexer, foundational AST structures, parser infrastructure, arithmetic expression parser, and initial statement/program parser are implemented in Go.
+Defines the production flat AST representation, arena storage, node payloads, and program representation.
 
-M1-P1 established the shared source-location model, AST foundations, token navigation, and structured syntax diagnostics. M1-P2 introduced Pratt-based arithmetic expression parsing, including precedence, associativity, grouping, and source-extent tracking. M1-P3 extends the parser to support `let`, `change`, and `say` statements and complete programs.
+It also retains legacy AST definitions for compatibility and comparative testing.
 
-M1-P4 completed broader syntax conformance and diagnostic verification
-using lexer-generated tokens in test fixtures.
+**`internal/source`**
 
-M1-P5-B completed production lexer–parser integration. The canonical
-`Parse(sourceText)` entry point now performs incremental lexical analysis,
-parsing, and AST construction through direct pull-based token streaming.
+Contains shared source-position and line-mapping functionality. It remains outside `internal/frontend` because source-location facilities may also be required by semantic analysis and later compiler stages.
 
-The parser obtains tokens through the `tokenSource` abstraction rather
-than requiring a preconstructed token slice. Buffered parsing remains
-available as a reference implementation for regression testing and
-comparative benchmarking.
+### Planned package boundaries
 
-### M1-P5-A — Lexer-to-parser token delivery
+Semantic analysis, bytecode compilation, VM execution, and runtime support will be organized when their implementations begin.
 
-M1-P5-A evaluated three lexer-to-parser token-delivery strategies:
-eager buffering, direct pull-based streaming, and bounded two-token
-lookahead.
+Potential package boundaries include semantic resolution and checking, bytecode generation, runtime values, and the VM.
 
-Before production integration, the parser consumed prepared token
-streams. M1-P5-A selected direct streaming, which was subsequently
-integrated into the canonical frontend during M1-P5-B.
+These are architectural directions rather than declarations of existing packages. Empty package trees should not be created solely to represent future plans.
 
-**Selected architecture:** Direct pull-based token streaming.
+## 4. Production frontend
 
-Under this design, the parser requests tokens incrementally from the lexer. The frontend does not need to construct and retain a complete token slice before parsing.
+### 4.1 Canonical entry point
 
-The evaluation comprised three experiments:
+The canonical source-parsing entry point is:
 
-1. **Token-delivery benchmark:** Compared eager buffering with direct streaming independently of AST construction.
-2. **Frontend integration benchmark:** Compared eager buffering and direct streaming across five workload categories and four input sizes, including lexing, parsing, and AST construction.
-3. **Lookahead benchmark:** Compared direct streaming against bounded two-token lookahead and eager buffering.
+```go
+parser.Parse(sourceText)
+```
 
-The integration benchmark showed that direct streaming was faster in 19 of 20 workload-size comparisons and allocated fewer bytes in all 20. The measured performance advantage was generally smaller than in the token-delivery-only experiment, emphasizing the importance of evaluating the complete frontend rather than relying exclusively on microbenchmarks.
+It returns a production flat-program representation and an error:
 
-AST-equivalence tests and targeted diagnostic regression tests passed.
+```go
+(*ast.FlatProgram, error)
+```
 
-**Architectural trade-offs:**
+The frontend processes source text through lexical scanning, parsing, and AST construction.
 
-- Direct streaming reduces intermediate token storage and avoids unnecessary lookahead work.
-- Eager buffering provides convenient random access to the token sequence.
-- Bounded lookahead remains an option for future grammar constructs requiring additional token inspection.
+Its responsibility ends at syntactic validation and AST production. It does not resolve identifiers, check types, or execute statements.
 
-**Implementation status:** The direct streaming architecture selected in
-M1-P5-A was integrated into the production frontend in M1-P5-B.
-The canonical `Parse(sourceText)` entry point now uses this architecture.
+### 4.2 Direct pull-based token streaming
 
-M1-P5-C completed cross-language frontend benchmarking against Go's
-`go/parser` and CPython 3.15, including controlled arithmetic workloads.
-Production integration tests, race detection, and static analysis passed.
+The production parser requests tokens incrementally from the lexer.
 
-The streaming implementation must preserve source locations, deterministic error reporting, EOF behavior, and the rule that malformed input cannot produce a successfully parsed program.
+This avoids constructing a complete token slice before parsing.
 
-The decision and future review triggers are tracked in `TECHNICAL_BACKLOG.md`.
+Direct streaming was selected during M1-P5 after evaluating eager token buffering, direct streaming, and bounded lookahead.
 
-### Lexer functionality
+The integrated experiments found direct streaming faster in 19 of 20 tested workload-size combinations and lower in allocated bytes in all 20.
 
-The lexer currently supports:
+H2 retains direct streaming as the production token-delivery strategy.
 
-- Byte-oriented source scanning with 1-based line and column tracking.
-- ASCII identifiers and reserved keywords, including `let`, `be`, `say`, `change`, `to`, `with`, and `giving`.
-- Decimal integer literals, rejecting prohibited leading zeros and invalid identifier suffixes.
-- Single- and double-quoted string literals with validation of the supported escape sequences.
-- Arithmetic operators `+`, `-`, `*`, `**`, `/`, `//`, and `%`.
-- Parentheses and colons.
-- Significant newlines, `INDENT`, and `DEDENT` tokens.
-- Four-space indentation alignment and rejection of invalid indentation.
-- `#` comments, including inline and comment-only lines.
-- Suppression of physical newlines inside parentheses.
-- Half-open source spans and positioned lexical errors.
-- Fail-fast lexical analysis.
+Buffered token delivery remains available for reference and comparative testing. Additional lookahead machinery is deferred until a concrete grammar requirement or measured regression justifies it.
 
-The lexer recognizes fixed reserved words as dedicated token kinds. Their grammatical roles are determined by the parser. For example, `to` participates in both assignment and function-definition syntax.
+### 4.3 Lexer responsibilities
 
-### Token representation
+The lexer supports the implemented lexical subset, including:
 
-Each token contains:
+- Reserved keywords and identifiers.
+- Integer and string literals.
+- Arithmetic operators and punctuation.
+- Significant newlines.
+- Four-space indentation, `INDENT`, and `DEDENT`.
+- Comments.
+- Parenthesized line continuation.
+- Source spans and positioned lexical errors.
 
-- `Kind`: a `TokenKind` identifying its lexical category.
-- `Lexeme`: the original source text.
-- `Span`: a half-open source range whose start is inclusive and end is exclusive.
+Token kinds use a compact `uint8`-backed representation.
 
-`TokenKind` uses a `uint8`-backed enumeration. Its `String()` method provides readable names for diagnostics and debugging. The zero value, `TokenInvalid`, represents an invalid or uninitialized token kind.
+Token lexemes reference the original source string where applicable, avoiding unnecessary text copies.
 
-The token representation uses shared source-location types from `internal/source`. Compatibility aliases in the lexer preserve the existing `lexer.Position` and `lexer.Span` names.
+Generated structural tokens use a reusable pending-token queue.
 
-Token lexemes refer to the original Go source string where applicable, avoiding unnecessary copies of source text.
+The lexer is designed for linear scanning time relative to source length, subject to the behavior of supported lexical constructs.
 
-### Indentation and pending tokens
+### 4.4 Parser responsibilities
 
-The lexer maintains an indentation stack initially containing the base indentation level of zero. Indentation increases generate `INDENT` tokens; decreases generate the necessary `DEDENT` tokens. Remaining indentation levels are closed at end of file.
+The production parser recognizes the currently implemented arithmetic, declaration, assignment, and output grammar.
 
-Generated structural tokens are stored in a reusable pending-token queue. An index tracks the next unread token, and the queue resets its length after draining while retaining its backing storage.
+Supported statement forms include:
 
-The indentation stack starts with capacity for four entries, including the base indentation level. Its capacity grows automatically when deeper nesting requires it.
-
-### AST foundations
-
-The `internal/ast` package defines three principal interfaces:
-
-- `Node`: any AST node that exposes its source span.
-- `Expression`: a value-producing syntactic construct.
-- `Statement`: a statement-level construct.
-
-Expression and statement interfaces use package-private marker methods to distinguish their implementations. The `Program` root implements `Node` but is neither an expression nor a statement.
-
-The initial expression nodes are `IntegerLiteral`, `StringLiteral`, `Identifier`, `UnaryExpression`, and `BinaryExpression`. The initial statement nodes are `LetStatement`, `ChangeStatement`, and `SayStatement`.
-
-AST nodes retain their source locations and syntactic relationships without evaluating expressions, resolving names, or performing type checking. Integer literal nodes preserve their decimal source text, while string literal nodes store decoded string contents produced during expression parsing. Unary and binary expression nodes retain their operators, operands, and source spans.
-
-The AST uses interface-based child references. Its structure remains independent of the planned bytecode representation.
-
-### Parser infrastructure and syntax diagnostics
-
-The `internal/parser` package currently accepts an ordered token slice terminated by `TokenEOF`. Its navigation helpers inspect, match, and consume tokens while preserving the terminal EOF position.
-
-The parser also provides a token-expectation helper and a structured `Diagnostic` containing:
-
-- A human-readable message.
-- A source span identifying the error location.
-- Optional expected token kinds.
-- An optional actual token kind.
-
-The initial parser follows a fail-fast contract: the first syntax error terminates parsing, and a malformed program must not be accepted as a successfully parsed AST. Diagnostic accumulation, synchronization, and multi-error recovery are deferred.
-
-The parser constructs arithmetic expression ASTs using Pratt parsing. It supports integer and string literals, identifiers, parenthesized expressions, unary numeric plus and minus, and the binary arithmetic operators `+`, `-`, `*`, `/`, `//`, `%`, and `**`.
-
-M1-P3 extends this infrastructure with statement-specific parsers, statement dispatch, and complete-program parsing. Each statement delegates its value expression to the existing Pratt parser. The program parser handles newline-separated statements, blank lines, and EOF termination, enforcing statement boundaries and preserving source spans.
-
-Lexer–parser integration and broader frontend conformance remain scheduled for subsequent M1 checkpoints.
-
-### Pratt expression parsing (M1-P2)
-
-The expression parser uses Pratt parsing with numeric binding powers to implement Eloque's initial arithmetic grammar. It separates prefix parsing from binary-operator parsing and uses binding-power thresholds to determine how expressions associate.
-
-The currently implemented precedence levels, from highest to lowest, are:
-
-| Precedence | Operators | Associativity |
-|---|---|---|
-| Grouping | `(...)` | Explicit grouping |
-| Exponentiation | `**` | Right-associative |
-| Unary arithmetic | `+`, `-` | Right-nesting prefix operators |
-| Multiplicative | `*`, `/`, `//`, `%` | Left-associative |
-| Additive | `+`, `-` | Left-associative |
-
-Exponentiation binds more tightly than unary arithmetic on its left but accepts unary expressions on its right. Consequently, `-2 ** 2` parses as `-(2 ** 2)`, `2 ** -3` parses as `2 ** (-3)`, and `2 ** 3 ** 2` parses as `2 ** (3 ** 2)`.
-
-The implementation uses binding powers of 50 for additive operators, 60 for multiplicative operators, 70 for prefix unary operators, and 80 for exponentiation. Left-associative operators parse their right operands with a higher minimum binding power, while exponentiation uses its own binding power to preserve right associativity.
-
-Parentheses control grouping without introducing an additional semantic AST node. The parser maintains an internal expression result containing both the AST expression and its complete syntactic source extent. This allows enclosing unary and binary expressions to include grouping parentheses in their spans while preserving the original locations of child AST nodes.
-
-String literal parsing decodes the escape sequences already validated by the lexer. Integer literals retain their original decimal lexemes; numeric interpretation and type checking are not performed during parsing.
-
-The lexer suppresses physical newlines inside matched parentheses, permitting multiline grouped expressions. The expression parser operates on the resulting token stream and treats emitted newline tokens as expression boundaries.
-
-Malformed expressions produce fail-fast syntax diagnostics with source locations and expected/actual token information where applicable. The parser does not currently implement error recovery or multiple diagnostics per parse.
-
-The implemented expression subset excludes comparisons, Boolean operators, function calls, member access, and collection expressions. These remain part of the target language specification and will be introduced according to their scheduled implementation milestones.
-
-### Expression parser complexity and performance (M1-P2)
-
-The Pratt expression parser consumes tokens without backtracking and has expected O(n) parsing time for an expression containing n tokens. AST memory grows proportionally to the number of expression nodes. Recursive parsing introduces additional stack usage proportional to expression nesting depth.
-
-The initial M1-P2 benchmark suite measures parsing and AST construction from prepared token streams, excluding lexing and token generation. Five benchmark runs were collected on linux/amd64 using an Intel Core Ultra 7 155H processor.
-
-| Benchmark | Input size | Median time | Memory per parse | Allocations per parse |
-|---|---:|---:|---:|---:|
-| Simple arithmetic | 2 operators | ~287 ns | 496 B | 8 |
-| Mixed precedence | 3 operators | ~394 ns | 688 B | 11 |
-| Additive chain | 100 operators | ~12.42 µs | 19,314 B | 302 |
-| Additive chain | 1,000 operators | ~115.63 µs | ~192 KB | 3,002 |
-| Exponentiation chain | 100 operators | ~13.11 µs | 19,314 B | 302 |
-| Exponentiation chain | 1,000 operators | ~135.02 µs | ~192 KB | 3,002 |
-| Nested parentheses | 100 levels | ~14.38 µs | 12,913 B | 202 |
-| Nested parentheses | 1,000 levels | ~160.87 µs | ~128 KB | 2,002 |
-
-The tested workloads demonstrate approximately linear execution-time and allocation scaling. Stress tests with 1,000 nested parentheses and 1,000 exponentiation operators also pass.
-
-No production-code optimisation was justified by the initial measurements. Recursive nesting remains a potential robustness concern for unusually deep or adversarial inputs; no universal nesting limit has been established.
-
-Benchmarks are maintained in `internal/parser/expression_bench_test.go`. These results establish an expression-parser baseline rather than full frontend or compiler throughput.
-
-### Statement and program parsing (M1-P3)
-
-M1-P3 introduces the initial statement grammar and complete-program AST construction using the existing parser infrastructure.
-
-The supported statement forms are:
-
-```elq
+```eloque
 let value be 10 + 20
 change value to value * 2
 say value
 ```
 
-These examples describe syntax accepted by the statement parser when supplied with the corresponding tokens. They are not yet executable Eloque programs.
+These examples are syntactically supported but are not yet executable.
 
-**Statement parsing**
+The expression parser uses Pratt parsing for precedence and associativity.
 
-The parser implements three statement-specific methods:
+Its arithmetic grammar includes unary `+` and `-`, binary arithmetic operators, and grouping.
 
-- `parseLetStatement()` parses `let identifier be expression` and constructs an `ast.LetStatement`.
-- `parseChangeStatement()` parses `change identifier to expression` and constructs an `ast.ChangeStatement`.
-- `parseSayStatement()` parses `say expression` and constructs an `ast.SayStatement`.
+Exponentiation is right-associative and binds more tightly than unary negation on its left.
 
-`parseStatement()` dispatches according to the current token kind. Unsupported statement starters produce structured diagnostics identifying the expected statement keywords and actual token kind.
-
-Each statement parser delegates expression parsing to `parseExpression(0)`. Expression parsing remains independent of statement-specific syntax.
-
-Statement source spans begin at their initiating keyword and end at the complete syntactic extent of their value expression. This includes enclosing grouping parentheses where applicable.
-
-**Complete-program parsing**
-
-`parseProgram()` constructs an `ast.Program` containing an ordered slice of statements.
-
-The program parser:
-
-- Processes statements in source order.
-- Skips newline tokens between statements, including blank lines.
-- Requires a newline or EOF after each successfully parsed statement.
-- Stops at EOF.
-- Returns a diagnostic rather than a partial successful program when parsing fails.
-
-A nonempty program's source span begins at its first statement and ends at its last statement. For an empty program, the span is zero-width at the EOF position.
-
-The current implementation does not parse indentation-based blocks or additional statement forms. These will be introduced as their respective language features are implemented.
-
-**Diagnostics and failure handling**
-
-M1-P3 preserves the existing fail-fast diagnostic contract.
-
-Malformed statement syntax, missing required keywords or identifiers, invalid statement starters, missing statement separators, and nested expression failures produce structured diagnostics.
-
-Diagnostics retain the relevant source location and expected/actual token metadata where applicable. Expression diagnostics propagate through statement and program parsing without being replaced by generic errors.
-
-The parser returns no successful program AST when a syntax error is encountered. Multi-error recovery and synchronization remain deferred.
-
-**Architecture and complexity**
-
-The parsing flow is:
+Consequently:
 
 ```text
-parseProgram()
-    |
-    v
-parseStatement()
-    |
-    +-- parseLetStatement()
-    |
-    +-- parseChangeStatement()
-    |
-    +-- parseSayStatement()
-                |
-                v
-         parseExpression(0)
+-2 ** 2     → -(2 ** 2)
+2 ** -3     → 2 ** (-3)
+2 ** 3 ** 2 → 2 ** (3 ** 2)
 ```
 
-All three statement-specific parsers delegate value expressions to `parseExpression(0)`; the diagram illustrates the shared dependency rather than exclusive use by `parseSayStatement()`.
+The parser constructs a complete program representation for valid input.
 
-Statement dispatch uses token-kind matching, and program parsing advances through the token stream without backtracking. Expected parsing time is O(n) for n tokens, excluding pathological recursive-expression stack considerations.
+Malformed input must not produce a successfully parsed program.
 
-AST memory and allocations grow proportionally to the size of the parsed program under the tested workloads.
+### 4.5 Diagnostics
 
-**Performance baseline**
+The production frontend preserves fail-fast lexical and syntax diagnostics.
 
-The initial M1-P3 benchmark suite measures complete-program parsing and AST construction from prepared token streams, excluding lexing and token generation.
+Diagnostics retain source-location information and relevant expected/actual token metadata where applicable.
 
-Five runs per workload were collected on linux/amd64 using an Intel Core Ultra 7 155H processor.
+The first encountered lexical or syntax error terminates the operation.
 
-| Statements | Mean parsing time | Approximate memory per parse | Allocations per parse |
+Multi-error accumulation, synchronization, and recovery remain deferred.
+
+H2 optimization must preserve the established diagnostic contract rather than trading diagnostic correctness for performance.
+
+## 5. H2 arena-backed AST
+
+### 5.1 Motivation
+
+The original M1 parser constructed an interface-based AST with individually represented expression and statement nodes.
+
+That design was straightforward and useful for establishing correctness, but its representation introduced allocation and traversal costs.
+
+H2 introduced an arena-backed flat AST to reduce allocation overhead while retaining the required syntactic structure and source information.
+
+### 5.2 Representation
+
+The production AST uses flat nodes stored in arena-managed storage.
+
+The implementation includes:
+
+- `FlatNode` — the production flat-node representation.
+- `FlatProgram` — the production parsed-program representation.
+- Arena storage and allocation functionality.
+- Node payload definitions.
+- Source-span preservation.
+- Tests covering arena behavior, invariants, and AST construction.
+
+Rather than treating each AST node as an independently allocated interface-backed object, the flat representation uses arena-managed nodes and associated structural information.
+
+The AST remains a syntactic representation. It does not encode resolved names, inferred types, runtime values, or executable bytecode.
+
+### 5.3 Arena lifetime and ownership
+
+The arena is associated with AST construction and the resulting program representation.
+
+Its storage must remain valid for as long as the parsed program is used.
+
+Future semantic analysis must consume the AST without assuming that arena-managed nodes have independent allocation lifetimes.
+
+The implementation's precise node-reference and payload invariants are enforced by the corresponding AST tests.
+
+### 5.4 Legacy representation
+
+The M1 AST and parser remain in the frontend packages under `legacy_*` source filenames.
+
+They serve as reference implementations for:
+
+- Regression testing.
+- Differential correctness checks.
+- Performance comparisons.
+- Investigating behavioral differences introduced by H2.
+
+The legacy representation is not the canonical production output.
+
+The current `FlatNode` and `FlatProgram` names remain in use. Any future naming simplification should be handled separately from this optimization milestone.
+
+## 6. H2 correctness validation
+
+H2 was validated using unit tests, integration tests, differential tests, and frontend benchmarks.
+
+The validation includes AST arena invariants and parser behavior.
+
+The frontend reorganization was subsequently checked using:
+
+```bash
+go test ./...
+go vet ./...
+```
+
+Both passed after removal of the temporary compiler benchmark workspace from the Go module's package discovery path.
+
+The migration did not intentionally change Eloque's accepted grammar or observable parsing semantics.
+
+## 7. H2 performance evaluation
+
+H2 was benchmarked against the retained M1 frontend and external parser implementations.
+
+The official results are preserved in:
+
+```text
+benchmarks/results/official/
+```
+
+Experimental arena-capacity and allocation investigations are preserved separately under:
+
+```text
+benchmarks/results/experimental/
+```
+
+### 7.1 M1 versus H2
+
+The official M1/H2 workload suite evaluated declarations, expressions, strings, comments, and mixed programs.
+
+At 1,000 workload units, the recorded median results were:
+
+| Workload | M1 | H2 | Speedup |
 |---|---:|---:|---:|
-| 3 | 864.5 ns | 1,712 B | 29 |
-| 300 | 86.5 µs | 162,994 B | 2,510 |
-| 3,000 | 1.007 ms | 1,694,141 B | 25,015 |
+| Declarations | 238.1 µs | 209.0 µs | 1.14× |
+| Expressions | 1,181.5 µs | 667.4 µs | 1.77× |
+| Strings | 400.1 µs | 394.2 µs | 1.01× |
+| Comments | 407.8 µs | 346.4 µs | 1.18× |
+| Mixed | 1,683.8 µs | 1,191.1 µs | 1.41× |
 
-The results demonstrate approximately linear scaling in execution time, memory consumption, and allocations across the tested workloads. No production-code optimisation was justified at this checkpoint.
+H2 reduced allocation counts across these workloads.
 
-Benchmarks are maintained in `internal/parser/program_bench_test.go`, with raw results preserved in `benchmark_m1_p3.txt`. The measurements establish a program-parser baseline, not end-to-end frontend or compiler throughput.
+The largest measured improvement among these examples occurred in the expression-heavy workload. String-heavy performance was approximately unchanged.
 
-### Canonical frontend optimization (post-M1-P3)
+These results support H2 as a beneficial implementation optimization for the tested workloads, not a universal speed guarantee.
 
-Following M1-P3, the existing lexer and parser were consolidated and optimized before beginning M1-P4. This work establishes the canonical implementation baseline for subsequent frontend development.
+### 7.2 Controlled cross-language comparison
 
-The optimization was undertaken without intentionally changing the language's accepted syntax or observable parsing semantics. The existing correctness and robustness requirements remain applicable.
+A separate controlled arithmetic suite compared Eloque H2, the Go compiler syntax parser, Go's standard-library parser, and CPython 3.14.4.
 
-**Recorded optimized measurements**
+At 10,000 workload units:
 
-| Workload | Result |
+| Frontend | Median latency |
 |---|---:|
-| Lexer throughput | Approximately 261.6 MB/s |
-| Lexer allocation count | 2 allocs/op |
-| Parser, 1,000-operation chains | Approximately 76.0–99.4 µs |
-| Parser chain allocation count | 2,002 allocs/op |
-| Parser, 3,000-statement program | Approximately 664 µs |
-| Parser program allocation count | 13,028 allocs/op |
-| Expression-heavy complete frontend throughput | Approximately 34.5 MB/s |
+| Eloque H2 | 7.16 ms |
+| Go compiler syntax parser | 14.12 ms |
+| Go `go/parser` | 23.92 ms |
+| CPython 3.14.4 `ast.parse` | 147.86 ms |
 
-These measurements characterize specific benchmark workloads, not universal frontend throughput.
+These measurements are specific to the benchmark inputs and harnesses.
 
-The optimized 3,000-statement parser workload is approximately 34% faster than the original M1-P3 baseline of 1.007 ms, with approximately 48% fewer allocations than the original 25,015 allocs/op.
+The implementations process different language grammars and produce different AST structures. The results do not establish equivalent compiler responsibilities or general superiority over Go or Python.
 
-Complete frontend benchmarks measure lexing, token collection, parsing, and AST construction. They must be distinguished from prepared-token parser benchmarks, which exclude lexical processing.
+They also do not measure Eloque execution performance, since Eloque has no executable runtime yet.
 
-Reproducible benchmark commands, workload definitions, recorded results, and the preliminary CPython frontend comparison are maintained in [`benchmarks/README.md`](../benchmarks/README.md).
+For methodology, environment details, reproduction commands, and historical comparisons, see [benchmarks/README.md](../benchmarks/README.md).
 
-The optimized frontend served as the baseline for M1-P4 conformance testing and remains the canonical implementation for M1-P5 production integration, end-to-end validation, and performance regression review.
+## 8. Deferred frontend optimizations
 
-### Complexity and measured lexer performance
+H2 experiments investigated arena capacity, growth behavior, and allocation patterns.
 
-For source length `N`, the lexer operates in O(N) time overall. Its auxiliary working space is O(d + q), where `d` is indentation depth and `q` is the maximum number of pending tokens, excluding source storage and returned tokens retained by callers.
+These experiments do not automatically justify additional production optimizations.
 
-The October 2026 performance audit measured:
+Further arena-capacity tuning should be reconsidered when representative workloads reveal meaningful allocation or growth overhead.
 
-| Metric | Initial implementation | Optimized implementation |
-|---|---:|---:|
-| Mixed-source execution time | ~699 ns/op | ~644 ns/op |
-| Mixed-source allocation volume | 248 B/op | 80 B/op |
-| Mixed-source allocation count | 7 allocs/op | 2 allocs/op |
-| Token structure size | 48 bytes | 40 bytes |
+A proposed optimization must demonstrate:
 
-Benchmarks were performed on linux/amd64 with an Intel Core Ultra 7 155H processor. Runtime measurements are approximate and subject to benchmark variability.
+- Correctness preservation.
+- Improved performance on representative inputs.
+- Acceptable memory consumption across different program shapes.
+- No unjustified regression for smaller workloads.
+- Benefits that justify additional implementation complexity.
 
-A separate scaling benchmark, using repeated source samples from 138 bytes to 138 KB, showed approximately linear execution time and constant allocation counts for the tested bounded-indentation workload.
+The review trigger and supporting evidence belong in [TECHNICAL_BACKLOG.md](TECHNICAL_BACKLOG.md).
 
-These measurements characterize the lexer baseline before the latest keyword additions, not the performance of the future parser, compiler, or virtual machine. Benchmarks are maintained in `internal/lexer/lexer_bench_test.go`.
+## 9. Semantic analysis
 
-## Runtime value model
+The next compiler phase will introduce name resolution and static type checking.
 
-The observable semantics of lists, maps and structured custom values are **value semantics**: assigning one to another produces logically independent values. The runtime may use copies, copy-on-write or structural sharing if mutation remains observationally independent.
+### Name resolution
 
-- `Int`: signed 64-bit with checked overflow.
-- `Float`: IEEE 754 binary64; no implicit lossy conversion.
+The resolver will bind identifier uses to declarations and enforce the language's scope rules.
+
+It must reject undeclared identifiers and prohibited shadowing.
+
+### Static type checking
+
+The checker will validate the implemented language's type rules before execution.
+
+Planned responsibilities include:
+
+- Type inference for eligible local bindings.
+- Assignment compatibility.
+- Arithmetic operand validation.
+- Explicit function signatures when functions are implemented.
+- Return-path checking.
+- Optional-value handling.
+- Source-aware type diagnostics.
+
+Static checking is mandatory for normal compilation.
+
+The frontend's AST representation must not be confused with the semantic information produced by these future stages.
+
+## 10. Bytecode compiler
+
+The initial backend will compile statically validated programs into bytecode.
+
+Its intended responsibilities include:
+
+- Instruction generation.
+- Constant-pool management.
+- Local-variable representation.
+- Branch and call support as language features are added.
+- Source-location and debugging metadata.
+
+The initial design may compile from the validated AST without a general-purpose intermediate representation.
+
+A separate backend-neutral IR should be introduced only when a concrete optimization or additional backend justifies its complexity.
+
+## 11. Virtual machine and runtime
+
+The first executable Eloque implementation is planned as a Go-hosted stack-based bytecode VM.
+
+Its initial scope will cover a small statically checked subset, including constants, arithmetic, bindings, and output.
+
+Future capabilities include control flow, functions, collections, custom types, exceptions, and concurrency.
+
+### Runtime value model
+
+The language's intended observable value semantics are independent of the internal Go representation.
+
+Planned primitive types include:
+
+- `Int`: checked signed 64-bit integers.
+- `Float`: IEEE 754 binary64.
+- `Bool`: strict Boolean values.
 - `String`: immutable Unicode text.
-- `Bool`: strict booleans, no truthiness conversion.
-- Optional values: `T?` can hold `none`.
-- Lists/maps: typed operations, negative indexing for supported sequence types, end-exclusive slices, safe `find` access.
+- Optional values represented through `T?`.
 
-The VM's actual value representation (Go interfaces, tagged union, pointers, etc.) remains **open** until implementation. Go's garbage collector can manage Go-allocated objects, but it does not automatically implement Eloque's value semantics, deep freezing or safe shared-state policy.
+Lists, maps, and structured values are intended to preserve logical value independence under assignment.
 
-## VM direction
+The runtime representation—Go interfaces, tagged values, pointer-backed objects, or another approach—remains undecided.
 
-Start with a minimal stack machine that can execute validated constants, arithmetic, `say` and bindings. Add branches, loops, calls, collections and exceptions as the frontend supports them.
+It must be reviewed before implementing the first VM value type.
 
-Likely building blocks:
+### VM architecture review
 
-- Opcode/instruction representation and constant pool.
-- Operand stack and local variable slots.
-- Call frames and return addresses.
-- Branch and loop instructions.
-- Source-location/debug metadata.
-- Typed runtime failures and exception unwinding.
+The stack VM is the baseline, not an irreversible commitment.
 
-Avoid premature commitments to bytecode encoding, object layout, garbage-collection strategies beyond Go-managed allocation, or a multi-backend intermediate representation.
+Once a working VM and reproducible execution benchmarks exist, a register-based design may be evaluated against stack-machine optimizations.
 
-A small tree evaluator can be used as a temporary test aid if useful, but **the primary planned runtime is bytecode plus VM**.
+The decision should consider dispatch cost, instruction count, memory traffic, bytecode size, and implementation complexity.
 
-## Errors and diagnostics
+## 12. Modules, exceptions, and concurrency
 
-Diagnostics are a first-class interface for both human programmers and AI agents.
+### Modules
 
-- Compile-time errors should include an error category/code, message, file, line, column and relevant source span.
-- Runtime failures should carry typed exceptions and source locations when available.
-- Human-readable CLI diagnostics are the default; structured machine-readable output should be supported by the tooling design.
-- Invalid direct indexing, missing map keys, integer overflow and division by zero must not silently return misleading values.
-- Exceptions are unchecked; static analysis may warn about potentially unhandled errors without requiring exception declarations.
+Each Eloque source file is intended to represent a module.
 
-Exact diagnostic codes, JSON schema and exception hierarchy are deferred until their respective implementation milestones.
+The proposed module system includes imports, controlled visibility, deterministic initialization, and rejection of circular imports in the initial design.
 
-## Modules
+Module resolution and caching remain future work.
 
-Each `.elq` file is intended to be a module. `import` supports whole-module and selected-name imports, with aliases introduced by `named`. Top-level names beginning with `_` are private and access must be rejected by the compiler.
+### Exceptions
 
-Module initialization runs at most once per program execution. Initialization order follows a defined dependency order; circular imports are rejected initially. Path resolution, caching representation and failure recovery need further specification.
+The intended exception system uses typed failures and structured handling.
 
-## Concurrency and sandboxing
+Exception matching, propagation, cleanup, and unwinding semantics require implementation-stage review.
 
-The initial runtime is **sequential**. Eventual native concurrency is a language goal, not a feature of the first VM.
+### Concurrency
 
-Explicit references, ownership rules, shared mutable state, cancellation, task lifetime and exception propagation should be designed together. Go goroutines may be a runtime mechanism, but Eloque's user-facing safety guarantees must be specified independently.
+The initial VM is sequential.
 
-Normal CLI execution has no arbitrary universal instruction budget. Sandboxed/agent execution should eventually support configurable instruction, time and memory limits. Hard guarantees depend on the implementation and hosting environment; not every infinite loop can be proven statically.
+Native concurrency is a longer-term language goal.
 
-## Performance and future backends
+Go goroutines may provide an implementation mechanism, but Eloque's observable concurrency contract must be designed independently.
 
-Measure correctness first, then benchmark representative workloads. A stack-based VM is the baseline. Compare a register-based alternative only after the working VM and a repeatable benchmark harness exist.
+Task ownership, cancellation, shared mutable state, race safety, and error propagation must be specified before implementation.
 
-Potential later work includes opcode specialization, reduced allocations, inline caches, optional JIT, AOT/native compilation and WebAssembly. None is a committed v0.1 feature. CPython parity is an aspiration, **not** an established result.
+The VM should avoid unnecessary global mutable state that would obstruct future independent execution contexts.
 
-Keep language semantics separate from VM internals so future backends can preserve observable behavior without rewriting the language contract. Do not build a general-purpose IR until a real second-backend or optimization need justifies it.
+## 13. Future execution backends
 
-## Compatibility
+Possible future improvements include:
 
-- Before 1.0, syntax and semantics may change, with documentation and conformance tests updated together.
-- At 1.0, published source-level semantics become the compatibility commitment.
-- Internal bytecode is not a stable public interchange format unless standardized later.
-- Backend changes that preserve observable behavior need not require a major version.
+- Bytecode specialization.
+- Register-based VM evaluation.
+- JIT compilation.
+- AOT/native compilation.
+- WebAssembly.
+- Additional compiler optimizations.
 
-## Open architecture decisions and review gates
+These are research or review items, not features of the completed frontend.
+
+Performance comparisons with CPython must eventually use equivalent, correctness-tested executable programs once Eloque has a working runtime.
+
+Frontend parsing measurements must not be used as evidence of runtime performance parity.
+
+## 14. Compatibility and evolution
+
+Before version 1.0, syntax, semantics, and implementation details may evolve with corresponding specification and conformance-test updates.
+
+At version 1.0, published source-level semantics will form the compatibility commitment.
+
+Internal AST representations and bytecode encodings are not public compatibility guarantees unless explicitly standardized.
+
+Changes to internal implementation should preserve observable behavior unless a deliberate language revision is documented.
+
+## 15. Architecture review gates
 
 | Decision | Review trigger |
 |---|---|
-| Runtime value representation and efficient value semantics | Before first VM value implementation |
-| Exact instruction encoding and source-map design | First bytecode compiler milestone |
-| Float edge cases, conversion rules and formatting | Numeric runtime and checker implementation |
-| Collection freezing and safe mutation | Before mutable collection implementation |
-| Exception taxonomy and unwinding precedence | Exception milestone |
-| Module resolution and caching | Import milestone |
-| Closure representation and advanced functions | When closures enter scope |
-| Explicit references, ownership and concurrency | Dedicated concurrency design milestone |
-| Structured diagnostic schema and sandbox limits | CLI tooling / agent execution milestone |
-| Backend-neutral IR | Only when a second backend or real optimization need arises |
+| Arena capacity and allocation tuning | Representative frontend profiling demonstrates a meaningful opportunity |
+| Additional parser lookahead | A grammar feature requires it or a measured regression justifies it |
+| Runtime value representation | Before first VM value implementation |
+| Numeric edge cases | Arithmetic checker and runtime implementation |
+| Stack versus register VM | After working VM and reproducible execution benchmarks |
+| Backend-neutral IR | Concrete second-backend or optimization requirement |
+| Collection value independence | Before mutable collections |
+| Exception taxonomy and unwinding | Exception implementation milestone |
+| Module resolution and caching | Module implementation milestone |
+| Native concurrency and ownership | Dedicated concurrency design milestone |
+| JIT, AOT, and WebAssembly | Demonstrated performance or deployment requirement |
+| Structured diagnostics and sandbox controls | Tooling and agent-execution milestones |
 
-Review triggers are tracked in [TECHNICAL_BACKLOG.md](TECHNICAL_BACKLOG.md). Avoid interpreting a deferred implementation detail as an unsettled language principle.
+All deferred engineering decisions must retain a rationale, review trigger, and measurable acceptance criteria in [TECHNICAL_BACKLOG.md](TECHNICAL_BACKLOG.md).
+
+---
+
+**Current architectural baseline:** H2 direct-streaming frontend with arena-backed flat AST, retained M1 reference implementation, and verified frontend correctness.
+
+**Next development direction:** A small statically checked executable subset, progressing through semantic analysis, bytecode compilation, and VM execution.

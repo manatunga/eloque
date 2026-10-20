@@ -1,0 +1,66 @@
+goos: linux
+goarch: amd64
+pkg: github.com/manatunga/eloque/internal/parser
+cpu: Intel(R) Core(TM) Ultra 7 155H
+BenchmarkFlatParserNodeCapacity/Small/Baseline-22         	  266137	      7829 ns/op	    7304 B/op	      65 allocs/op
+BenchmarkFlatParserNodeCapacity/Small/Baseline-22         	  307159	      7523 ns/op	    7304 B/op	      65 allocs/op
+BenchmarkFlatParserNodeCapacity/Small/Baseline-22         	  314185	      7755 ns/op	    7304 B/op	      65 allocs/op
+BenchmarkFlatParserNodeCapacity/Small/Baseline-22         	  308509	      8904 ns/op	    7304 B/op	      65 allocs/op
+BenchmarkFlatParserNodeCapacity/Small/Baseline-22         	  275818	      8363 ns/op	    7304 B/op	      65 allocs/op
+BenchmarkFlatParserNodeCapacity/Small/BytesPer16-22       	  255267	      8387 ns/op	    8408 B/op	      60 allocs/op
+BenchmarkFlatParserNodeCapacity/Small/BytesPer16-22       	  261745	      8331 ns/op	    8408 B/op	      60 allocs/op
+BenchmarkFlatParserNodeCapacity/Small/BytesPer16-22       	  275568	      8292 ns/op	    8408 B/op	      60 allocs/op
+BenchmarkFlatParserNodeCapacity/Small/BytesPer16-22       	  296044	      8381 ns/op	    8408 B/op	      60 allocs/op
+BenchmarkFlatParserNodeCapacity/Small/BytesPer16-22       	  278508	      8437 ns/op	    8408 B/op	      60 allocs/op
+BenchmarkFlatParserNodeCapacity/Small/BytesPer8-22        	  277702	      8585 ns/op	    7704 B/op	      59 allocs/op
+BenchmarkFlatParserNodeCapacity/Small/BytesPer8-22        	  273973	      8306 ns/op	    7704 B/op	      59 allocs/op
+BenchmarkFlatParserNodeCapacity/Small/BytesPer8-22        	  318561	      7746 ns/op	    7704 B/op	      59 allocs/op
+BenchmarkFlatParserNodeCapacity/Small/BytesPer8-22        	  312165	      7741 ns/op	    7705 B/op	      59 allocs/op
+BenchmarkFlatParserNodeCapacity/Small/BytesPer8-22        	  302485	      8336 ns/op	    7704 B/op	      59 allocs/op
+BenchmarkFlatParserNodeCapacity/Small/BytesPer4-22        	  301561	      7957 ns/op	    6296 B/op	      58 allocs/op
+BenchmarkFlatParserNodeCapacity/Small/BytesPer4-22        	  292797	      8051 ns/op	    6296 B/op	      58 allocs/op
+BenchmarkFlatParserNodeCapacity/Small/BytesPer4-22        	  305313	      7722 ns/op	    6296 B/op	      58 allocs/op
+BenchmarkFlatParserNodeCapacity/Small/BytesPer4-22        	  307814	      7647 ns/op	    6296 B/op	      58 allocs/op
+BenchmarkFlatParserNodeCapacity/Small/BytesPer4-22        	  305905	      7900 ns/op	    6296 B/op	      58 allocs/op
+BenchmarkFlatParserNodeCapacity/Medium/Baseline-22        	   30888	     76975 ns/op	   86386 B/op	     354 allocs/op
+BenchmarkFlatParserNodeCapacity/Medium/Baseline-22        	   31054	     82444 ns/op	   86386 B/op	     354 allocs/op
+BenchmarkFlatParserNodeCapacity/Medium/Baseline-22        	   28417	     78698 ns/op	   86385 B/op	     354 allocs/op
+BenchmarkFlatParserNodeCapacity/Medium/Baseline-22        	   30458	     78832 ns/op	   86385 B/op	     354 allocs/op
+BenchmarkFlatParserNodeCapacity/Medium/Baseline-22        	   30892	     79209 ns/op	   86386 B/op	     354 allocs/op
+BenchmarkFlatParserNodeCapacity/Medium/BytesPer16-22      	   28795	     81524 ns/op	  102148 B/op	     346 allocs/op
+BenchmarkFlatParserNodeCapacity/Medium/BytesPer16-22      	   29133	     75974 ns/op	  102151 B/op	     346 allocs/op
+BenchmarkFlatParserNodeCapacity/Medium/BytesPer16-22      	   31029	     77623 ns/op	  102151 B/op	     346 allocs/op
+BenchmarkFlatParserNodeCapacity/Medium/BytesPer16-22      	   30435	     80264 ns/op	  102149 B/op	     346 allocs/op
+BenchmarkFlatParserNodeCapacity/Medium/BytesPer16-22      	   29385	     80286 ns/op	  102148 B/op	     346 allocs/op
+BenchmarkFlatParserNodeCapacity/Medium/BytesPer8-22       	   32845	     72407 ns/op	   74113 B/op	     344 allocs/op
+BenchmarkFlatParserNodeCapacity/Medium/BytesPer8-22       	   32832	     74260 ns/op	   74112 B/op	     344 allocs/op
+BenchmarkFlatParserNodeCapacity/Medium/BytesPer8-22       	   32709	     74637 ns/op	   74111 B/op	     344 allocs/op
+BenchmarkFlatParserNodeCapacity/Medium/BytesPer8-22       	   31944	     77800 ns/op	   74111 B/op	     344 allocs/op
+BenchmarkFlatParserNodeCapacity/Medium/BytesPer8-22       	   32088	     75002 ns/op	   74111 B/op	     344 allocs/op
+BenchmarkFlatParserNodeCapacity/Medium/BytesPer4-22       	   32584	     74858 ns/op	   68734 B/op	     343 allocs/op
+BenchmarkFlatParserNodeCapacity/Medium/BytesPer4-22       	   32592	     73539 ns/op	   68734 B/op	     343 allocs/op
+BenchmarkFlatParserNodeCapacity/Medium/BytesPer4-22       	   32445	     74619 ns/op	   68734 B/op	     343 allocs/op
+BenchmarkFlatParserNodeCapacity/Medium/BytesPer4-22       	   32289	     75691 ns/op	   68735 B/op	     343 allocs/op
+BenchmarkFlatParserNodeCapacity/Medium/BytesPer4-22       	   32892	     76511 ns/op	   68734 B/op	     343 allocs/op
+BenchmarkFlatParserNodeCapacity/Large/Baseline-22         	    2709	    877371 ns/op	 1251928 B/op	    3080 allocs/op
+BenchmarkFlatParserNodeCapacity/Large/Baseline-22         	    2892	    904375 ns/op	 1251924 B/op	    3080 allocs/op
+BenchmarkFlatParserNodeCapacity/Large/Baseline-22         	    2521	    876999 ns/op	 1251870 B/op	    3080 allocs/op
+BenchmarkFlatParserNodeCapacity/Large/Baseline-22         	    2708	    893369 ns/op	 1251860 B/op	    3079 allocs/op
+BenchmarkFlatParserNodeCapacity/Large/Baseline-22         	    2637	    891566 ns/op	 1251872 B/op	    3080 allocs/op
+BenchmarkFlatParserNodeCapacity/Large/BytesPer16-22       	    2799	    921627 ns/op	 1074484 B/op	    3065 allocs/op
+BenchmarkFlatParserNodeCapacity/Large/BytesPer16-22       	    2668	    856497 ns/op	 1074502 B/op	    3065 allocs/op
+BenchmarkFlatParserNodeCapacity/Large/BytesPer16-22       	    2848	    861123 ns/op	 1074497 B/op	    3065 allocs/op
+BenchmarkFlatParserNodeCapacity/Large/BytesPer16-22       	    2768	    837358 ns/op	 1074503 B/op	    3065 allocs/op
+BenchmarkFlatParserNodeCapacity/Large/BytesPer16-22       	    2649	    879872 ns/op	 1074485 B/op	    3065 allocs/op
+BenchmarkFlatParserNodeCapacity/Large/BytesPer8-22        	    3120	    779218 ns/op	  689429 B/op	    3061 allocs/op
+BenchmarkFlatParserNodeCapacity/Large/BytesPer8-22        	    3014	    779199 ns/op	  689430 B/op	    3061 allocs/op
+BenchmarkFlatParserNodeCapacity/Large/BytesPer8-22        	    2986	    755487 ns/op	  689438 B/op	    3061 allocs/op
+BenchmarkFlatParserNodeCapacity/Large/BytesPer8-22        	    3145	    756706 ns/op	  689430 B/op	    3061 allocs/op
+BenchmarkFlatParserNodeCapacity/Large/BytesPer8-22        	    3132	    758537 ns/op	  689428 B/op	    3061 allocs/op
+BenchmarkFlatParserNodeCapacity/Large/BytesPer4-22        	    3159	    766321 ns/op	  648445 B/op	    3060 allocs/op
+BenchmarkFlatParserNodeCapacity/Large/BytesPer4-22        	    3166	    744573 ns/op	  648442 B/op	    3060 allocs/op
+BenchmarkFlatParserNodeCapacity/Large/BytesPer4-22        	    3014	    757079 ns/op	  648440 B/op	    3060 allocs/op
+BenchmarkFlatParserNodeCapacity/Large/BytesPer4-22        	    3165	    791666 ns/op	  648454 B/op	    3060 allocs/op
+BenchmarkFlatParserNodeCapacity/Large/BytesPer4-22        	    3285	    765549 ns/op	  648447 B/op	    3060 allocs/op
+PASS
+ok  	github.com/manatunga/eloque/internal/parser	162.321s

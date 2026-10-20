@@ -9,6 +9,7 @@
 
 # Profiling and coverage
 *.prof
+*.pprof
 coverage/
 coverage.html
 coverage.txt

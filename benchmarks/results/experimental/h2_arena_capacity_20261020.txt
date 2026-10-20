@@ -1,0 +1,45 @@
+=== RUN   TestArenaCapacityGrowth
+=== RUN   TestArenaCapacityGrowth/Small
+    arena_capacity_test.go:35: nodes: len=100 cap=128
+    arena_capacity_test.go:36: FlatNode size: 16 bytes
+    arena_capacity_test.go:37: used node storage: 1600 bytes
+    arena_capacity_test.go:38: backing-array storage: 2048 bytes
+    arena_capacity_test.go:39: unused capacity: 448 bytes
+    arena_capacity_test.go:42: capacity utilization: 78.12%
+=== RUN   TestArenaCapacityGrowth/Medium
+    arena_capacity_test.go:35: nodes: len=1000 cap=1280
+    arena_capacity_test.go:36: FlatNode size: 16 bytes
+    arena_capacity_test.go:37: used node storage: 16000 bytes
+    arena_capacity_test.go:38: backing-array storage: 20480 bytes
+    arena_capacity_test.go:39: unused capacity: 4480 bytes
+    arena_capacity_test.go:42: capacity utilization: 78.12%
+=== RUN   TestArenaCapacityGrowth/Large
+    arena_capacity_test.go:35: nodes: len=10000 cap=11264
+    arena_capacity_test.go:36: FlatNode size: 16 bytes
+    arena_capacity_test.go:37: used node storage: 160000 bytes
+    arena_capacity_test.go:38: backing-array storage: 180224 bytes
+    arena_capacity_test.go:39: unused capacity: 20224 bytes
+    arena_capacity_test.go:42: capacity utilization: 88.78%
+--- PASS: TestArenaCapacityGrowth (0.00s)
+    --- PASS: TestArenaCapacityGrowth/Small (0.00s)
+    --- PASS: TestArenaCapacityGrowth/Medium (0.00s)
+    --- PASS: TestArenaCapacityGrowth/Large (0.00s)
+=== RUN   TestArenaElementSizes
+=== RUN   TestArenaElementSizes/FlatNode
+    arena_capacity_test.go:65: FlatNode: 16 bytes
+=== RUN   TestArenaElementSizes/BinaryPayload
+    arena_capacity_test.go:65: BinaryPayload: 12 bytes
+=== RUN   TestArenaElementSizes/UnaryPayload
+    arena_capacity_test.go:65: UnaryPayload: 8 bytes
+=== RUN   TestArenaElementSizes/BindingPayload
+    arena_capacity_test.go:65: BindingPayload: 12 bytes
+=== RUN   TestArenaElementSizes/NodeID
+    arena_capacity_test.go:65: NodeID: 4 bytes
+--- PASS: TestArenaElementSizes (0.00s)
+    --- PASS: TestArenaElementSizes/FlatNode (0.00s)
+    --- PASS: TestArenaElementSizes/BinaryPayload (0.00s)
+    --- PASS: TestArenaElementSizes/UnaryPayload (0.00s)
+    --- PASS: TestArenaElementSizes/BindingPayload (0.00s)
+    --- PASS: TestArenaElementSizes/NodeID (0.00s)
+PASS
+ok  	github.com/manatunga/eloque/internal/ast	0.003s
