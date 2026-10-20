@@ -1,36 +1,43 @@
 # Eloque Benchmarks
 
-This directory contains performance benchmarks for Eloque's lexer
-and parser, historical optimization results, token-delivery
-architecture experiments, and cross-language frontend comparisons
-against Go and CPython.
+This directory contains reproducible frontend performance benchmarks, historical optimization results, token-delivery architecture experiments, and cross-language comparisons against Go and CPython.
 
-## Directory Structure
+**Current production baseline:** H2 direct-streaming parser with an arena-backed flat AST.
+
+**Historical baseline:** M1 direct-streaming parser with an interface-based AST.
+
+The benchmarks measure lexical analysis, parsing, and AST construction. They do not measure Eloque program execution, static type checking, bytecode generation, or VM performance.
+
+## Directory structure
 
 ```text
 benchmarks/
 ├── README.md
 ├── cpython/
-│   ├── frontend.py
-│   └── frontend_controlled.py
 ├── go/
-│   ├── frontend_test.go
-│   └── frontend_controlled_test.go
 └── results/
     ├── current/
     ├── experimental/
-    └── historical/
+    ├── historical/
+    └── official/
 ```
 
-- `current/`: Current performance baselines.
-- `experimental/`: Measurements from architecture and optimization experiments.
-- `historical/`: Preserved measurements from earlier implementations.
+- `results/official/`: Finalized benchmark evidence for the H2 checkpoint.
+- `results/current/`: Previously maintained production baseline measurements.
+- `results/experimental/`: Exploratory optimization, allocation, and architecture measurements.
+- `results/historical/`: Earlier implementation measurements retained for comparison.
 
-Eloque's lexer and parser benchmarks reside in `internal/lexer/`
-and `internal/parser/`, respectively.
+The current Eloque lexer, parser, and AST benchmarks reside under:
 
-Cross-language Go frontend benchmarks reside in `benchmarks/go/`.
-CPython frontend benchmarks reside in `benchmarks/cpython/`.
+```text
+internal/frontend/lexer/
+internal/frontend/parser/
+internal/frontend/ast/
+```
+
+Cross-language Go benchmarks reside under `benchmarks/go/`, and CPython benchmarks reside under `benchmarks/cpython/`.
+
+Historical result files and their original contents should be preserved.
 
 ## Benchmark Result Naming Convention
 
@@ -57,7 +64,9 @@ Preserve the original result contents when renaming files.
 Benchmark comparisons should record the environment, command,
 methodology, and implementation revision where available.
 
-## Benchmark Environment
+## Historical M1 Benchmark Environment
+
+The following environment describes the earlier M1 measurements. For the official H2 environment, refer to results/official/h2_controlled_20261020.meta.txt.
 
 The recorded measurements were collected using:
 
@@ -77,21 +86,29 @@ Results are machine-dependent and may vary with system load, thermal conditions,
 
 Run commands from the repository root.
 
-### Eloque Lexer
+### Eloque lexer
+
+Run from the repository root:
 
 ```bash
-go test ./internal/lexer \
+go test ./internal/frontend/lexer \
   -run '^$' -bench . -benchmem \
   -benchtime=1s -count=3
 ```
 
-### Eloque Parser and Complete Frontend
+### Eloque parser and complete frontend
 
 ```bash
-go test ./internal/parser \
+go test ./internal/frontend/parser \
   -run '^$' -bench . -benchmem \
   -benchtime=1s -count=3
 ```
+
+The canonical `parser.Parse(sourceText)` entry point performs direct pull-based lexical streaming and constructs an arena-backed `ast.FlatProgram`.
+
+The retained M1 parser and buffered frontend are reference implementations for regression and comparative benchmarks.
+
+These commands execute the benchmark functions registered in the respective Go packages. Reproducing an individual official H2 result requires the exact benchmark selector, iteration settings, and environment recorded for that result.
 
 The production Eloque frontend incrementally requests tokens from the lexer while parsing and constructing its AST. Buffered frontend benchmarks are retained as a reference implementation. Both measure lexing, parsing, and AST construction, but differ in token-delivery strategy.
 
@@ -294,6 +311,104 @@ Lower execution time is better.
 
 These figures are derived from separately collected benchmark runs and are preliminary rather than controlled, statistically rigorous comparisons.
 
+## H2 — Arena-backed flat AST and streaming parser
+
+**Checkpoint:** H2, October 20, 2026.
+
+H2 replaced the production interface-based AST with an arena-backed flat representation while retaining direct pull-based token streaming.
+
+The previous M1 implementation remains available as a comparison baseline.
+
+The optimization was intended to reduce AST allocation overhead without changing the implemented grammar or diagnostic contract.
+
+### Official benchmark evidence
+
+The following files contain the finalized H2 measurements:
+
+| File | Purpose |
+|---|---|
+| `h2_eloque_controlled_20261020.txt` | Eloque H2 controlled arithmetic measurements |
+| `h2_go_compiler_controlled_20261020.txt` | Go compiler syntax parser measurements |
+| `h2_go_parser_controlled_20261020.txt` | Go standard-library parser measurements |
+| `h2_cpython_controlled_20261020.txt` | CPython controlled arithmetic measurements |
+| `h2_controlled_20261020.meta.txt` | Recorded benchmark environment and methodology |
+| `h2_m1_workloads_20261020.txt` | M1 versus H2 representative workload measurements |
+
+All six files are stored under `benchmarks/results/official/`.
+
+### M1 versus H2 performance
+
+The workload comparison covers declarations, expressions, strings, comments, and mixed programs.
+
+The official suite used ten repeated measurements.
+
+At 1,000 workload units:
+
+| Workload | M1 median | H2 median | H2 speedup |
+|---|---:|---:|---:|
+| Declarations | 238.1 µs | 209.0 µs | 1.14× |
+| Expressions | 1,181.5 µs | 667.4 µs | 1.77× |
+| Strings | 400.1 µs | 394.2 µs | 1.01× |
+| Comments | 407.8 µs | 346.4 µs | 1.18× |
+| Mixed | 1,683.8 µs | 1,191.1 µs | 1.41× |
+
+H2 reduced allocation counts across the tested workloads.
+
+The largest measured latency improvement was in expression-heavy parsing. String-heavy parsing improved only marginally.
+
+These figures describe specific synthetic inputs and should not be generalized to every Eloque source program.
+
+### Controlled cross-language frontend comparison
+
+The official H2 comparison measured frontend processing for arithmetic workloads across Eloque, two Go parsers, and CPython 3.14.4.
+
+At 10,000 workload units:
+
+| Implementation | Median latency |
+|---|---:|
+| Eloque H2 | 7.16 ms |
+| Go compiler syntax parser | 14.12 ms |
+| Go `go/parser` | 23.92 ms |
+| CPython 3.14.4 `ast.parse` | 147.86 ms |
+
+All official H2 suites used ten repeated measurements.
+
+These implementations do not recognize identical language grammars or produce identical AST structures. The source wrappers and benchmark harnesses also differ.
+
+The comparison demonstrates measured frontend latency for the selected workloads, not equivalent compiler capabilities or general language-performance superiority.
+
+### H2 environment
+
+The official H2 environment and methodology are recorded in:
+
+`results/official/h2_controlled_20261020.meta.txt`
+
+Use this metadata file as the authoritative record when reproducing the official comparison.
+
+**CPython version:** 3.14.4.
+
+This is distinct from the historical M1-P5-C comparison, which used CPython 3.15.0rc2.
+
+Do not combine results from these different interpreter versions into a single supposedly uniform benchmark run.
+
+### H2 correctness and optimization experiments
+
+H2 validation included differential parser testing, arena-invariant testing, and regression checks.
+
+Experimental work investigated arena capacity, allocation behavior, and growth strategies.
+
+Experimental outputs are retained under `results/experimental/`, separately from the official results.
+
+Additional arena-capacity tuning is deferred pending representative profiling evidence. The decision is tracked in `docs/TECHNICAL_BACKLOG.md` under TB-025.
+
+### H2 outcome
+
+The H2 parser and arena-backed flat AST are the canonical production frontend.
+
+The retained M1 parser remains a historical reference and a regression-testing implementation.
+
+Future frontend optimization should preserve the official H2 baseline and report correctness, latency, allocation counts, allocated bytes, and memory trade-offs.
+
 ## Measurement Methodology
 
 ### Eloque
@@ -345,7 +460,7 @@ These results are useful for investigating the effects of optimization and archi
 
 Historical and current measurements should only be compared directly when the benchmark workload and measured operations remain equivalent.
 
-## Conclusions from Preliminary Benchmarks
+## Historical M1 Benchmark Conclusions
 
 On the tested synthetic workloads, Eloque's optimized frontend consistently completed processing faster than CPython 3.15.0rc2's `ast.parse()`.
 
@@ -354,6 +469,18 @@ The measured advantage ranged from approximately 5× to 11× for the 1,000-unit 
 These results demonstrate promising frontend performance, but do not establish that Eloque is generally faster than Python or that its future compiler and runtime will outperform CPython.
 
 Further benchmarking should include representative real-world source files, more controlled repeated measurements, and eventually bytecode compilation and execution benchmarks.
+
+## Current Benchmark Conclusions — H2
+
+H2 is the current production frontend performance baseline.
+
+The official M1/H2 comparison demonstrates reduced allocation counts and improved median parsing latency across the five tested workload categories.
+
+The controlled arithmetic comparison also records lower median frontend latency for Eloque H2 than the two measured Go parser implementations and CPython 3.14.4 on the selected inputs.
+
+These findings do not establish general compiler superiority, language execution performance, or CPython runtime parity.
+
+The next major performance evaluation should occur after M2 provides a working statically checked bytecode VM. At that stage, runtime comparisons must use correctness-equivalent programs, clearly defined measurement boundaries, and reproducible environments.
 
 ### M1-P5-C Validation Outcome
 

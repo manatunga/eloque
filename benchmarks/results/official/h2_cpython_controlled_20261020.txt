@@ -1,0 +1,8 @@
+Python implementation: CPython
+Python version: 3.14.4
+Python compiler: GCC 15.2.0
+
+N=10    bytes=400      frontend=      87,788 ns/op
+N=100   bytes=4270     frontend=     868,260 ns/op
+N=1000  bytes=45670    frontend=  11,011,362 ns/op
+N=10000 bytes=486670   frontend= 147,858,909 ns/op

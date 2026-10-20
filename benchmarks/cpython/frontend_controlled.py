@@ -8,7 +8,7 @@ from statistics import median
 from timeit import Timer
 
 SIZES = (10, 100, 1000, 10000)
-REPEATS = 5
+REPEATS = 10
 
 
 def build_source(count: int) -> str:

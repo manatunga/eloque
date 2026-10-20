@@ -1,6 +1,6 @@
 # Eloque Technical Backlog
 
-**Status:** Living engineering decision register; M1 implementation in progress. A review commitment is not a commitment to implement a specific technology.
+**Status:** Living engineering decision register. M1 and post-M1 H2 frontend optimization are complete; M2 is the next implementation milestone. A review commitment is not a commitment to implement a particular technology.
 
 See [LANGUAGE_SPEC.md](LANGUAGE_SPEC.md) for intended language behavior, [DESIGN_DECISIONS.md](DESIGN_DECISIONS.md) for settled decisions, and [ROADMAP.md](ROADMAP.md) for implementation milestones.
 
@@ -65,11 +65,12 @@ At each milestone, inspect items whose triggers have arrived. Record the decisio
 
 ### TB-007 — CPython comparative performance
 - **Status:** Committed measurement program; parity is an aspiration, not a guarantee.
-- **Baseline:** No measurements.
+- **Baseline:** Frontend-only comparisons have been completed during M1-P5 and H2. No Eloque runtime execution comparisons are possible yet.
 - **Trigger:** First usable VM (M2), then major runtime milestones.
 - **Method:** Pin versions, hardware, warmup and inputs. Compare equivalent, correctness-tested arithmetic, loops, calls, strings, collections and object workloads as implemented.
 - **Criterion:** Reproducible findings that guide optimization, not marketing claims based on isolated microbenchmarks.
-- **Evidence:** Pending.
+- **Evidence:** M1-P5 compared the streaming frontend with Go and CPython 3.15.0rc2. H2's official controlled arithmetic comparison recorded median frontend latencies at 10,000 units of 7.16 ms for Eloque H2, 14.12 ms for the Go compiler syntax parser, 23.92 ms for Go go/parser, and 147.86 ms for CPython 3.14.4 ast.parse. These results concern different language grammars and AST representations and do not establish execution-performance parity.
+- **Next action:** Preserve the frontend measurements as historical baselines. Begin correctness-equivalent execution benchmarks after the first working Eloque VM.
 
 ### TB-008 — Runtime value representation
 - **Status:** Review required.
@@ -178,7 +179,7 @@ At each milestone, inspect items whose triggers have arrived. Record the decisio
 
 ### TB-023 — Lexer–parser token delivery strategy
 
-- **Status:** Resolved for the M1 frontend.
+- **Status:** Resolved for the M1 and H2 production frontends.
 - **Baseline:** Eagerly buffered lexer tokens supplied to the parser.
 - **Trigger:** M1-P5-A lexer–parser integration experiments.
 - **Alternatives evaluated:** Complete token buffering, direct pull streaming,
@@ -194,7 +195,7 @@ avoids maintaining an unnecessary lookahead window.
 experiments, followed by M1-P5-B production integration.
 In the 20-case integrated buffered-versus-streaming comparison,
 direct streaming was faster in 19 cases and allocated fewer
-bytes in all 20.
+bytes in all 20. H2 retained direct pull-based token streaming while replacing the production AST representation with an arena-backed flat AST.
 Production integration and diagnostic regression tests passed.
 - **Criterion:** Preserve AST equivalence, lexical-error propagation,
 EOF behavior, and performance across representative workloads.
@@ -206,6 +207,31 @@ grammar requirement or measured performance regression justifies it.
 requires additional token lookahead, or profiling reveals a
 meaningful regression attributable to token delivery.
 
+### TB-024 — Arena-backed flat AST architecture
+
+- **Status:** Resolved for the H2 frontend.
+- **Baseline:** M1 used an interface-based AST with individually represented expression and statement nodes.
+- **Trigger:** Post-M1 H2 frontend optimization and allocation profiling.
+- **Alternatives evaluated:** Retaining the M1 representation versus introducing an arena-backed flat AST.
+- **Decision:** Use the arena-backed flat AST as the canonical production representation. Preserve the M1 AST and parser as legacy reference implementations.
+- **Rationale:** Reduce allocation overhead and improve frontend performance while preserving syntax, source locations, diagnostics, and AST structure.
+- **Evidence:** H2 differential and arena-invariant tests passed. At 1,000 workload units, the ten-run median comparison showed improvements of 1.14× for declarations, 1.77× for expressions, 1.01× for strings, 1.18× for comments, and 1.41× for mixed programs. Allocation counts were reduced across the tested workloads.
+- **Criterion:** Preserve correctness and the supported grammar while improving representative frontend performance without unacceptable memory overhead.
+- **Next action:** Retain the M1/H2 differential tests and official performance baselines. Extend flat AST coverage alongside future grammar features.
+- **Next review trigger:** A substantial AST feature expansion, a measured regression, or evidence that the flat representation materially complicates semantic analysis.
+
+### TB-025 — Arena capacity and growth optimization
+
+- **Status:** Review required; optimization deferred.
+- **Baseline:** H2's existing arena allocation and growth strategy.
+- **Trigger:** After representative frontend profiling identifies arena growth or allocation as a significant remaining cost, or after a substantial change in AST workload characteristics.
+- **Rationale for deferral:** H2 already provides measurable improvements. Additional preallocation or growth-policy changes could increase memory retention or penalize small programs without delivering meaningful end-to-end gains.
+- **Evidence:** H2 experimental arena-capacity, growth, and node-capacity measurements are retained in `benchmarks/results/experimental/`. These experiments have not established a sufficient reason to change the production policy.
+- **Method:** Benchmark small, medium, large, expression-heavy, and mixed programs. Compare allocation counts, allocated bytes, retained capacity, and latency. Use repeated runs and representative input distributions.
+- **Acceptance criterion:** Demonstrate repeatable end-to-end improvements without unacceptable memory overhead, regressions on small programs, or additional correctness risks. Reject optimizations whose benefits do not justify their complexity.
+- **Next action:** Preserve the experimental results and retain the current arena policy.
+- **Next review trigger:** M2 integration reveals a measurable arena-related bottleneck, or frontend profiling after a significant grammar expansion identifies a new opportunity.
+
 ## Tooling, agents and execution safety
 
 ### TB-019 — Structured diagnostics
@@ -216,7 +242,7 @@ meaningful regression attributable to token delivery.
 - **Criterion:** Diagnostics are actionable, deterministic and easy to parse without requiring prose interpretation.
 - **Evidence:** Pending.
 - **M1 progress:** Tokens and AST nodes use shared half-open source spans. M1-P2 established expression source-location tracking, including the distinction between semantic AST node locations and complete syntactic grouping extents. M1-P3 extended source-span preservation and structured fail-fast diagnostics to `let`, `change`, and `say` statements and complete-program parsing. M1-P4 completed broader positive and negative frontend syntax conformance coverage with 29 additional fixtures covering valid programs, malformed syntax, EOF diagnostics, multiline source locations, nested expression errors, first-error behavior, and lexer/parser error boundaries. Tests verify diagnostic messages, source spans, expected/actual token metadata, and rejection of malformed programs without returning successful partial ASTs. Full Go tests, race detection, and `go vet` passed.
-- **Next action:** Complete production lexer–parser integration, end-to-end frontend validation, and diagnostic regression review in M1-P5. Extend diagnostics to name resolution and static type checking in M2. Multi-error recovery remains deferred under D-037, and the broader machine-readable diagnostic schema remains scheduled for review before M8 tooling.
+- **Next action:** Preserve the completed M1 diagnostic contract through H2 and subsequent frontend changes. Extend diagnostics to name resolution and static type checking during M2. Multi-error recovery remains deferred under D-037, and the broader machine-readable diagnostic schema remains scheduled for review before M8 tooling.
 
 ### TB-020 — Sandboxed execution budgets
 - **Status:** Committed long-term capability; design review required.
@@ -266,6 +292,17 @@ meaningful regression attributable to token delivery.
 - **Acceptance criteria:** Existing language behavior and diagnostics remain correct; new syntax receives positive and negative conformance tests; performance remains measurable and regressions are investigated before introducing additional optimization complexity.
 
 See [`benchmarks/README.md`](../benchmarks/README.md) for reproduction instructions, recorded benchmark results, and methodological limitations.
+
+## H2 frontend optimization review
+
+- **Decision:** Adopt the H2 streaming parser and arena-backed flat AST as the canonical production frontend.
+- **Evidence:** Differential correctness testing, arena-invariant testing, representative M1/H2 workload comparisons, and controlled cross-language frontend measurements.
+- **Outcome:** The H2 implementation improved representative frontend performance and reduced allocations. The frontend was reorganized under `internal/frontend/`, with shared source utilities retained in `internal/source`.
+- **Deferred optimization:** Further arena-capacity tuning remains tracked under TB-025.
+- **Next action:** Preserve official and experimental benchmark results, extend the frontend as required by future language milestones, and avoid optimization without profiling evidence.
+- **Next review trigger:** M2 integration reveals a meaningful frontend bottleneck, a new grammar feature changes AST allocation patterns, or representative benchmarks demonstrate a regression.
+
+The H2 measurements are frontend-only. They do not establish Eloque runtime performance or justify changing the planned stack-based VM baseline.
 
 ## Milestone review checklist
 

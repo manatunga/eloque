@@ -3,7 +3,7 @@ package source
 import "sort"
 
 type LineMap struct {
-    lineStarts []uint32
+	lineStarts []uint32
 }
 
 func NewLineMap(sourceText string) LineMap {
@@ -38,7 +38,7 @@ func (m *LineMap) Position(offset uint32) Position {
 	lineStart := int(m.lineStarts[lineIdx])
 	column := (int(offset) - lineStart) + 1
 	return Position{
-		Line: lineIdx + 1,
+		Line:   lineIdx + 1,
 		Column: column,
 	}
 }
@@ -46,6 +46,6 @@ func (m *LineMap) Position(offset uint32) Position {
 func (m *LineMap) Span(span ByteSpan) Span {
 	return Span{
 		Start: m.Position(span.Start),
-		End: m.Position(span.End),
+		End:   m.Position(span.End),
 	}
 }

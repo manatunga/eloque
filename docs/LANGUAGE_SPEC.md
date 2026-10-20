@@ -1,13 +1,12 @@
 # Eloque Language Specification
 
-**Status:** Active language design specification, revised October 2026. Milestone 1 (Frontend foundations) is complete. The Go lexer and parser support the implemented M1 syntax subset, including complete-program AST construction and structured fail-fast diagnostics. Name resolution, static type checking, bytecode compilation, and program execution are not yet implemented. Examples throughout this specification illustrate the target language and are not necessarily supported by the current frontend.
+**Status:** Active language design specification, revised October 2026. Milestone 1 and the post-M1 H2 frontend optimization are complete. The Go lexer and parser support the implemented initial syntax subset, with direct pull-based token streaming, arena-backed flat AST construction, and structured fail-fast diagnostics. Name resolution, static type checking, bytecode compilation, and program execution are not yet implemented. Examples throughout this specification illustrate the target language and are not necessarily supported by the current frontend.
 **Language name:** Eloque
 **Source file extension:** `.elq` (selected)
 **Planned CLI command:** `eloque` (subject to availability checks)
 **Implementation architecture:** Go-based compiler and runtime.
-The lexer, parser, and AST construction are implemented.
-Name resolution, static type checking, bytecode compilation,
-and the stack-based virtual machine are planned.
+
+The lexer, parser, and arena-backed flat AST construction are implemented. The canonical `Parse(sourceText)` entry point returns `(*ast.FlatProgram, error)`. Name resolution, static type checking, bytecode compilation, and the stack-based virtual machine are planned.
 
 **Status labels:**
 
@@ -24,7 +23,7 @@ The first executable Eloque release will support a narrower subset than the comp
 
 Eloque is a general-purpose programming language with structured conversational syntax, not unrestricted natural-language parsing. It prioritizes novice readability, unambiguous static semantics and machine-readable diagnostics for AI-assisted development, and a foundation for safe native concurrency. Prefer concise, regular grammar over excessive English verbosity. Execution is deterministic subject to explicit external inputs and eventual concurrency semantics.
 
-## Current implementation coverage (M1)
+## Current implementation coverage (M1 + H2)
 
 The completed M1 frontend supports lexical analysis, parsing,
 and AST construction for the following syntax subset:
@@ -39,6 +38,8 @@ and AST construction for the following syntax subset:
 
 The frontend also provides source-position tracking, lexical
 error propagation, and structured fail-fast syntax diagnostics.
+
+H2 changed the frontend's internal AST representation and parser implementation without changing the supported M1 grammar. The production frontend uses an arena-backed flat AST and direct lexer token streaming. The original M1 parser remains available internally for differential testing and historical performance comparisons.
 
 The implementation does not yet provide name resolution,
 static type checking, bytecode compilation, or execution.

@@ -1,6 +1,6 @@
 # Eloque Roadmap
 
-**Status:** Active implementation roadmap — M0 completed; M1 (Frontend foundations) in progress. Milestones and versions are planning aids, not release commitments. Eloque, `.elq`, and the CLI name remain provisional.
+**Status:** Active implementation roadmap — M0 and M1 completed; post-M1 H2 frontend optimization and package reorganization completed. M2 (First execution) is next. Milestones and versions are planning aids, not release commitments. Eloque, `.elq`, and the CLI name remain provisional.
 
 ## Delivery principles
 
@@ -154,6 +154,84 @@ race detection, static analysis, buffered-versus-streaming performance
 comparisons, and cross-language frontend benchmarks against Go and
 CPython 3.15.
 
+### Post-M1 — H2 streaming frontend and arena-backed AST: Completed
+
+After completing M1, Eloque underwent a second frontend optimization phase, designated **H2**.
+
+The objective was to reduce parser and AST allocation overhead without changing the accepted M1 grammar or observable diagnostic behavior.
+
+**Implementation completed**
+
+- Introduced an arena-backed flat AST representation using `FlatNode` and `FlatProgram`.
+- Updated the production parser to construct the flat AST directly.
+- Preserved direct pull-based lexer token streaming.
+- Retained the original M1 parser and interface-based AST as legacy reference implementations.
+- Added arena invariant tests, AST tests, differential parser tests, and regression coverage.
+- Reorganized the frontend packages into `internal/frontend/ast`, `internal/frontend/lexer`, and `internal/frontend/parser`.
+- Kept shared source-location utilities in `internal/source`.
+- Preserved `Parse(sourceText)` as the canonical production entry point.
+
+**Performance validation completed**
+
+H2 was evaluated against the retained M1 implementation using five representative workload categories: declarations, expressions, strings, comments, and mixed programs.
+
+The official comparison used workload sizes of 10, 100, and 1,000 units, with ten benchmark runs.
+
+At 1,000 units:
+
+| Workload | M1 median | H2 median | Speedup |
+|---|---:|---:|---:|
+| Declarations | 238.1 µs | 209.0 µs | 1.14× |
+| Expressions | 1,181.5 µs | 667.4 µs | 1.77× |
+| Strings | 400.1 µs | 394.2 µs | 1.01× |
+| Comments | 407.8 µs | 346.4 µs | 1.18× |
+| Mixed | 1,683.8 µs | 1,191.1 µs | 1.41× |
+
+H2 reduced allocation counts across these workloads. String-heavy parsing showed little latency improvement, while expression-heavy parsing showed the largest improvement.
+
+A separate controlled arithmetic benchmark compared H2 with the Go compiler syntax parser, Go's standard-library parser, and CPython 3.14.4.
+
+At 10,000 units, the recorded median frontend latencies were:
+
+| Implementation | Median latency |
+|---|---:|
+| Eloque H2 | 7.16 ms |
+| Go compiler syntax parser | 14.12 ms |
+| Go `go/parser` | 23.92 ms |
+| CPython 3.14.4 `ast.parse` | 147.86 ms |
+
+These measurements concern synthetic frontend workloads, not program execution. Differences in language grammar, source wrappers, AST representations, and measurement harnesses limit cross-language comparability.
+
+Official results are archived in `benchmarks/results/official/`.
+
+**Validation**
+
+The H2 implementation includes correctness, differential, arena-invariant, and benchmark coverage. The frontend package migration subsequently passed `go test ./...` and `go vet ./...`.
+
+**Deferred work**
+
+Additional arena-capacity tuning remains deferred pending representative profiling evidence. The existing flat AST type names are retained for now. Further optimization must be justified by measurable benefits without unacceptable memory or correctness regressions.
+
+**Outcome:** H2 is the canonical production frontend. The legacy M1 implementation remains available for regression and comparative testing.
+
+### Transition to M2 — First execution: Not started
+
+The next development phase will introduce the smallest statically checked executable subset.
+
+M2 will build upon the H2 frontend and add:
+
+1. Name resolution and scope validation.
+2. Mandatory basic static type checking.
+3. Bytecode compilation.
+4. A sequential stack-based virtual machine.
+5. End-to-end execution and diagnostic tests.
+
+Before implementing VM values, the runtime value representation must be reviewed.
+
+The initial executable subset will focus on literals, arithmetic, `let`, `change`, and `say`. Expanded control flow, functions, collections, and concurrency remain assigned to later milestones.
+
+**M2 completion criterion:** Eloque executes representative valid programs through the bytecode VM and rejects supported type-invalid programs before execution.
+
 **Next milestone:** M2 — Refer to the milestone definition below.
 
 Eloque can parse supported source programs into an AST but cannot yet
@@ -262,5 +340,13 @@ Eloque intends to use Semantic Versioning as a guideline:
 - [x] Implement expression parsing with the agreed precedence and associativity rules (M1-P2).
 - [x] Implement statement and complete-program parsing (M1-P3).
 - [x] Complete syntax diagnostics and frontend conformance fixtures (M1-P4).
-- [ ] Integrate and validate the complete frontend (M1-P5).
+- [x] Integrate and validate the complete streaming frontend (M1-P5).
+- [x] Complete H2 arena-backed flat AST and streaming parser optimization.
+- [x] Validate H2 against the legacy M1 frontend using differential tests and controlled benchmarks.
+- [x] Reorganize the frontend under `internal/frontend/`.
+- [ ] Synchronize documentation with the completed H2 implementation.
+- [ ] Review the M2 runtime value representation and compiler-stage interfaces.
+- [ ] Implement name resolution and mandatory basic static type checking.
+- [ ] Implement bytecode compilation and the initial stack-based VM.
+- [ ] Validate the first executable Eloque subset end to end.
 - [ ] Expand grammar and static-checking rules alongside subsequent executable features.
