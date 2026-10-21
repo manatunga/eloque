@@ -304,6 +304,121 @@ See [`benchmarks/README.md`](../benchmarks/README.md) for reproduction instructi
 
 The H2 measurements are frontend-only. They do not establish Eloque runtime performance or justify changing the planned stack-based VM baseline.
 
+---
+
+## M2 architecture follow-through — October 2026
+
+**Status:** Approved decisions and deferred work. No implementation implied.
+
+### Immediate prerequisite: diagnostic migration
+
+**Priority:** Required before M2 resolver implementation.
+
+**Rationale:** First-error termination limits developer feedback and future agent tooling. Recovery must be introduced without compromising compiler correctness or H2's frontend architecture.
+
+**Required work:**
+
+- Shared structured diagnostics with stable codes, severity, locations, related locations, and notes.
+- Compilation-local file identity and source ownership.
+- Stage-owned diagnostic slices and a compilation-wide budget.
+- Explicit complete, recovered, and aborted outcomes.
+- Safe lexer and parser recovery.
+- Deterministic ordering and cascade suppression.
+- Preservation of parser token mismatch metadata.
+- Strict prevention of executing recovered or invalid programs.
+
+**Acceptance criteria:** Multiple independent errors reported; no infinite loops; accurate spans; safe structural recovery; deterministic diagnostics; valid-program regression tests pass; representative performance recorded.
+
+### M2 name resolver
+
+**Priority:** Immediately after diagnostic migration.
+
+**Rationale:** Identifier binding must be established before type checking and bytecode generation.
+
+**Required work:**
+
+- Contiguous symbol arena with compilation-local `SymbolID`.
+- Parent-linked lexical scopes.
+- Local name maps.
+- Declaration-before-use rules.
+- Duplicate declaration errors.
+- Nested shadowing warnings with related locations.
+- Initializer self-reference binding.
+- Private reference-binding storage indexed initially by AST `NodeID`.
+- Correct binding conventions for identifier expressions, declarations, and reassignment targets.
+- No AST mutation.
+
+**Acceptance criteria:** Resolver behavioral matrix R01–R28 in `ARCHITECTURE.md`, with scope-specific tests introduced as the relevant grammar becomes available.
+
+### Deferred: dense versus sparse reference storage
+
+**Trigger:** Representative resolver memory and lookup benchmarks.
+
+**Rationale:** Dense arrays offer simple constant-time access but may waste memory when only a small fraction of AST nodes carry bindings.
+
+**Acceptance criteria:** Change only when measured memory or runtime improvements justify added complexity. Preserve the public resolution accessors.
+
+### Deferred: identifier interning
+
+**Trigger:** Repeated-identifier workloads and eventual multi-file compilation.
+
+**Rationale:** Source-backed strings avoid early allocations. Interning may help repeated names but introduces tables and ownership complexity.
+
+**Acceptance criteria:** Demonstrated net benefit in allocations, retained memory, and lookup performance.
+
+### Deferred: expression traversal strategy
+
+**Trigger:** Deeply nested expression stress tests.
+
+**Rationale:** Recursive traversal is straightforward but may require safeguards for extreme nesting.
+
+**Acceptance criteria:** Correctness and stack safety under defined stress workloads, with acceptable traversal overhead.
+
+### Deferred: public diagnostic serialization
+
+**Trigger:** CLI, editor, or AI-agent tooling requiring a stable machine-readable protocol.
+
+**Rationale:** The internal diagnostic model should be stable before committing to a public JSON schema.
+
+**Acceptance criteria:** Deterministic output, stable codes, accurate locations, extensible metadata, and documented compatibility expectations.
+
+### Deferred: diagnostic budget tuning
+
+**Trigger:** Realistic malformed-file and tooling workloads.
+
+**Rationale:** An initial candidate of 100 errors may not suit every compilation context.
+
+**Acceptance criteria:** Bounded resource use, actionable diagnostic output, and predictable truncation behavior.
+
+### Deferred: multi-file source management
+
+**Trigger:** Module imports and multi-file compilation, expected around M7.
+
+**Rationale:** M2 needs compilation-local file identity, not a complete workspace architecture.
+
+**Acceptance criteria:** Correct cross-file locations, source ownership, module identity, and acceptable memory use.
+
+### Deferred: runtime architecture optimization
+
+**Trigger:** First executable stack VM and reproducible runtime benchmarks.
+
+**Rationale:** Register VMs, JIT, AOT, WebAssembly, and alternative backends cannot be justified solely from frontend performance measurements.
+
+**Acceptance criteria:** Demonstrated runtime or deployment advantages against representative workloads, accounting for implementation and maintenance costs.
+
+### Documentation consistency requirement
+
+When implementation begins, review this backlog alongside:
+
+- `LANGUAGE_SPEC.md`
+- `DESIGN_DECISIONS.md`
+- `ARCHITECTURE.md`
+- `ROADMAP.md`
+
+Update implementation status and superseded descriptions without erasing historical M1/H2 context.
+
+All deferred items must retain their rationale, reevaluation trigger, and acceptance criteria until resolved.
+
 ## Milestone review checklist
 
 - [x] **M1 lexer performance:** TB-022 token representation, allocation efficiency, and scaling review.

@@ -42,7 +42,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for the implementation structure, [ROADMA
 | D-007 | Decided | `true`, `false`, and `none` are language literals. `none` is valid in optional `T?` contexts, not arbitrary non-optional values. |
 | D-008 | Decided; checker pending | Strict static typing with `as Type` annotations and local inference; checker errors block normal compilation. No implicit truthiness. |
 | D-009 | Decided; functions pending | Function parameters require explicit types; value-returning functions require `giving Type`. Omission denotes no value return. |
-| D-010 | Decided; control flow pending | `if`, `otherwise if`, and `otherwise`; lexical block scopes; no shadowing of a visible enclosing binding. |
+| D-010 | Decided; control flow pending | `if`, `otherwise if`, and `otherwise`; lexical block scopes; nested lexical shadowing is permitted with a nonfatal warning referencing the shadowed declaration; same-scope duplicates are errors. |
 | D-011 | Decided; loops pending | `for each`, `repeat N times`, `repeat while`, `repeat until`, `skip`, and `stop`. |
 | D-012 | Decided; functions pending | `to name with (parameters) giving Type:` declares functions; `name with (arguments)` invokes them, including zero-argument calls; `give` returns. |
 | D-013 | Decided; functions pending | Named arguments and defaults use `be`. Verb-first function names are a convention, not a restriction. |
@@ -66,10 +66,10 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for the implementation structure, [ROADMA
 | D-031 | Decided; execution pending | Top-level statements execute in source order; `main` is not invoked automatically. |
 | D-032 | Decided; diagnostics implemented in part (M1) | Normal execution is sequential; runtime exceptions include source locations; tooling requires structured diagnostics. M1 provides structured frontend diagnostics, not runtime exceptions. |
 | D-033 | Decided; runtime pending | Support configurable sandbox limits; do not impose an arbitrary universal instruction limit on ordinary CLI execution. |
-| D-034 | Decided; lexer implemented (M1) | Decimal integer literals prohibit leading zeros except `0`. A digit sequence immediately followed by an ASCII letter or underscore is a lexical error; invalid-suffix diagnostics take precedence over leading-zero diagnostics. Lexical errors carry source positions and fail fast; multi-error recovery is deferred. |
+| D-034 | Decided; lexer implemented (M1) | Decimal integer literals prohibit leading zeros except `0`. A digit sequence immediately followed by an ASCII letter or underscore is a lexical error; invalid-suffix diagnostics take precedence over leading-zero diagnostics. The existing lexer fails fast; controlled multi-error recovery is approved for the pre-M2 frontend migration. |
 | D-035 | Implemented (M1) | Go lexer token kinds use a `uint8`-backed enumeration with zero reserved for `TokenInvalid`; `String()` supplies readable names. Incremental token emission and reused indentation-stack/pending-queue storage reduce allocations. This is an implementation choice, not a language semantic rule. |
 | D-036 | Decided; lexer implemented (M1) | `change`, `to`, `with`, and `giving` are reserved keywords with dedicated token kinds, not ordinary identifiers. One token kind may serve multiple grammatical contexts. |
-| D-037 | Implemented (M1) | Syntax parsing fails at the first error and returns a structured diagnostic with message, source span, and optional expected/actual token metadata. Malformed input must not be accepted as a valid program. Multi-error recovery may be reconsidered after synchronization and diagnostic-quality criteria are defined. |
+| D-037 | Implemented (M1) | The existing parser stops at the first syntax error. The approved replacement collects independent errors through safe recovery, preserving structured token mismatch metadata and rejecting malformed programs from executable compilation. |
 | D-038 | Implemented (M1) | The canonical `Parse(sourceText)` frontend consumes lexer tokens incrementally via `tokenSource`, without a redundant independent token cursor. Buffered parsing remains for regression tests and benchmarks. Future changes must preserve correctness, diagnostic quality, and reproducible performance baselines. |
 | D-039 | Implemented (H2) | Adopt an arena-backed flat AST as the canonical production representation. The parser constructs `FlatNode` and `FlatProgram` structures using arena-managed storage. Retain the original M1 interface-based AST and parser as legacy references for correctness and performance comparisons. This is an internal representation decision, not a language-semantic change. |
 | D-040 | Implemented (H2) | Organize the frontend under `internal/frontend/{ast,lexer,parser}` while retaining shared source-location utilities in `internal/source`. Preserve the canonical `Parse(sourceText)` entry point and direct pull-based token streaming. Future semantic analysis and backend packages should be introduced when their implementations begin rather than creating speculative empty package structures. |
@@ -111,13 +111,226 @@ Eloque grew out of the earlier BakeScript culinary-syntax concept. That transiti
 These are future tasks, **not unfinished M1 requirements**:
 
 - **Lexing and parsing:** Extend token coverage, grammar, source spans, and conformance fixtures for future features; specify comparison/Boolean precedence and associativity. Preserve existing reserved-keyword rules and arithmetic parser behavior.
-- **Diagnostics:** Define machine-readable diagnostic schema and criteria for any future multi-error recovery; retain M1's fail-fast baseline until a replacement is validated.
+- **Diagnostics:** Implement the approved shared diagnostic contract and controlled multi-error recovery before M2 resolution. Preserve M1/H2 behavior as a historical implementation baseline until the migration is validated.
 - **Types and numbers:** Resolve mixed `Int`/`Float` arithmetic, conversion and overflow edge cases, exceptional floating-point values, type narrowing, generic compatibility, and safe mutation analysis.
 - **Collections and text:** Define iteration and mutation details, including Unicode code-point versus grapheme-cluster indexing.
 - **Language features:** Specify exception taxonomy and cleanup precedence, module resolution, structural-interface diagnostics, and pattern exhaustiveness.
 - **Execution and tooling:** Define CLI behavior, sandbox budgets, and concurrency/ownership semantics as their implementation milestones approach.
 - **VM architecture:** Benchmark a functioning stack VM before reconsidering a register VM. Keep alternative backends and runtime optimization proposals as tracked future decisions rather than assuming they are adopted.
 - **Frontend representation and optimization:** Preserve H2's arena-backed flat AST as the production baseline. Revisit arena capacity and growth policies only when representative profiling demonstrates a meaningful opportunity. Evaluate any proposed optimization against correctness, allocation overhead, retained memory, small-program performance, and implementation complexity. The review is tracked under TB-025 in the technical backlog.
+
+## M2 architecture decisions — October 2026
+
+**Status:** Approved design, not yet implemented.
+
+The decisions below establish the architectural contract for Eloque's diagnostic migration and M2 name-resolution stage. They supersede earlier design choices where explicitly identified. Implementation details may be refined through testing, but changes to agreed semantics must be documented.
+
+### D-041 — Dedicated name-resolution stage
+
+**Status:** Decided; implementation pending.
+
+Name resolution is a dedicated semantic-analysis pass performed after syntactic validation and before mandatory static type checking.
+
+The resolver must not mutate the AST. It produces a separate resolution result containing symbol definitions and bindings between identifier references and declarations.
+
+Variable declarations are visible from their declaration point onward. Future function and named-type declarations may support forward references through a declaration prepass within the appropriate scope.
+
+The precise interaction between forward declarations, module imports, and visibility will be specified when those language features are introduced.
+
+### D-042 — Lexical scopes and shadowing
+
+**Status:** Decided; implementation pending.
+
+Scopes are lexically nested and parent-linked.
+
+Each scope owns a mapping from locally declared names to symbol identities. Name lookup searches the current scope first, then successive enclosing scopes.
+
+- Duplicate declarations within the same scope are errors.
+- A declaration in a nested scope may shadow a visible enclosing declaration.
+- Shadowing emits a nonfatal warning identifying the earlier declaration.
+- The nearest visible lexical declaration takes precedence.
+- Independent scopes may reuse identifiers.
+- A duplicate declaration must not replace the original binding in the scope table.
+
+This decision supersedes the no-shadowing restriction previously recorded in D-010 and Section 4 of the language specification.
+
+### D-043 — Declaration and initializer resolution
+
+**Status:** Decided; implementation pending.
+
+Variable declarations are registered before their initializer expressions are resolved.
+
+Therefore:
+
+```elq
+let x be x + 1
+```
+
+The initializer reference to `x` resolves to the newly introduced symbol.
+
+Name resolution itself does not reject this as an undefined name. A separate definite-assignment analysis must diagnose the read of an uninitialized value.
+
+The same rule applies when a nested declaration shadows an enclosing variable: references within the initializer resolve to the new declaration.
+
+Name resolution and definite-assignment checking remain separate responsibilities.
+
+### D-044 — Symbol representation and ownership
+
+**Status:** Decided implementation direction; performance subject to validation.
+
+Symbols are stored in a contiguous, append-only arena represented conceptually by `[]Symbol`.
+
+Symbol identity uses a compact `uint32`-backed `SymbolID` with an explicit invalid sentinel.
+
+Symbol identities:
+
+- Are stable within one compilation unit.
+- Do not represent runtime storage slots.
+- Are not guaranteed to remain stable across recompilations.
+- Are not globally unique across modules.
+
+Scope lookup initially uses local `map[string]SymbolID` tables linked through parent scopes. Inherited environments are not copied.
+
+Identifier names may reference substrings of retained source text, avoiding unnecessary allocations. The resolution result must retain the necessary source/program lifetime.
+
+Global string interning is deferred until representative benchmarks justify it.
+
+### D-045 — Reference binding representation
+
+**Status:** Decided initial implementation; representation remains private.
+
+Reference bindings initially use a dense `[]SymbolID` indexed by AST `NodeID`.
+
+Unbound entries use an explicit invalid sentinel.
+
+The storage representation is hidden behind accessors, conceptually:
+
+- `Symbol(SymbolID)`
+- `Reference(ast.NodeID)`
+- `Declaration(ast.NodeID)`
+
+The implementation must accommodate the existing H2 AST:
+
+- Identifier expressions are represented by `NodeIdentifier`.
+- Declaration names are source spans in `NodeLetStatement` binding payloads.
+- Reassignment targets are source spans in `NodeChangeStatement` binding payloads.
+
+Consequently, a `NodeChangeStatement` may serve as the lookup key for its assignment-target binding, while a `NodeLetStatement` identifies a declaration.
+
+The compiler should consume resolved symbol identities rather than repeating name lookups.
+
+Dense versus sparse binding storage remains an explicitly tracked benchmark decision.
+
+### D-046 — Shared diagnostic representation
+
+**Status:** Decided; implementation pending.
+
+Compiler diagnostics use a common structured representation containing:
+
+- Stable machine-readable diagnostic code.
+- Severity: error, warning, or informational.
+- Human-readable message.
+- Primary source location.
+- Optional related locations with explanatory messages.
+- Optional notes.
+
+Locations use half-open source byte spans and compilation-local file identities.
+
+Line and column information is derived from source text for presentation rather than duplicated throughout the compiler.
+
+A minimal source registry maps file identities to source information. File identities are local to a compilation snapshot and are not permanent identifiers across recompilations.
+
+Parser-specific expected/actual-token information is retained as structured stage-specific metadata. The shared diagnostic package must not depend on lexer-specific token types.
+
+Diagnostic codes are grouped by stage, with stable named identifiers such as `LEX_UNEXPECTED_CHARACTER`, `PARSE_EXPECTED_TOKEN`, `RESOLVE_UNDEFINED_NAME`, and `TYPE_MISMATCH`.
+
+Diagnostic messages may evolve without changing the meaning of established codes.
+
+### D-047 — Diagnostic collection and ordering
+
+**Status:** Decided; implementation pending.
+
+Each compiler stage owns its diagnostic collection.
+
+There is no global mutable diagnostic collector.
+
+The compilation driver coordinates a shared error budget and merges stage diagnostics deterministically.
+
+A configurable overall diagnostic limit is required. A default of 100 errors is an initial candidate, subject to validation rather than a permanent language-level guarantee.
+
+Diagnostics should be ordered by source location, with stable tie-breaking for coincident locations.
+
+Independent errors should be collected where safe. Diagnostics caused solely by an earlier error should be suppressed where practical.
+
+Warnings are nonblocking by default.
+
+Successful compiler paths should avoid unnecessary diagnostic allocations. Optional diagnostic slices remain nil when unused.
+
+### D-048 — Recovery and compilation eligibility
+
+**Status:** Decided; implementation pending.
+
+Diagnostic collection and error recovery are separate concerns.
+
+Each stage determines how to recover safely while using the common diagnostic representation.
+
+Stage results explicitly distinguish:
+
+- **Complete:** Processing finished without blocking errors.
+- **Recovered:** Processing continued after blocking errors; output is not eligible for normal executable compilation.
+- **Aborted:** Processing could not safely continue.
+
+A warning-only stage result remains complete.
+
+A recovered AST may support diagnostic reporting or future editor tooling, but must not be treated as a fully valid executable program.
+
+Any blocking compilation error prevents normal bytecode generation and execution.
+
+Fatal structural failures may terminate an affected region or stage when continued recovery would be unsafe.
+
+### D-049 — Frontend migration prerequisite
+
+**Status:** Approved implementation prerequisite.
+
+Before M2 name resolution begins, the existing H2 lexer, streaming token source, and arena-backed parser must be adapted to controlled multi-error reporting.
+
+The migration must preserve:
+
+- Direct pull-based lexical streaming.
+- Arena-backed flat AST representation.
+- Existing correct syntax behavior.
+- Source-location accuracy.
+- Safe token and parser progress.
+- The separation between recovered and valid programs.
+
+The lexer must distinguish independently recoverable malformed input from failures that compromise structural interpretation.
+
+The parser must synchronize at contextually safe boundaries and avoid infinite recovery loops.
+
+Partially constructed arena nodes may remain allocated internally, but abandoned nodes must not be exposed as valid statements.
+
+Correctness, diagnostic quality, allocations, and representative performance must be evaluated against the existing M1/H2 baseline.
+
+This replaces the earlier decision to defer multi-error recovery indefinitely.
+
+### D-050 — Implementation sequence
+
+**Status:** Decided.
+
+The approved sequence is:
+
+1. Finalize and document shared diagnostic architecture.
+2. Migrate frontend lexical and syntax diagnostics to controlled recovery.
+3. Validate frontend regression tests, diagnostic behavior, and benchmarks.
+4. Implement dedicated M2 name resolution.
+5. Implement mandatory static type checking and definite-assignment checks.
+6. Implement bytecode compilation.
+7. Implement the baseline stack-based VM.
+8. Establish execution benchmarks before reconsidering major runtime architecture choices.
+
+No stage should be considered implemented solely because its design is recorded here.
+
+See `ARCHITECTURE.md` for the resolver algorithm, test matrix, and acceptance criteria, and `TECHNICAL_BACKLOG.md` for deferred reevaluation triggers.
 
 ## Change process
 

@@ -89,7 +89,15 @@ assignments, but does not yet enforce binding types or mutability.
 
 The target language defines `let` as a mutable binding, `fixed` as preventing rebinding without necessarily freezing the referenced value, and `frozen` as enforcing deep immutability. The `fixed` and `frozen` modifiers are not implemented in M1.
 
-The M1 frontend requires initializers for `let` declarations. Support for declarations without initializers remains a separate language-design decision and is not implemented. Local binding types may be inferred statically from their initializers. Block scopes are lexical. **Shadowing is prohibited** when an enclosing declaration of the same name is visible; unrelated scopes may reuse names.
+The M1 frontend requires initializers for `let` declarations. Support for declarations without initializers remains a separate language-design decision and is not implemented. Local binding types may be inferred statically from their initializers.
+
+Block scopes are lexical. **Shadowing is permitted in nested lexical scopes**, but produces a nonfatal compiler warning identifying the shadowed declaration. Redeclaring a name within the same scope is an error. Identifier lookup selects the nearest visible lexical declaration.
+
+Variables must be declared before use. Future function and named-type declarations may be forward-referenced, subject to the rules established when those constructs are implemented.
+
+A declaration introduces its binding before its initializer is resolved. Consequently, in `let x be x + 1`, the initializer's `x` refers to the newly declared binding, not an enclosing binding. A subsequent definite-assignment check rejects the uninitialized read.
+
+These resolution semantics are approved but are not yet implemented.
 
 Lists, maps and structured values use **value semantics**: assignment creates an independent *logical* value. The runtime may optimize with copy-on-write or structural sharing without observable aliasing. Explicit references/shared mutable state are deferred to the concurrency design.
 
@@ -313,7 +321,13 @@ Native concurrency, ownership rules, and shared-state synchronization remain def
 
 The canonical `Parse(sourceText)` frontend propagates lexical errors through the parser while preserving their source locations. Lexical errors are compiler diagnostics, not runtime exceptions.
 
-Error recovery and reporting multiple lexical errors in a single pass remain potential future enhancements.
+**Compiler diagnostics [Approved architecture; implementation pending]:** Eloque uses a shared structured diagnostic model across lexical analysis, parsing, name resolution, and static type checking. Compiler stages collect multiple independent errors where recovery is safe, while suppressing misleading cascading errors.
+
+Diagnostics carry stable machine-readable codes, severity, source locations, and optional related locations and explanatory notes. Warnings are nonfatal by default.
+
+The compiler distinguishes complete, recovered, and aborted stage outcomes. Recovered or incomplete syntax trees are not eligible for normal bytecode compilation. Any blocking compilation error prevents executable code generation and execution.
+
+The existing M1/H2 frontend still implements first-error termination. Controlled multi-error recovery is an approved prerequisite to M2 name-resolution implementation, not functionality already delivered.
 
 ## 14. Tooling and backend [Provisional roadmap]
 

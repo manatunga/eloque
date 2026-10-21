@@ -504,3 +504,605 @@ All deferred engineering decisions must retain a rationale, review trigger, and 
 **Current architectural baseline:** H2 direct-streaming frontend with arena-backed flat AST, retained M1 reference implementation, and verified frontend correctness.
 
 **Next development direction:** A small statically checked executable subset, progressing through semantic analysis, bytecode compilation, and VM execution.
+
+---
+
+## M2 implementation blueprint: diagnostics and name resolution
+
+**Status:** Approved architecture — implementation pending.
+
+**Last reviewed:** October 2026.
+
+This section records the architectural decisions agreed before the M2 implementation phase. It is intended to remain the primary implementation reference when development resumes.
+
+### A. Compiler pipeline and stage boundaries
+
+The target pipeline is:
+
+```text
+Source registration
+       |
+       v
+Streaming lexer
+       |
+       v
+Recovering parser
+       |
+       v
+Validated flat AST
+       |
+       v
+Name resolver
+       |
+       v
+Mandatory static checker
+       |
+       v
+Bytecode compiler
+       |
+       v
+Stack VM
+```
+
+The diagnostic system spans the frontend and semantic stages, but does not eliminate their individual responsibilities.
+
+Name resolution must not be embedded into parsing or bytecode generation.
+
+The resolver receives a syntactically valid `ast.FlatProgram` and returns resolution information plus diagnostics.
+
+Recovered or incomplete frontend output must not enter the normal semantic compilation pipeline.
+
+### B. Shared diagnostic contract
+
+The conceptual diagnostic model is:
+
+```go
+type Severity uint8
+
+const (
+    SeverityError Severity = iota
+    SeverityWarning
+    SeverityInfo
+)
+
+type Code string
+
+type Diagnostic struct {
+    Code     Code
+    Severity Severity
+    Message  string
+    Primary  Location
+    Related  []RelatedLocation
+    Notes    []string
+}
+
+type Location struct {
+    File FileID
+    Span source.ByteSpan
+}
+
+type RelatedLocation struct {
+    Location Location
+    Message  string
+}
+```
+
+These types describe the approved contract, not mandatory final Go declarations.
+
+The concrete package boundaries and names may be refined without changing the agreed behavior.
+
+#### Source ownership
+
+The compiler should maintain a minimal compilation-local source registry.
+
+It must be capable of associating each `FileID` with the corresponding source text, source name/path, and position mapping.
+
+`FileID` is compilation-local and must not be interpreted as a persistent file identity across recompilations.
+
+Byte spans are half-open, using inclusive start and exclusive end offsets.
+
+Line and column positions are calculated when diagnostics are rendered.
+
+The existing frontend position-mapping implementation should be reused or consolidated where appropriate, rather than duplicated unnecessarily.
+
+A full multi-file workspace or incremental-compilation framework is not required for M2.
+
+#### Diagnostic codes
+
+Codes must be stable and machine-readable.
+
+Proposed code families:
+
+- `LEX_*`
+- `PARSE_*`
+- `RESOLVE_*`
+- `TYPE_*`
+
+Examples:
+
+- `LEX_UNEXPECTED_CHARACTER`
+- `LEX_INVALID_INTEGER`
+- `LEX_INVALID_INDENTATION`
+- `PARSE_EXPECTED_TOKEN`
+- `RESOLVE_UNDEFINED_NAME`
+- `RESOLVE_DUPLICATE_DECLARATION`
+- `RESOLVE_SHADOWED_DECLARATION`
+- `TYPE_UNINITIALIZED_READ`
+- `TYPE_MISMATCH`
+
+Exact identifiers should be finalized alongside the corresponding implementation.
+
+Published diagnostic codes should retain their meanings even when messages are improved.
+
+#### Parser-specific metadata
+
+The parser currently retains expected and actual token information.
+
+That metadata must not be discarded during migration.
+
+It should remain in a parser-specific representation and be convertible into generic structured diagnostic output.
+
+The shared diagnostic package must not import the lexer merely to store token kinds.
+
+The exact machine-readable serialization schema is deferred until tooling requires it.
+
+### C. Diagnostic collection policy
+
+Each stage owns its own diagnostic slice.
+
+A compiler driver coordinates:
+
+- A compilation-wide diagnostic budget.
+- Deterministic diagnostic ordering.
+- Blocking-error detection.
+- Stage eligibility.
+- Final diagnostic presentation.
+
+A default budget of 100 errors is an initial candidate.
+
+The total budget must not be accidentally multiplied by the number of compiler stages.
+
+Independent errors should be reported when safe. Cascading diagnostics arising solely from earlier failures should be suppressed where practical.
+
+A diagnostic collection must not require global mutable state.
+
+Compiler stages should receive lightweight policy/configuration values when necessary.
+
+#### Stage outcomes
+
+Three conceptual outcomes are required:
+
+**Complete**
+
+The stage finished without blocking errors. Warnings and informational diagnostics may be present.
+
+**Recovered**
+
+The stage continued after blocking errors and may have produced partial results. Those results are not eligible for normal executable compilation.
+
+**Aborted**
+
+The stage could not safely continue. Downstream stages must not consume its output as valid.
+
+The final concrete result types may differ between lexer, parser, and semantic analysis.
+
+A common diagnostic model does not require a universal stage-result struct.
+
+### D. Frontend recovery migration
+
+The current implementation is first-error terminating.
+
+The lexer returns `(Token, error)`.
+
+The streaming token source caches the first lexical error and substitutes `TokenInvalid`, preventing further scanning.
+
+The parser's `expect()` returns a diagnostic without consuming the unexpected token.
+
+These behaviors are suitable for the original fail-fast implementation but require deliberate changes for recovery.
+
+#### Lexer recovery requirements
+
+Unexpected characters may be skipped when doing so preserves reliable scanning.
+
+Malformed numeric literals should be consumed as a coherent malformed unit where possible, preventing misleading follow-on tokenization.
+
+Invalid escapes and unterminated strings require recovery at a reliable string or line boundary.
+
+Invalid indentation must not leave the indentation stack in an inconsistent state.
+
+Unmatched or unclosed parentheses require special treatment because they influence logical newline recognition.
+
+When structural state cannot be restored safely, recovery may terminate the affected region or stage.
+
+Repeated calls must never reproduce the same error indefinitely without advancing or terminating.
+
+#### Parser recovery requirements
+
+Parser recovery must explicitly guarantee progress.
+
+Potential synchronization tokens include:
+
+- `NEWLINE`
+- `DEDENT`
+- `EOF`
+
+Their suitability depends on grammatical context, nesting, and future block constructs.
+
+A newline inside parentheses must not automatically be treated as a safe statement boundary.
+
+When a statement cannot be completed safely, the parser should abandon that statement and synchronize before attempting another.
+
+The arena may contain expression nodes constructed before a failure. Those nodes must not be included in the program's valid statement range unless the containing statement was successfully constructed and validated.
+
+Recovered AST output must be clearly distinguished from a complete, valid AST.
+
+#### Migration acceptance criteria
+
+- Multiple independent errors can be reported in one compilation.
+- Lexical recovery does not corrupt structural tokenization.
+- Parser recovery cannot enter an infinite loop.
+- Diagnostic positions remain accurate.
+- Errors are reported in deterministic order.
+- Cascading diagnostics are appropriately suppressed.
+- Recovered programs cannot be executed.
+- Existing valid M1/H2 programs continue parsing correctly.
+- Streaming token production remains supported.
+- Arena invariants remain valid.
+- Representative benchmark regressions are measured and reviewed.
+
+### E. Name-resolution responsibilities
+
+The resolver determines which declaration each name refers to.
+
+It is not responsible for general type compatibility, bytecode emission, or runtime storage allocation.
+
+The resolver must:
+
+1. Create symbol identities for declarations.
+2. Manage lexical scopes.
+3. Resolve identifier expressions.
+4. Resolve assignment targets.
+5. Detect undefined names.
+6. Detect duplicate declarations.
+7. Report shadowing warnings.
+8. Preserve binding information for later compiler stages.
+9. Produce deterministic diagnostics.
+10. Leave the AST unchanged.
+
+Definite-assignment analysis is a separate responsibility.
+
+### F. Symbol storage
+
+Use a contiguous append-only symbol arena, conceptually:
+
+```go
+type SymbolID uint32
+
+type Resolution struct {
+    symbols []Symbol
+}
+```
+
+An explicit invalid symbol sentinel is required.
+
+Symbol identities are stable within one compilation unit but not across recompilations.
+
+A symbol ID is not a VM register, stack slot, or global runtime address.
+
+Future module systems may require qualified identities, but that should not be introduced prematurely.
+
+Each symbol must retain sufficient information to identify its declaration and support diagnostics.
+
+Exact `Symbol` fields should be finalized when implementation begins.
+
+### G. Lexical scope representation
+
+Use parent-linked scopes.
+
+Each scope contains its locally declared symbols, conceptually:
+
+```go
+type Scope struct {
+    parent *Scope
+    names  map[string]SymbolID
+}
+```
+
+Lookup searches:
+
+1. Current scope.
+2. Parent scope.
+3. Successive enclosing scopes.
+4. Stop when found or no parent remains.
+
+Do not copy inherited scope maps into nested scopes.
+
+A duplicate name in the same scope is an error.
+
+A matching name in an enclosing scope is permitted but generates a warning.
+
+The shadowing warning must reference the earlier declaration's source location.
+
+The original symbol must remain authoritative after a duplicate-declaration error.
+
+### H. Source-backed identifiers
+
+The H2 AST retains original source text and byte spans.
+
+The resolver should initially obtain identifier names through source-backed string slices rather than eagerly allocating copied strings.
+
+The lifetime of the original source must be retained for as long as these names are referenced.
+
+Do not introduce global string interning without benchmark evidence.
+
+Identifier comparison must remain exact and case-sensitive.
+
+### I. Reference binding representation
+
+The initial representation is a dense array of `SymbolID` values indexed by AST `NodeID`.
+
+Entries without bindings use the invalid symbol sentinel.
+
+The representation must remain private behind accessors so it can be replaced with a sparse mapping if benchmarks justify doing so.
+
+Conceptual operations:
+
+```go
+Symbol(SymbolID)
+Reference(ast.NodeID)
+Declaration(ast.NodeID)
+```
+
+The exact accessor signatures are not yet fixed.
+
+#### H2 AST binding conventions
+
+The current AST does not represent every name as an identifier-expression node.
+
+**Identifier expressions**
+
+`NodeIdentifier` has its own `NodeID`.
+
+The resolver records the resolved symbol for that node.
+
+**Declarations**
+
+`NodeLetStatement` stores the declaration name as a byte span in its binding payload.
+
+The resolver records the declaration symbol using the statement's `NodeID`.
+
+**Assignments**
+
+`NodeChangeStatement` stores its target name as a byte span in its binding payload.
+
+The resolver records the assignment-target reference using the statement's `NodeID`.
+
+The compiler must not assume assignment targets are separate `NodeIdentifier` nodes.
+
+### J. Resolver traversal algorithm
+
+For the currently supported grammar, process top-level statements in source order.
+
+#### `let`
+
+1. Read the declaration name from its source span.
+2. Check the current scope for an existing declaration.
+3. If duplicated, emit an error without replacing the original binding.
+4. Otherwise, check enclosing scopes for a shadowed declaration.
+5. Emit a warning when shadowing occurs.
+6. Allocate and register the new symbol.
+7. Resolve the initializer expression.
+8. Record the declaration binding.
+
+The declaration must be visible during initializer resolution.
+
+#### `change`
+
+1. Read the assignment target name.
+2. Resolve it through the scope chain.
+3. Report an undefined target when lookup fails.
+4. Record the target binding when successful.
+5. Resolve the assigned expression.
+
+Mutability and type compatibility are checked separately.
+
+#### `say`
+
+Resolve the contained expression.
+
+#### Expressions
+
+- Integer and string literals require no name lookup.
+- Identifier expressions resolve through the current scope.
+- Unary expressions resolve their operand.
+- Binary expressions resolve both operands.
+
+Traversal must preserve deterministic diagnostic order.
+
+Future nested blocks, functions, and named types extend this algorithm rather than changing the underlying lexical binding rules.
+
+### K. Forward declarations
+
+Variables require declaration before use.
+
+Future functions and named types may be referenced before their textual definitions.
+
+When those constructs are implemented, use an appropriate scope-local declaration prepass to register eligible symbols before resolving bodies.
+
+Do not implement speculative function/type AST nodes or module-resolution behavior during the initial M2 resolver.
+
+### L. Initializer self-reference
+
+Consider:
+
+```elq
+let x be x + 1
+```
+
+The resolver creates the symbol for `x` before resolving the initializer.
+
+The initializer's `x` resolves to that new symbol.
+
+The definite-assignment checker subsequently rejects the uninitialized read.
+
+For nested scopes:
+
+```elq
+let x be 10
+
+if ready:
+    let x be x + 1
+```
+
+The inner initializer refers to the inner declaration, not the outer one.
+
+The inner declaration also produces a shadowing warning.
+
+The syntax example is illustrative of future block-scope behavior; `if` is not yet part of the implemented M1/H2 parser.
+
+### M. Behavioral test matrix
+
+The following cases form the acceptance matrix for the resolver and diagnostic migration.
+
+**Valid name resolution**
+
+- R01: Empty program.
+- R02: Single declaration.
+- R03: Multiple declarations.
+- R04: Identifier read after declaration.
+- R05: Repeated references resolve to the same symbol.
+- R06: Assignment target resolves correctly.
+- R07: Assignment RHS resolves correctly.
+- R08: Nested unary/binary expressions resolve all identifier references.
+- R09: Independent declarations receive distinct stable symbol IDs.
+- R10: Resolver output is deterministic for identical input.
+
+**Invalid name resolution**
+
+- R11: Undefined identifier expression.
+- R12: Undefined assignment target.
+- R13: Variable used before declaration.
+- R14: Duplicate declaration in the same scope.
+- R15: Duplicate declaration does not replace the original symbol.
+- R16: Multiple independent undefined names produce independent diagnostics.
+- R17: Malformed syntax is not passed to normal resolution.
+
+**Scope behavior**
+
+- R18: Nearest lexical declaration wins.
+- R19: Nested shadowing produces a warning.
+- R20: Shadowing warning references the earlier declaration.
+- R21: Unrelated scopes may reuse names.
+- R22: Scope exit restores visibility of the enclosing declaration.
+
+**Initializer and assignment analysis**
+
+- R23: Initializer self-reference binds to the newly declared symbol.
+- R24: Definite-assignment analysis rejects an uninitialized self-reference.
+- R25: Shadowing initializer resolves to the inner symbol.
+
+**Integrity and diagnostics**
+
+- R26: Identifier, declaration, and assignment-target bindings use correct AST node identities.
+- R27: Resolver does not mutate the AST; source spans and retained source remain valid.
+- R28: Diagnostic spans, ordering, symbol sentinels, and result accessors behave deterministically.
+
+Scope-related syntax-level tests must wait until nested scopes are supported. Resolver scope behavior may be exercised earlier through appropriately isolated fixtures.
+
+### N. Additional diagnostic test requirements
+
+Beyond R01–R28, validate:
+
+- Exact half-open byte spans.
+- Compilation-local file identity.
+- Stable diagnostic codes.
+- Severity classification.
+- Related declaration locations.
+- Warning-only compilation eligibility.
+- Recovered AST ineligibility.
+- Aborted-stage behavior.
+- Global diagnostic budget enforcement.
+- Deterministic ordering.
+- No infinite lexer/parser recovery loops.
+- No misleading duplicate cascades.
+- No unnecessary diagnostic allocations on valid input.
+- Safe behavior under deeply nested expressions.
+- Preservation of expected/actual token metadata.
+
+### O. Performance and deferred architecture
+
+The following decisions must be revisited only when their stated trigger is reached.
+
+**Dense versus sparse reference bindings**
+
+Trigger: representative resolver memory and lookup benchmarks.
+
+Criteria: retained memory, allocation count, lookup cost, implementation complexity.
+
+**Source-backed strings versus interning**
+
+Trigger: workloads with repeated identifiers and eventually multi-file compilation.
+
+Criteria: allocation savings, retained source lifetime, lookup performance, memory overhead.
+
+**Recursive versus iterative expression traversal**
+
+Trigger: deeply nested expression stress tests.
+
+Criteria: stack safety, correctness, traversal overhead, implementation complexity.
+
+**Diagnostic budget and public serialization**
+
+Trigger: practical CLI/editor/agent tooling.
+
+Criteria: actionable output, deterministic serialization, bounded resource use, stable compatibility.
+
+**Multi-file source manager**
+
+Trigger: module imports and multi-file compilation, expected around M7.
+
+Criteria: file identity correctness, source ownership, diagnostics across modules, incremental-compilation requirements if justified.
+
+**Stack VM versus register VM**
+
+Trigger: a functioning executable stack VM with representative runtime benchmarks.
+
+Criteria: execution speed, memory use, bytecode size, compiler complexity, maintainability.
+
+**JIT, AOT, WebAssembly and alternative backends**
+
+Trigger: measured limitations of the baseline VM and concrete deployment requirements.
+
+Criteria: demonstrable improvements against reproducible workloads, implementation cost, portability, maintenance burden.
+
+**CPython performance comparisons**
+
+Trigger: working runtime with comparable language workloads.
+
+Frontend parsing benchmarks must not be presented as evidence of runtime parity.
+
+### P. Implementation readiness checklist
+
+Before beginning resolver implementation:
+
+- [ ] Shared diagnostic contract recorded.
+- [ ] Frontend recovery strategy implemented.
+- [ ] Streaming token source supports safe diagnostic continuation.
+- [ ] Parser recovery guarantees forward progress.
+- [ ] Stage outcomes and compilation eligibility enforced.
+- [ ] Diagnostic regression tests pass.
+- [ ] Existing frontend correctness tests pass.
+- [ ] H2 performance impact measured.
+- [ ] Resolver data structures and APIs reviewed against actual current AST files.
+
+Before considering M2 complete:
+
+- [ ] Name resolution implemented and tested.
+- [ ] Mandatory static checker implemented and tested.
+- [ ] Definite-assignment behavior validated.
+- [ ] Bytecode compiler implemented.
+- [ ] Stack VM executes the supported language subset.
+- [ ] Blocking diagnostics prevent execution.
+- [ ] Runtime correctness and representative benchmarks recorded.
+
+This blueprint is an approved design reference. It does not imply any listed implementation is complete.

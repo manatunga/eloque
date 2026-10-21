@@ -319,6 +319,42 @@ Once there is a working VM:
 
 **CPython parity is a long-term aspiration, not a forecast.** A stack-based VM remains the initial baseline until evidence supports a different architecture.
 
+---
+
+## Pre-M2 prerequisite: structured diagnostics and frontend recovery
+
+**Status:** Approved; not yet implemented.
+
+Before implementing the M2 name resolver, Eloque will migrate its existing H2 frontend from first-error termination to controlled, structured multi-error reporting.
+
+The work includes:
+
+1. Introduce the shared diagnostic representation and minimal compilation-local source registry.
+2. Define stage-specific result and recovery contracts.
+3. Adapt the streaming lexer and token source to safe lexical recovery.
+4. Adapt the arena-backed parser to statement-level recovery and guaranteed progress.
+5. Enforce compilation eligibility so recovered or malformed programs cannot execute.
+6. Add diagnostic and recovery regression tests.
+7. Benchmark the migration against the existing M1/H2 frontend baseline.
+8. Begin M2 name resolution only after the migration passes its acceptance criteria.
+
+### M2 implementation order
+
+After frontend recovery is validated:
+
+1. Dedicated lexical name resolver.
+2. Mandatory static type checker, including definite-assignment analysis.
+3. Bytecode compiler.
+4. Baseline stack-based virtual machine.
+5. First executable Eloque programs.
+6. Runtime correctness and performance benchmarks.
+
+The M2 design is documented in `DESIGN_DECISIONS.md` and `ARCHITECTURE.md`.
+
+The detailed resolver acceptance matrix and deferred optimization triggers are preserved in `ARCHITECTURE.md` and `TECHNICAL_BACKLOG.md`.
+
+This roadmap addition does not mark the diagnostic migration or any M2 execution stage as implemented.
+
 ## Versioning and compatibility
 
 Eloque intends to use Semantic Versioning as a guideline:
