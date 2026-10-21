@@ -39,7 +39,7 @@ The order may change where dependencies demand it. In particular, implement enou
 - Initial architecture, language specification, roadmap, and design decisions established.
 - Go test infrastructure operational.
 
-### M1 — Frontend foundations: In progress
+### M1 — Frontend foundations: Completed
 
 **Lexer checkpoint: Completed**
 
@@ -213,6 +213,31 @@ The H2 implementation includes correctness, differential, arena-invariant, and b
 Additional arena-capacity tuning remains deferred pending representative profiling evidence. The existing flat AST type names are retained for now. Further optimization must be justified by measurable benefits without unacceptable memory or correctness regressions.
 
 **Outcome:** H2 is the canonical production frontend. The legacy M1 implementation remains available for regression and comparative testing.
+
+### Post-M1 — Structured diagnostics and multi-error recovery: In progress
+
+This checkpoint transitions Eloque's frontend from the M1 fail-fast diagnostic model to bounded multi-error recovery before beginning M2 execution development.
+
+**Shared diagnostic foundation: Completed**
+
+- Established shared diagnostic codes, severity, file identities, half-open byte spans, related locations, notes, and token-expectation metadata.
+- Migrated the lexer and H2 parser to native structured diagnostics.
+- Updated frontend, lexer, and parser diagnostic tests.
+- Retired the legacy M1 pointer-based parser.
+- Verified the migration with `go test ./...` and `go vet ./...`.
+
+**Multi-error recovery: In progress**
+
+- [ ] Finalize diagnostic accumulation, ownership, and recovery-session contracts.
+- [ ] Implement explicit lexical recovery with guaranteed forward progress.
+- [ ] Implement parser synchronization and suppression of cascading diagnostics.
+- [ ] Introduce configurable error budgets and explicit parse outcomes.
+- [ ] Preserve valid AST structures where recovery is safe.
+- [ ] Verify multi-error behavior through conformance, robustness, and regression tests.
+- [ ] Benchmark successful parsing and recovery workloads against the retained frontend baseline.
+- [ ] Update architecture, language specification, and diagnostic documentation to reflect verified behavior.
+
+**Completion criteria:** Eloque reports multiple independent lexical and syntax errors from a single source file, terminates safely on malformed input, preserves valid AST structures where appropriate, and maintains acceptable successful-path performance without abandoning direct token streaming.
 
 ### Transition to M2 — First execution: Not started
 
