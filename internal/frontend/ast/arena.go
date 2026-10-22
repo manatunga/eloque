@@ -18,12 +18,65 @@ type Arena struct {
 	statements []NodeID
 }
 
+// ArenaCheckpoint records the arena's allocation boundaries.
+//
+// Restoring a checkpoint discards nodes and payloads appended after
+// it. Existing node IDs and statement references remain valid.
+type ArenaCheckpoint struct {
+	nodes      int
+	strings    int
+	binaries   int
+	unaries    int
+	bindings   int
+	statements int
+	arena      *Arena
+}
+
 // NewArena creates an AST arena backed by the given source text.
 // The arena retains the source so nodes can reference its byte ranges.
 func NewArena(sourceText string) *Arena {
 	return &Arena{
 		sourceText: sourceText,
 	}
+}
+
+// Checkpoint captures the current allocation boundaries of the arena.
+//
+// Creating a checkpoint performs no allocations.
+func (a *Arena) Checkpoint() ArenaCheckpoint {
+	return ArenaCheckpoint{
+		nodes:      len(a.nodes),
+		strings:    len(a.strings),
+		binaries:   len(a.binaries),
+		unaries:    len(a.unaries),
+		bindings:   len(a.bindings),
+		statements: len(a.statements),
+		arena:      a,
+	}
+}
+
+// Rollback discards allocations and statement references added after
+// the supplied checkpoint.
+//
+// Checkpoints must belong to this arena and must not describe lengths
+// greater than the arena's current storage lengths.
+func (a *Arena) Rollback(cp ArenaCheckpoint) {
+	if cp.arena != a ||
+		cp.nodes > len(a.nodes) ||
+		cp.strings > len(a.strings) ||
+		cp.binaries > len(a.binaries) ||
+		cp.unaries > len(a.unaries) ||
+		cp.bindings > len(a.bindings) ||
+		cp.statements > len(a.statements) {
+		panic("ast: invalid arena checkpoint")
+	}
+
+	a.nodes = a.nodes[:cp.nodes]
+	a.strings = a.strings[:cp.strings]
+	a.binaries = a.binaries[:cp.binaries]
+	a.unaries = a.unaries[:cp.unaries]
+	a.bindings = a.bindings[:cp.bindings]
+	a.statements = a.statements[:cp.statements]
 }
 
 // checkPayloadCapacity panics when appending another payload would

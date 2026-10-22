@@ -3,11 +3,23 @@
 **Status:** Active design decision register, updated October 2026.
 **Normative language specification:** [LANGUAGE_SPEC.md](LANGUAGE_SPEC.md).
 
-This register records accepted design choices, provisional directions, deferred work, and selected implementation decisions. **Decided** means agreed, not necessarily implemented. **Provisional** requires further specification or validation. **Deferred** is deliberately postponed. **Implemented (M1)** identifies behavior or architecture established during Milestone 1. **Implemented (H2)** identifies the post-M1 frontend optimization and architectural migration. Neither status implies that Eloque programs can execute.
+This register records accepted design choices, provisional directions, deferred work, and selected implementation decisions. **Decided** means agreed, not necessarily implemented. **Provisional** requires further specification or validation. **Deferred** is deliberately postponed. **Implemented (M1)** identifies behavior or architecture established during Milestone 1. **Implemented (H2)** identifies the post-M1 frontend optimization and architectural migration. Neither status implies that Eloque programs can execute. **Implemented (post-H2)** identifies frontend functionality added after the H2 optimization, including structured diagnostic recovery. It does not imply that semantic analysis or execution is available.
 
 ## Current implementation baseline — M1 and H2
 
 Milestone 1 established Eloque's Go lexer, parser, AST construction, structured fail-fast lexical and syntax diagnostics, and canonical `Parse(sourceText)` entry point.
+
+### Post-H2 structured diagnostics and recovery
+
+The production frontend additionally supports `ParseRecovering(sourceText, ParseOptions)`, which returns a `ParseResult` containing a potentially partial arena-backed AST, collected diagnostics, and a termination status.
+
+The possible statuses are `ParseComplete`, `ParseRecovered`, and `ParseAborted`. Recovery is bounded by a configurable error budget: zero selects the default of 20 errors, positive values specify a limit, and negative values disable the limit.
+
+The recovery architecture preserves successfully completed statements where possible, while avoiding retention of incomplete AST construction. The frontend also guards against excessive expression nesting.
+
+The original `Parse(sourceText)` API remains available for fail-fast parsing. Recovery-capable parsing is intended for diagnostics and tooling; a partial AST is not evidence of semantic validity or executability.
+
+These capabilities are implemented frontend behavior, not changes to the language's normative grammar.
 
 The supported syntax subset includes literals, identifiers, arithmetic expressions, and `let`, `change`, and `say` statements.
 
@@ -69,7 +81,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for the implementation structure, [ROADMA
 | D-034 | Decided; lexer implemented (M1) | Decimal integer literals prohibit leading zeros except `0`. A digit sequence immediately followed by an ASCII letter or underscore is a lexical error; invalid-suffix diagnostics take precedence over leading-zero diagnostics. The existing lexer fails fast; controlled multi-error recovery is approved for the pre-M2 frontend migration. |
 | D-035 | Implemented (M1) | Go lexer token kinds use a `uint8`-backed enumeration with zero reserved for `TokenInvalid`; `String()` supplies readable names. Incremental token emission and reused indentation-stack/pending-queue storage reduce allocations. This is an implementation choice, not a language semantic rule. |
 | D-036 | Decided; lexer implemented (M1) | `change`, `to`, `with`, and `giving` are reserved keywords with dedicated token kinds, not ordinary identifiers. One token kind may serve multiple grammatical contexts. |
-| D-037 | Implemented (M1) | The existing parser stops at the first syntax error. The approved replacement collects independent errors through safe recovery, preserving structured token mismatch metadata and rejecting malformed programs from executable compilation. |
+| D-037 | Active implementation; M1 fail-fast baseline retained | M1 implemented deterministic fail-fast lexical and syntax diagnostics. The post-M1 structured-diagnostics checkpoint is transitioning the frontend to multi-error recovery. The shared diagnostic model and native lexer/parser diagnostic migration are complete; diagnostic accumulation, lexer recovery, parser synchronization, error budgets, and parse outcomes remain in progress. Recovery must preserve direct pull-based token streaming, deterministic diagnostic reporting, safe termination, and successful-path performance. The M1 fail-fast behavior remains the regression baseline until the recovery implementation passes correctness and performance validation. |
 | D-038 | Implemented (M1) | The canonical `Parse(sourceText)` frontend consumes lexer tokens incrementally via `tokenSource`, without a redundant independent token cursor. Buffered parsing remains for regression tests and benchmarks. Future changes must preserve correctness, diagnostic quality, and reproducible performance baselines. |
 | D-039 | Implemented (H2) | Adopt an arena-backed flat AST as the canonical production representation. The parser constructs `FlatNode` and `FlatProgram` structures using arena-managed storage. Retain the original M1 interface-based AST and parser as legacy references for correctness and performance comparisons. This is an internal representation decision, not a language-semantic change. |
 | D-040 | Implemented (H2) | Organize the frontend under `internal/frontend/{ast,lexer,parser}` while retaining shared source-location utilities in `internal/source`. Preserve the canonical `Parse(sourceText)` entry point and direct pull-based token streaming. Future semantic analysis and backend packages should be introduced when their implementations begin rather than creating speculative empty package structures. |

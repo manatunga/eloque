@@ -1,26 +1,19 @@
 package parser
 
 import (
-	"reflect"
+	"slices"
 	"testing"
 
+	"github.com/manatunga/eloque/internal/diagnostic"
 	"github.com/manatunga/eloque/internal/frontend/ast"
 	"github.com/manatunga/eloque/internal/frontend/lexer"
 	"github.com/manatunga/eloque/internal/source"
 )
 
-// newFlatStatementTestParser constructs an H2 parser using the
-// production streaming lexer and arena initialization.
-//
-// Tests use real Eloque source text so token offsets, keyword
-// classification, and statement boundaries are exercised together.
 func newFlatStatementTestParser(sourceText string) *FlatParser {
 	return NewFlatParser(sourceText)
 }
 
-// TestFlatStatementBindings verifies the statement node kind, variable
-// name span, initializer reference, and source extent for both binding
-// statement forms.
 func TestFlatStatementBindings(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -84,8 +77,6 @@ func TestFlatStatementBindings(t *testing.T) {
 	}
 }
 
-// TestFlatSayStatement verifies that output statements reference their
-// expression through the arena without introducing a binding payload.
 func TestFlatSayStatement(t *testing.T) {
 	sourceText := "say 2 + 3 * 4"
 	p := newFlatStatementTestParser(sourceText)
@@ -131,9 +122,6 @@ func TestFlatSayStatement(t *testing.T) {
 	}
 }
 
-// TestFlatStatementGroupingSpan verifies that grouping parentheses
-// contribute to the statement's syntactic span without becoming
-// additional expression nodes.
 func TestFlatStatementGroupingSpan(t *testing.T) {
 	sourceText := "let result be (2 + 3)"
 	p := newFlatStatementTestParser(sourceText)
@@ -163,8 +151,6 @@ func TestFlatStatementGroupingSpan(t *testing.T) {
 	}
 }
 
-// TestFlatStatementTerminators verifies that individual statement
-// parsers leave NEWLINE and EOF handling to the program parser.
 func TestFlatStatementTerminators(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -196,13 +182,13 @@ func TestFlatStatementTerminators(t *testing.T) {
 	}
 }
 
-// TestFlatStatementDiagnostics verifies that malformed H2 statements
-// preserve M1's diagnostic messages and expected-token information.
 func TestFlatStatementDiagnostics(t *testing.T) {
 	tests := []struct {
 		name         string
 		source       string
 		wantMessage  string
+		wantStart    uint32
+		wantEnd      uint32
 		wantActual   lexer.TokenKind
 		wantExpected []lexer.TokenKind
 	}{
@@ -210,6 +196,8 @@ func TestFlatStatementDiagnostics(t *testing.T) {
 			name:         "let missing name",
 			source:       "let be 20",
 			wantMessage:  "expected a variable name after 'let'",
+			wantStart:    4,
+			wantEnd:      6,
 			wantActual:   lexer.TokenBe,
 			wantExpected: []lexer.TokenKind{lexer.TokenIdent},
 		},
@@ -217,6 +205,8 @@ func TestFlatStatementDiagnostics(t *testing.T) {
 			name:         "let missing be",
 			source:       "let x 20",
 			wantMessage:  "expected 'be' after variable name to initialize a variable value",
+			wantStart:    6,
+			wantEnd:      8,
 			wantActual:   lexer.TokenInt,
 			wantExpected: []lexer.TokenKind{lexer.TokenBe},
 		},
@@ -224,6 +214,8 @@ func TestFlatStatementDiagnostics(t *testing.T) {
 			name:         "change missing name",
 			source:       "change to 2",
 			wantMessage:  "expected a variable name after 'change'",
+			wantStart:    7,
+			wantEnd:      9,
 			wantActual:   lexer.TokenTo,
 			wantExpected: []lexer.TokenKind{lexer.TokenIdent},
 		},
@@ -231,14 +223,34 @@ func TestFlatStatementDiagnostics(t *testing.T) {
 			name:         "change missing to",
 			source:       "change x 2",
 			wantMessage:  "expected 'to' after variable name to assign a new variable value",
+			wantStart:    9,
+			wantEnd:      10,
 			wantActual:   lexer.TokenInt,
 			wantExpected: []lexer.TokenKind{lexer.TokenTo},
 		},
 		{
-			name:        "say missing expression",
+			name:        "say missing expression at EOF",
 			source:      "say",
 			wantMessage: "expected an expression",
+			wantStart:   3,
+			wantEnd:     3,
 			wantActual:  lexer.TokenEOF,
+			wantExpected: []lexer.TokenKind{
+				lexer.TokenInt,
+				lexer.TokenString,
+				lexer.TokenIdent,
+				lexer.TokenLeftParen,
+				lexer.TokenPlus,
+				lexer.TokenMinus,
+			},
+		},
+		{
+			name:        "say missing expression at newline",
+			source:      "say\n",
+			wantMessage: "expected an expression",
+			wantStart:   3,
+			wantEnd:     4,
+			wantActual:  lexer.TokenNewline,
 			wantExpected: []lexer.TokenKind{
 				lexer.TokenInt,
 				lexer.TokenString,
@@ -252,6 +264,8 @@ func TestFlatStatementDiagnostics(t *testing.T) {
 			name:        "unsupported statement",
 			source:      "42",
 			wantMessage: "expected a statement ('let', 'change' or 'say')",
+			wantStart:   0,
+			wantEnd:     2,
 			wantActual:  lexer.TokenInt,
 			wantExpected: []lexer.TokenKind{
 				lexer.TokenLet,
@@ -265,8 +279,8 @@ func TestFlatStatementDiagnostics(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			p := newFlatStatementTestParser(tt.source)
 
-			id, diagnostic := p.parseFlatStatement()
-			if diagnostic == nil {
+			id, diag := p.parseFlatStatement()
+			if diag == nil {
 				t.Fatal("expected diagnostic, got nil")
 			}
 
@@ -274,20 +288,46 @@ func TestFlatStatementDiagnostics(t *testing.T) {
 				t.Errorf("node ID = %v, want InvalidNodeID", id)
 			}
 
-			if diagnostic.Message != tt.wantMessage {
-				t.Errorf("message = %q, want %q",
-					diagnostic.Message, tt.wantMessage)
+			if diag.Code != CodeUnexpectedToken {
+				t.Errorf("code = %q, want %q", diag.Code, CodeUnexpectedToken)
 			}
 
-			if diagnostic.Actual == nil ||
-				*diagnostic.Actual != tt.wantActual {
-				t.Errorf("actual = %v, want %v",
-					diagnostic.Actual, tt.wantActual)
+			if diag.Severity != diagnostic.SeverityError {
+				t.Errorf("severity = %v, want error", diag.Severity)
 			}
 
-			if !reflect.DeepEqual(diagnostic.Expected, tt.wantExpected) {
-				t.Errorf("expected tokens = %v, want %v",
-					diagnostic.Expected, tt.wantExpected)
+			if diag.Message != tt.wantMessage {
+				t.Errorf("message = %q, want %q", diag.Message, tt.wantMessage)
+			}
+
+			if diag.Primary.File != 0 {
+				t.Errorf("file ID = %d, want 0", diag.Primary.File)
+			}
+
+			if diag.Primary.Span != (source.ByteSpan{
+				Start: tt.wantStart,
+				End:   tt.wantEnd,
+			}) {
+				t.Errorf("span = %+v, want [%d,%d)",
+					diag.Primary.Span, tt.wantStart, tt.wantEnd)
+			}
+
+			if diag.TokenExpectation == nil {
+				t.Fatal("missing token expectation")
+			}
+
+			if got := diag.TokenExpectation.Actual; got != tt.wantActual.String() {
+				t.Errorf("actual = %q, want %q", got, tt.wantActual.String())
+			}
+
+			expected := make([]string, len(tt.wantExpected))
+			for i, kind := range tt.wantExpected {
+				expected[i] = kind.String()
+			}
+
+			if !slices.Equal(diag.TokenExpectation.Expected, expected) {
+				t.Errorf("expected = %v, want %v",
+					diag.TokenExpectation.Expected, expected)
 			}
 		})
 	}

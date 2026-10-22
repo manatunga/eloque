@@ -1,6 +1,6 @@
 # Eloque Roadmap
 
-**Status:** Active implementation roadmap — M0 and M1 completed; post-M1 H2 frontend optimization and package reorganization completed. M2 (First execution) is next. Milestones and versions are planning aids, not release commitments. Eloque, `.elq`, and the CLI name remain provisional.
+**Status:** Active implementation roadmap — M0 and M1 completed; post-M1 H2 frontend optimization, package reorganization, and pre-M2 structured diagnostic recovery implemented. M2 (First execution) is next. Milestones and versions are planning aids, not release commitments.
 
 ## Delivery principles
 
@@ -39,7 +39,7 @@ The order may change where dependencies demand it. In particular, implement enou
 - Initial architecture, language specification, roadmap, and design decisions established.
 - Go test infrastructure operational.
 
-### M1 — Frontend foundations: In progress
+### M1 — Frontend foundations: Completed
 
 **Lexer checkpoint: Completed**
 
@@ -214,6 +214,31 @@ Additional arena-capacity tuning remains deferred pending representative profili
 
 **Outcome:** H2 is the canonical production frontend. The legacy M1 implementation remains available for regression and comparative testing.
 
+### Post-M1 — Structured diagnostics and multi-error recovery: In progress
+
+This checkpoint transitions Eloque's frontend from the M1 fail-fast diagnostic model to bounded multi-error recovery before beginning M2 execution development.
+
+**Shared diagnostic foundation: Completed**
+
+- Established shared diagnostic codes, severity, file identities, half-open byte spans, related locations, notes, and token-expectation metadata.
+- Migrated the lexer and H2 parser to native structured diagnostics.
+- Updated frontend, lexer, and parser diagnostic tests.
+- Retired the legacy M1 pointer-based parser.
+- Verified the migration with `go test ./...` and `go vet ./...`.
+
+**Multi-error recovery: In progress**
+
+- [ ] Finalize diagnostic accumulation, ownership, and recovery-session contracts.
+- [ ] Implement explicit lexical recovery with guaranteed forward progress.
+- [ ] Implement parser synchronization and suppression of cascading diagnostics.
+- [ ] Introduce configurable error budgets and explicit parse outcomes.
+- [ ] Preserve valid AST structures where recovery is safe.
+- [ ] Verify multi-error behavior through conformance, robustness, and regression tests.
+- [ ] Benchmark successful parsing and recovery workloads against the retained frontend baseline.
+- [ ] Update architecture, language specification, and diagnostic documentation to reflect verified behavior.
+
+**Completion criteria:** Eloque reports multiple independent lexical and syntax errors from a single source file, terminates safely on malformed input, preserves valid AST structures where appropriate, and maintains acceptable successful-path performance without abandoning direct token streaming.
+
 ### Transition to M2 — First execution: Not started
 
 The next development phase will introduce the smallest statically checked executable subset.
@@ -323,9 +348,13 @@ Once there is a working VM:
 
 ## Pre-M2 prerequisite: structured diagnostics and frontend recovery
 
-**Status:** Approved; not yet implemented.
+**Status:** Implemented; final branch verification and integration pending.
 
-Before implementing the M2 name resolver, Eloque will migrate its existing H2 frontend from first-error termination to controlled, structured multi-error reporting.
+The H2 frontend now supports structured diagnostic collection and recovery-capable parsing through `ParseRecovering(sourceText, ParseOptions)`, while retaining the original fail-fast `Parse(sourceText)` API.
+
+The implementation includes lexical recovery, parser synchronization, statement-level AST preservation, configurable error budgets, expression-depth protection, and dedicated regression, robustness, stress, and performance tests.
+
+Recovery-capable parsing returns a termination status and may retain a partial AST. It does not establish semantic validity or execution eligibility. Name resolution, mandatory static type checking, bytecode compilation, and VM execution remain M2 work.
 
 The work includes:
 
@@ -353,7 +382,7 @@ The M2 design is documented in `DESIGN_DECISIONS.md` and `ARCHITECTURE.md`.
 
 The detailed resolver acceptance matrix and deferred optimization triggers are preserved in `ARCHITECTURE.md` and `TECHNICAL_BACKLOG.md`.
 
-This roadmap addition does not mark the diagnostic migration or any M2 execution stage as implemented.
+The diagnostic recovery implementation is complete pending final integration checks. No M2 name resolution, static checking, bytecode compilation, or execution stage is marked implemented.
 
 ## Versioning and compatibility
 
@@ -380,7 +409,10 @@ Eloque intends to use Semantic Versioning as a guideline:
 - [x] Complete H2 arena-backed flat AST and streaming parser optimization.
 - [x] Validate H2 against the legacy M1 frontend using differential tests and controlled benchmarks.
 - [x] Reorganize the frontend under `internal/frontend/`.
-- [ ] Synchronize documentation with the completed H2 implementation.
+- [x] Synchronize documentation with the completed H2 implementation.
+- [x] Implement structured diagnostics and recovery-capable frontend parsing.
+- [x] Establish post-recovery experimental frontend benchmark evidence.
+- [x] Complete final recovery-branch verification and merge.
 - [ ] Review the M2 runtime value representation and compiler-stage interfaces.
 - [ ] Implement name resolution and mandatory basic static type checking.
 - [ ] Implement bytecode compilation and the initial stack-based VM.

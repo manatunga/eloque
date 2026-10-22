@@ -1,34 +1,54 @@
 package lexer
 
+import (
+	"github.com/manatunga/eloque/internal/diagnostic"
+	"github.com/manatunga/eloque/internal/source"
+)
+
 // Lexer maintains the state required to tokenize Eloque source code.
 //
 // The start and current fields track byte offsets into the source.
-// Line and column positions are 1-based and are maintained for lexical
-// error reporting.
+// Line and column positions are 1-based and are maintained for
+// source-position tracking during tokenization.
 //
 // indentStack tracks active indentation levels, while pendingTokens
 // queues structural tokens such as INDENT and DEDENT.
 //
-// parenDepth and parenPositions track unmatched opening parentheses.
-// Newlines inside parentheses are ignored during tokenization.
+// parenDepth and parenPositions track unmatched opening parentheses,
+// with parenPositions storing their source byte offsets. Newlines
+// inside parentheses are ignored during tokenization.
+//
+// fileID identifies the source file within the current compilation
+// and is attached to lexical diagnostics.
+//
+// recoveryTerminated records whether recovery-aware scanning has
+// encountered a terminal condition. Once set, NextRecoverable
+// must not resume tokenization.
 type Lexer struct {
-	source         string
-	start          int
-	current        int
-	line           int
-	column         int
-	startPosition  Position
-	indentStack    []int
-	parenDepth     int
-	atLineStart    bool
-	pendingTokens  []Token
-	pendingIndex   int
-	parenPositions []Position
+	source                 string
+	start                  int
+	current                int
+	line                   int
+	column                 int
+	startPosition          Position
+	indentStack            []int
+	parenDepth             int
+	atLineStart            bool
+	pendingTokens          []Token
+	pendingIndex           int
+	parenPositions         []uint32
+	fileID                 diagnostic.FileID
+	recoveryTerminated     bool
+	recoveryScanning       bool
+	recoveryCrossedNewline bool
 }
 
 // New creates a lexer for the provided Eloque source text.
+//
 // Scanning begins at byte offset 0, line 1, column 1.
-func New(source string) *Lexer {
+// fileID identifies the source file within the current compilation
+// and is attached to diagnostics produced by the lexer.
+func New(source string, fileID diagnostic.FileID) *Lexer {
 	return &Lexer{
 		source:        source,
 		start:         0,
@@ -38,6 +58,29 @@ func New(source string) *Lexer {
 		startPosition: Position{Line: 1, Column: 1},
 		indentStack:   make([]int, 1, 4),
 		atLineStart:   true,
+		fileID:        fileID,
+	}
+}
+
+// newDiagnostic constructs a structured lexical error associated with
+// a half-open byte range in the lexer's source file.
+//
+// The lexer reports errors using source byte offsets without resolving
+// line and column positions. File identity is supplied by the caller
+// when the lexer is constructed.
+func (l *Lexer) newDiagnostic(
+	code diagnostic.Code,
+	message string,
+	span source.ByteSpan,
+) *diagnostic.Diagnostic {
+	return &diagnostic.Diagnostic{
+		Code:     code,
+		Severity: diagnostic.SeverityError,
+		Message:  message,
+		Primary: diagnostic.Location{
+			File: l.fileID,
+			Span: span,
+		},
 	}
 }
 
@@ -193,15 +236,21 @@ func isValidIndentationWidth(width int) bool {
 }
 
 // processIndentation validates and applies a line's indentation width.
-// It queues structural tokens without consuming source characters.
-// Invalid indentation returns a positioned lexical error without
-// modifying the indentation stack or pending-token queue.
-func (l *Lexer) processIndentation(width int) error {
+//
+// It queues INDENT and DEDENT tokens without consuming source characters.
+// Invalid indentation produces a structured diagnostic spanning the
+// indentation prefix, without modifying the indentation stack or
+// pending-token queue.
+func (l *Lexer) processIndentation(width int) *diagnostic.Diagnostic {
 	if !isValidIndentationWidth(width) {
-		return &LexError{
-			Position: Position{Line: l.line, Column: l.column},
-			Message:  "indentation must be a multiple of four spaces",
-		}
+		return l.newDiagnostic(
+			CodeInvalidIndentation,
+			"indentation must be a multiple of four spaces",
+			source.ByteSpan{
+				Start: uint32(l.current - width),
+				End:   uint32(l.current),
+			},
+		)
 	}
 	currentIndent := l.indentStack[len(l.indentStack)-1]
 	if width > currentIndent {
@@ -218,10 +267,14 @@ func (l *Lexer) processIndentation(width int) error {
 			index--
 		}
 		if l.indentStack[index] != width {
-			return &LexError{
-				Position: Position{Line: l.line, Column: l.column},
-				Message:  "dedentation does not match an active indentation level",
-			}
+			return l.newDiagnostic(
+				CodeInvalidDedent,
+				"dedentation does not match an active indentation level",
+				source.ByteSpan{
+					Start: uint32(l.current - width),
+					End:   uint32(l.current),
+				},
+			)
 		}
 		dedentCount := len(l.indentStack) - 1 - index
 		l.indentStack = l.indentStack[:index+1]
@@ -247,36 +300,50 @@ func (l *Lexer) skipComment() {
 }
 
 // scanString scans a string literal delimited by quote, assuming the opening
-// quote has already been consumed. It preserves escape sequences in the token
-// lexeme and reports invalid escapes, newlines, or EOF before the closing quote
-// as lexical errors.
-func (l *Lexer) scanString(quote byte) (Token, error) {
+// quote has already been consumed.
+//
+// Escape sequences are preserved in the token lexeme. Invalid escapes and
+// strings terminated by a newline or end of source produce structured
+// diagnostics with precise source byte ranges.
+func (l *Lexer) scanString(quote byte) (Token, *diagnostic.Diagnostic) {
 	isValidEscape := [256]bool{
 		'"': true, '\'': true, '\\': true, 'n': true, 't': true, 'r': true,
 	}
 
 	for l.peek() != quote {
 		if l.isAtEnd() || l.peek() == '\n' {
-			return Token{}, &LexError{
-				Position: l.startPosition,
-				Message:  "unterminated string literal",
-			}
+			return Token{}, l.newDiagnostic(
+				CodeUnterminatedString,
+				"unterminated string literal",
+				source.ByteSpan{
+					Start: uint32(l.start),
+					End:   uint32(l.current),
+				},
+			)
 		}
 		if l.peek() == '\\' {
-			escapePosition := Position{Line: l.line, Column: l.column}
+			escapeOffset := uint32(l.current)
 			l.advance()
 			if l.isAtEnd() || l.peek() == '\n' {
-				return Token{}, &LexError{
-					Position: escapePosition,
-					Message:  "invalid escape sequence",
-				}
+				return Token{}, l.newDiagnostic(
+					CodeInvalidEscape,
+					"invalid escape sequence",
+					source.ByteSpan{
+						Start: escapeOffset,
+						End:   uint32(l.current),
+					},
+				)
 			}
 
 			if !isValidEscape[l.peek()] {
-				return Token{}, &LexError{
-					Position: escapePosition,
-					Message:  "invalid escape sequence",
-				}
+				return Token{}, l.newDiagnostic(
+					CodeInvalidEscape,
+					"invalid escape sequence",
+					source.ByteSpan{
+						Start: escapeOffset,
+						End:   uint32(l.current + 1),
+					},
+				)
 			}
 		}
 		l.advance()
@@ -287,13 +354,17 @@ func (l *Lexer) scanString(quote byte) (Token, error) {
 }
 
 // NextToken returns the next token in source order, emitting queued
-// structural tokens before scanning additional source text. At the start
-// of a non-blank line, it measures and processes indentation before
-// scanning ordinary tokens. It skips horizontal spaces, preserves
-// newlines, and validates integer literals. Invalid input returns a
-// zero-value token and a positioned lexical error; callers should stop
-// tokenization when an error occurs.
-func (l *Lexer) NextToken() (Token, error) {
+// structural tokens before scanning additional source text.
+//
+// The lexer processes indentation at the beginning of non-blank lines,
+// skips comments and insignificant whitespace, and validates literals
+// and delimiter structure.
+//
+// Lexical failures are reported as structured diagnostics containing
+// stable error codes and half-open source byte ranges. Until recovery
+// support is implemented, callers must stop tokenization after a
+// diagnostic is returned.
+func (l *Lexer) NextToken() (Token, *diagnostic.Diagnostic) {
 	if token, ok := l.popPendingToken(); ok {
 		return token, nil
 	}
@@ -323,6 +394,10 @@ func (l *Lexer) NextToken() (Token, error) {
 		}
 
 		if l.peek() == '\n' && l.parenDepth > 0 {
+			if l.recoveryScanning {
+				l.recoveryCrossedNewline = true
+			}
+
 			l.advance()
 			l.atLineStart = true
 			continue
@@ -333,10 +408,16 @@ func (l *Lexer) NextToken() (Token, error) {
 
 	if l.isAtEnd() {
 		if l.parenDepth > 0 {
-			return Token{}, &LexError{
-				Position: l.parenPositions[len(l.parenPositions)-1],
-				Message:  "unclosed opening parenthesis",
-			}
+			openingOffset := l.parenPositions[len(l.parenPositions)-1]
+
+			return Token{}, l.newDiagnostic(
+				CodeUnclosedOpeningParen,
+				"unclosed opening parenthesis",
+				source.ByteSpan{
+					Start: openingOffset,
+					End:   openingOffset + 1,
+				},
+			)
 		}
 		if len(l.indentStack) > 1 {
 			if err := l.processIndentation(0); err != nil {
@@ -393,15 +474,19 @@ func (l *Lexer) NextToken() (Token, error) {
 
 	if char == '(' {
 		l.parenDepth++
-		l.parenPositions = append(l.parenPositions, l.startPosition)
+		l.parenPositions = append(l.parenPositions, uint32(l.start))
 		return l.makeToken(TokenLeftParen), nil
 	}
 	if char == ')' {
 		if l.parenDepth == 0 {
-			return Token{}, &LexError{
-				Position: l.startPosition,
-				Message:  "unmatched closing parenthesis",
-			}
+			return Token{}, l.newDiagnostic(
+				CodeUnmatchedClosingParen,
+				"unmatched closing parenthesis",
+				source.ByteSpan{
+					Start: uint32(l.start),
+					End:   uint32(l.current),
+				},
+			)
 		}
 		l.parenDepth--
 		l.parenPositions = l.parenPositions[:len(l.parenPositions)-1]
@@ -415,22 +500,34 @@ func (l *Lexer) NextToken() (Token, error) {
 	if isDigit(char) {
 		lexeme := l.scanInteger()
 		if isIdentifierStart(l.peek()) {
-			return Token{}, &LexError{
-				Position: l.startPosition,
-				Message:  "invalid integer literal",
-			}
+			return Token{}, l.newDiagnostic(
+				CodeInvalidInteger,
+				"invalid integer literal",
+				source.ByteSpan{
+					Start: uint32(l.start),
+					End:   uint32(l.current),
+				},
+			)
 		}
 		if hasLeadingZero(lexeme) {
-			return Token{}, &LexError{
-				Position: l.startPosition,
-				Message:  "integer literal cannot have leading zeros",
-			}
+			return Token{}, l.newDiagnostic(
+				CodeLeadingZero,
+				"integer literal cannot have leading zeros",
+				source.ByteSpan{
+					Start: uint32(l.start),
+					End:   uint32(l.current),
+				},
+			)
 		}
 		return l.makeToken(TokenInt), nil
 	}
 
-	return Token{}, &LexError{
-		Position: l.startPosition,
-		Message:  "unexpected character",
-	}
+	return Token{}, l.newDiagnostic(
+		CodeUnexpectedCharacter,
+		"unexpected character",
+		source.ByteSpan{
+			Start: uint32(l.start),
+			End:   uint32(l.current),
+		},
+	)
 }

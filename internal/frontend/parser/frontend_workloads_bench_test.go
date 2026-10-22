@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/manatunga/eloque/internal/frontend/ast"
-	"github.com/manatunga/eloque/internal/frontend/lexer"
 )
 
 // frontendWorkload describes a valid Eloque source-generation scenario.
@@ -15,7 +14,8 @@ type frontendWorkload struct {
 	build func(int) string
 }
 
-// frontendWorkloads defines the programs used to compare both frontends.
+// frontendWorkloads defines representative programs used to benchmark
+// and validate the production Eloque frontend.
 var frontendWorkloads = []frontendWorkload{
 	{
 		name:  "Declarations",
@@ -121,73 +121,7 @@ func buildMixedWorkload(count int) string {
 	return builder.String()
 }
 
-var (
-	frontendLegacyProgramSink *ast.Program
-	frontendFlatProgramSink   *ast.FlatProgram
-)
-
-// parseFrontend lexes and parses an Eloque source program.
-func parseFrontend(text string) (*ast.Program, error) {
-	l := lexer.New(text)
-	tokens := make([]lexer.Token, 0, len(text)/4)
-
-	for {
-		token, err := l.NextToken()
-		if err != nil {
-			return nil, err
-		}
-
-		tokens = append(tokens, token)
-
-		if token.Kind == lexer.TokenEOF {
-			break
-		}
-	}
-
-	p := New(text, tokens)
-	program, diagnostic := p.parseProgram()
-	if diagnostic != nil {
-		return nil, fmt.Errorf("syntax error: %v", diagnostic)
-	}
-
-	return program, nil
-}
-
-// BenchmarkBufferedFrontendWorkloads measures complete lexing
-// and parsing across different source-code profiles and program sizes.
-func BenchmarkBufferedFrontendWorkloads(b *testing.B) {
-	sizes := []int{10, 100, 1000}
-
-	for _, workload := range frontendWorkloads {
-		for _, size := range sizes {
-			text := workload.build(size)
-
-			b.Run(
-				fmt.Sprintf("%s/N%d", workload.name, size),
-				func(b *testing.B) {
-					// Validate the generated source before timing.
-					program, err := parseFrontend(text)
-					if err != nil {
-						b.Fatalf("invalid benchmark source: %v", err)
-					}
-					frontendLegacyProgramSink = program
-
-					b.ReportAllocs()
-					b.SetBytes(int64(len(text)))
-					b.ResetTimer()
-
-					for b.Loop() {
-						program, err := parseFrontend(text)
-						if err != nil {
-							b.Fatalf("frontend failed: %v", err)
-						}
-						frontendLegacyProgramSink = program
-					}
-				},
-			)
-		}
-	}
-}
+var frontendFlatProgramSink *ast.FlatProgram
 
 // BenchmarkStreamingFrontendWorkloads measures the production
 // streaming frontend across representative Eloque programs.

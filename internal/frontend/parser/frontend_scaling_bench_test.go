@@ -5,45 +5,47 @@ import (
 	"testing"
 )
 
-// BenchmarkFrontendScaling compares buffered and production streaming
-// frontends across increasingly large source programs.
+// BenchmarkFrontendScaling measures the production Eloque frontend
+// across increasingly large source programs.
 //
 // The N10000 workloads extend beyond the regular frontend benchmark
-// suite to help identify scaling regressions.
+// suite to help identify nonlinear scaling and allocation regressions.
+//
+// Each iteration includes lexing, parsing, and AST construction.
 func BenchmarkFrontendScaling(b *testing.B) {
 	for _, workload := range frontendWorkloads {
 		for _, size := range []int{10, 100, 1000, 10000} {
-			source := workload.build(size)
+			sourceText := workload.build(size)
 
-			b.Run(fmt.Sprintf("%s/N%d", workload.name, size), func(b *testing.B) {
-				b.Run("Buffered", func(b *testing.B) {
-					b.ReportAllocs()
-					b.SetBytes(int64(len(source)))
-
-					for b.Loop() {
-						program, err := parseFrontend(source)
-						if err != nil {
-							b.Fatal(err)
-						}
-
-						frontendLegacyProgramSink = program
+			b.Run(
+				fmt.Sprintf("%s/N%d", workload.name, size),
+				func(b *testing.B) {
+					program, diag := Parse(sourceText)
+					if diag != nil {
+						b.Fatalf(
+							"invalid benchmark source: %+v",
+							diag,
+						)
 					}
-				})
+					frontendFlatProgramSink = program
 
-				b.Run("Streaming", func(b *testing.B) {
 					b.ReportAllocs()
-					b.SetBytes(int64(len(source)))
+					b.SetBytes(int64(len(sourceText)))
+					b.ResetTimer()
 
 					for b.Loop() {
-						program, err := Parse(source)
-						if err != nil {
-							b.Fatal(err)
+						program, diag := Parse(sourceText)
+						if diag != nil {
+							b.Fatalf(
+								"frontend failed: %+v",
+								diag,
+							)
 						}
 
 						frontendFlatProgramSink = program
 					}
-				})
-			})
+				},
+			)
 		}
 	}
 }

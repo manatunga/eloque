@@ -1,6 +1,6 @@
 # Eloque Architecture
 
-**Status:** Milestone 1 completed. H2 frontend optimization completed and validated. Semantic analysis, bytecode compilation, and VM execution have not yet been implemented.
+Status: Milestone 1 and H2 frontend optimization completed. Structured diagnostics and recovery-capable parsing implemented. Semantic analysis, bytecode compilation, and VM execution remain unimplemented.
 
 Eloque is a proposed general-purpose programming language with structured, conversational-English-inspired syntax, strict static typing, and an eventual native concurrency model.
 
@@ -189,19 +189,46 @@ Consequently:
 
 The parser constructs a complete program representation for valid input.
 
-Malformed input must not produce a successfully parsed program.
+Fail-fast parsing rejects malformed input. Recovery-capable parsing may return a partial AST alongside diagnostics and a non-complete status. Such an AST represents successfully retained syntax, not a validated executable program.
 
-### 4.5 Diagnostics
+### 4.5 Structured diagnostics and recovery
 
-The production frontend preserves fail-fast lexical and syntax diagnostics.
+The production frontend supports two parsing modes:
 
-Diagnostics retain source-location information and relevant expected/actual token metadata where applicable.
+- **Fail-fast:** `parser.Parse(sourceText)` returns `(*ast.FlatProgram, error)` and stops on an error.
+- **Recovery-capable:** `parser.ParseRecovering(sourceText, options)` returns a `ParseResult` containing the AST, collected diagnostics, and termination status.
 
-The first encountered lexical or syntax error terminates the operation.
+The recovery-capable API is intended for tooling that benefits from receiving multiple diagnostics in one parsing attempt.
 
-Multi-error accumulation, synchronization, and recovery remain deferred.
+```go
+result := parser.ParseRecovering(sourceText, parser.ParseOptions{
+    MaxErrors: 20,
+})
+```
 
-H2 optimization must preserve the established diagnostic contract rather than trading diagnostic correctness for performance.
+`ParseResult` exposes:
+
+| Field | Meaning |
+|---|---|
+| `Program` | Parsed program, potentially partial |
+| `Diagnostics` | Diagnostics collected during parsing |
+| `Status` | Termination outcome |
+
+The possible statuses are:
+
+- `ParseComplete`: Parsing reached EOF without errors.
+- `ParseRecovered`: Parsing reached EOF after recovering from one or more errors.
+- `ParseAborted`: Parsing stopped before successful recovery, including error-budget exhaustion.
+
+The default error budget is 20 error-severity diagnostics. Positive `MaxErrors` values set an explicit limit; zero selects the default; negative values disable the limit. Warnings and informational diagnostics do not count toward the error budget.
+
+Diagnostics are accumulated in encounter order. The diagnostic collection is allocated lazily.
+
+Recovery-capable parsing may preserve successfully completed statements in a partial arena-backed AST. A partial AST must not be treated as a validated program. In particular, recovery does not perform name resolution, static type checking, or execution.
+
+The frontend also includes safeguards against excessive expression nesting and recovery paths that fail to make progress. These safeguards are intended to keep malformed or adversarial input from causing uncontrolled recursive parsing or indefinite recovery.
+
+The existing fail-fast entry point remains available for callers that require immediate rejection of malformed input.
 
 ## 5. H2 arena-backed AST
 

@@ -1,8 +1,10 @@
 package parser
 
 import (
+	"slices"
 	"testing"
 
+	"github.com/manatunga/eloque/internal/diagnostic"
 	"github.com/manatunga/eloque/internal/frontend/lexer"
 	"github.com/manatunga/eloque/internal/source"
 )
@@ -13,13 +15,13 @@ func TestExpectSuccess(t *testing.T) {
 		{Kind: lexer.TokenEOF, Start: 2, End: 2},
 	})
 
-	token, diagnostic := p.expect(
+	token, diag := p.expect(
 		lexer.TokenBe,
 		"expected 'be' after variable name",
 	)
 
-	if diagnostic != nil {
-		t.Fatalf("unexpected diagnostic: %+v", diagnostic)
+	if diag != nil {
+		t.Fatalf("unexpected diagnostic: %+v", diag)
 	}
 
 	if token.Kind != lexer.TokenBe {
@@ -32,11 +34,6 @@ func TestExpectSuccess(t *testing.T) {
 }
 
 func TestExpectFailure(t *testing.T) {
-	span := source.Span{
-		Start: source.Position{Line: 1, Column: 12},
-		End:   source.Position{Line: 1, Column: 14},
-	}
-
 	sourceText := "           42"
 
 	p := New(sourceText, []lexer.Token{
@@ -44,12 +41,12 @@ func TestExpectFailure(t *testing.T) {
 		{Kind: lexer.TokenEOF, Start: 13, End: 13},
 	})
 
-	token, diagnostic := p.expect(
+	token, diag := p.expect(
 		lexer.TokenBe,
 		"expected 'be' after variable name",
 	)
 
-	if diagnostic == nil {
+	if diag == nil {
 		t.Fatal("expected a syntax diagnostic")
 	}
 
@@ -57,22 +54,59 @@ func TestExpectFailure(t *testing.T) {
 		t.Errorf("token = %+v, want zero-value token", token)
 	}
 
-	if diagnostic.Message != "expected 'be' after variable name" {
-		t.Errorf("message = %q", diagnostic.Message)
+	if diag.Code != CodeUnexpectedToken {
+		t.Errorf(
+			"code = %q, want %q",
+			diag.Code,
+			CodeUnexpectedToken,
+		)
 	}
 
-	if diagnostic.Location != span {
-		t.Errorf("location = %+v, want %+v", diagnostic.Location, span)
+	if diag.Severity != diagnostic.SeverityError {
+		t.Errorf(
+			"severity = %v, want error",
+			diag.Severity,
+		)
 	}
 
-	if len(diagnostic.Expected) != 1 ||
-		diagnostic.Expected[0] != lexer.TokenBe {
-		t.Errorf("expected = %v, want [BE]", diagnostic.Expected)
+	if diag.Message != "expected 'be' after variable name" {
+		t.Errorf("message = %q", diag.Message)
 	}
 
-	if diagnostic.Actual == nil ||
-		*diagnostic.Actual != lexer.TokenInt {
-		t.Errorf("actual = %v, want INT", diagnostic.Actual)
+	wantSpan := source.ByteSpan{Start: 11, End: 13}
+
+	if diag.Primary.File != 0 {
+		t.Errorf("file ID = %d, want 0", diag.Primary.File)
+	}
+
+	if diag.Primary.Span != wantSpan {
+		t.Errorf(
+			"span = %+v, want %+v",
+			diag.Primary.Span,
+			wantSpan,
+		)
+	}
+
+	if diag.TokenExpectation == nil {
+		t.Fatal("missing token expectation")
+	}
+
+	wantExpected := []string{lexer.TokenBe.String()}
+
+	if !slices.Equal(diag.TokenExpectation.Expected, wantExpected) {
+		t.Errorf(
+			"expected = %v, want %v",
+			diag.TokenExpectation.Expected,
+			wantExpected,
+		)
+	}
+
+	if diag.TokenExpectation.Actual != lexer.TokenInt.String() {
+		t.Errorf(
+			"actual = %q, want %q",
+			diag.TokenExpectation.Actual,
+			lexer.TokenInt.String(),
+		)
 	}
 
 	if bufferedCursor(p) != 0 {
@@ -81,31 +115,68 @@ func TestExpectFailure(t *testing.T) {
 }
 
 func TestExpectUnexpectedEOF(t *testing.T) {
-	eofSpan := source.Span{
-		Start: source.Position{Line: 2, Column: 1},
-		End:   source.Position{Line: 2, Column: 1},
-	}
-
 	p := New("\n", []lexer.Token{
 		{Kind: lexer.TokenEOF, Start: 1, End: 1},
 	})
 
-	_, diagnostic := p.expect(
+	_, diag := p.expect(
 		lexer.TokenRightParen,
 		"expected ')' to close expression",
 	)
 
-	if diagnostic == nil {
+	if diag == nil {
 		t.Fatal("expected a diagnostic at EOF")
 	}
 
-	if diagnostic.Location != eofSpan {
-		t.Errorf("location = %+v, want %+v", diagnostic.Location, eofSpan)
+	if diag.Code != CodeUnexpectedToken {
+		t.Errorf(
+			"code = %q, want %q",
+			diag.Code,
+			CodeUnexpectedToken,
+		)
 	}
 
-	if diagnostic.Actual == nil ||
-		*diagnostic.Actual != lexer.TokenEOF {
-		t.Errorf("actual = %v, want EOF", diagnostic.Actual)
+	if diag.Severity != diagnostic.SeverityError {
+		t.Errorf(
+			"severity = %v, want error",
+			diag.Severity,
+		)
+	}
+
+	wantSpan := source.ByteSpan{Start: 1, End: 1}
+
+	if diag.Primary.File != 0 {
+		t.Errorf("file ID = %d, want 0", diag.Primary.File)
+	}
+
+	if diag.Primary.Span != wantSpan {
+		t.Errorf(
+			"span = %+v, want %+v",
+			diag.Primary.Span,
+			wantSpan,
+		)
+	}
+
+	if diag.TokenExpectation == nil {
+		t.Fatal("missing token expectation")
+	}
+
+	wantExpected := []string{lexer.TokenRightParen.String()}
+
+	if !slices.Equal(diag.TokenExpectation.Expected, wantExpected) {
+		t.Errorf(
+			"expected = %v, want %v",
+			diag.TokenExpectation.Expected,
+			wantExpected,
+		)
+	}
+
+	if diag.TokenExpectation.Actual != lexer.TokenEOF.String() {
+		t.Errorf(
+			"actual = %q, want %q",
+			diag.TokenExpectation.Actual,
+			lexer.TokenEOF.String(),
+		)
 	}
 
 	if bufferedCursor(p) != 0 {

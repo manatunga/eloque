@@ -6,7 +6,7 @@
 
 **Eloque** is a proposed general-purpose programming language with structured, conversational-English-inspired syntax and precise, statically checked semantics. It is intended to be approachable for beginners while providing predictable diagnostics and tooling for AI-assisted development.
 
-> **Status:** Early development — Milestone 1 and the post-M1 H2 frontend optimization are complete. Eloque has a working Go lexer and parser using direct pull-based token streaming and an arena-backed flat AST. The canonical `Parse(sourceText)` entry point supports the implemented arithmetic, literal, declaration, assignment, and output syntax, with source-aware fail-fast diagnostics. Name resolution, static type checking, bytecode compilation, and VM execution are not yet implemented. The examples below are **illustrative, not executable**.
+> **Status:** Early development — Milestone 1, the post-M1 H2 frontend optimization, and structured diagnostic recovery are implemented. Eloque has a working Go lexer and parser using direct pull-based token streaming and an arena-backed flat AST. The frontend supports both fail-fast parsing through `Parse(sourceText)` and recovery-capable parsing through `ParseRecovering(sourceText, ParseOptions)`, with structured, source-aware diagnostics. Name resolution, static type checking, bytecode compilation, and VM execution are not yet implemented. The examples below are **illustrative, not executable**.
 
 ## A glimpse of Eloque
 
@@ -62,7 +62,7 @@ Eloque is implemented in **Go**.
 Its production frontend is operational. The semantic analysis and execution stages are planned.
 
 ```text
-. elq source
+.elq source
     |
     v
 Lexer (direct token streaming)
@@ -91,7 +91,14 @@ Program execution
 
 The frontend packages are organized under `internal/frontend/`, with shared source-location utilities in `internal/source/`.
 
-The production entry point is `parser.Parse(sourceText)`, returning `(*ast.FlatProgram, error)`.
+The production frontend exposes two parsing entry points:
+
+- `parser.Parse(sourceText)` returns `(*ast.FlatProgram, error)` and provides fail-fast parsing.
+- `parser.ParseRecovering(sourceText, options)` returns a `ParseResult` containing structured diagnostics, a termination status, and a potentially partial AST.
+
+Recovery-capable parsing supports configurable error budgets and preserves successfully completed statements where possible. Its termination statuses are `ParseComplete`, `ParseRecovered`, and `ParseAborted`.
+
+A recovered or partial AST is not semantically validated or executable. See [Architecture](docs/ARCHITECTURE.md) for the recovery contract and implementation details.
 
 The original M1 parser and interface-based AST remain available internally for regression testing and performance comparisons.
 
@@ -119,10 +126,11 @@ The following checkpoints are complete:
 - **M1-P5-C:** Cross-language frontend benchmarking against Go and CPython 3.15.0rc2, including controlled arithmetic workloads.
 - **Post-M1 H2 optimization:** Replaced the production interface-based AST with an arena-backed flat AST, retained direct pull-based token streaming, preserved the legacy M1 parser for regression comparisons, and validated the new frontend using differential tests, arena-invariant tests, and controlled benchmarks.
 - **Frontend package migration:** Reorganized the lexer, parser, and AST packages under `internal/frontend/`, retaining shared source-location utilities in `internal/source/`.
+- **Pre-M2 structured diagnostics and recovery:** Introduced shared diagnostic infrastructure, lexer and parser recovery, configurable error budgets, statement-level AST preservation, expression-depth safeguards, and dedicated regression and stress tests. Retained the existing fail-fast parsing API.
 
 The production frontend processes source text through `Parse(sourceText)`, incrementally requesting lexer tokens and constructing an arena-backed `FlatProgram`. The original M1 parser and buffered token-delivery implementation remain available as reference implementations.
 
-**Current status:** M1 and H2 are complete. M2 — First execution — is the next implementation milestone.
+**Current status:** M1, H2, and pre-M2 structured diagnostic recovery are implemented. M2 — First execution — is the next implementation milestone.
 
 **Next milestone:** M2, as defined in the project roadmap.
 
@@ -145,12 +153,16 @@ These results describe synthetic frontend workloads. Different language grammars
 
 They do not establish general compiler superiority or Eloque runtime performance.
 
+An additional **experimental post-recovery comparison (October 22–23, 2026)** measured fail-fast and recovery-enabled Eloque parsing alongside Go compiler-native parsing, Go `go/parser`, and CPython 3.15.0rc2.
+
+At 10,000 arithmetic declarations, Eloque recorded median frontend latencies of **7.87 ms (fail-fast)** and **8.12 ms (recovery-enabled)**. The recovery-enabled path incurred approximately **3.25% median overhead** on this valid-source workload.
+
+These experimental measurements do not replace the October 20 official H2 baseline. The complete report, methodology, raw Go measurements, and limitations are available in [the post-recovery benchmark report](benchmarks/results/experimental/h2-post-recovery-report/REPORT.md).
+
 The official results, historical measurements, methodology, and limitations are documented in [benchmarks/README.md](benchmarks/README.md).
 
 ### Implementation limitations
 
-Eloque's M1 frontend and H2 optimization are complete, but the language cannot yet execute source programs. Name resolution, static type checking, bytecode compilation, and VM execution remain unimplemented. The production frontend supports only the selected initial grammar, not the full proposed language.
+Eloque currently supports lexical analysis, syntax parsing, structured diagnostics, and recovery-capable AST construction for its initial grammar. It does not yet support name resolution, static type checking, bytecode compilation, or program execution.
 
-Name resolution, static type checking, bytecode compilation, and virtual-machine execution have not yet been implemented. The current frontend supports only the documented M1 syntax subset, not the full proposed language.
-
-The [language specification](docs/LANGUAGE_SPEC.md) describes the intended language, not the currently executable feature set. Syntax, release boundaries, and technical details may evolve before version 1.0.
+The [language specification](docs/LANGUAGE_SPEC.md) describes the intended language rather than a fully implemented feature set. Syntax, release boundaries, and technical details may evolve before version 1.0.

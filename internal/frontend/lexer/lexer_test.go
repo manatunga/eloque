@@ -1,13 +1,16 @@
 package lexer
 
 import (
-	"errors"
 	"reflect"
+	"strings"
 	"testing"
+
+	"github.com/manatunga/eloque/internal/diagnostic"
+	"github.com/manatunga/eloque/internal/source"
 )
 
 func TestAdvance(t *testing.T) {
-	lexer := New("abc")
+	lexer := New("abc", 0)
 	first := lexer.advance()
 	second := lexer.advance()
 
@@ -39,7 +42,7 @@ func TestAdvancePosition(t *testing.T) {
 		{'\n', 5, 4, 1},
 		{'c', 6, 4, 2},
 	}
-	lexer := New("a\nb\n\nc")
+	lexer := New("a\nb\n\nc", 0)
 
 	if lexer.current != 0 || lexer.line != 1 || lexer.column != 1 {
 		t.Errorf("unexpected initial position: current=%d, line=%d, column=%d",
@@ -68,7 +71,7 @@ func TestAdvancePosition(t *testing.T) {
 }
 
 func TestIsAtEnd(t *testing.T) {
-	lexer := New("abc")
+	lexer := New("abc", 0)
 	if lexer.isAtEnd() {
 		t.Error("expected lexer should not be at end right after initialization.")
 	}
@@ -87,7 +90,7 @@ func TestIsAtEnd(t *testing.T) {
 }
 
 func TestPeek(t *testing.T) {
-	lexer := New("abc")
+	lexer := New("abc", 0)
 	afterInit := lexer.peek()
 	if afterInit != 'a' || lexer.current != 0 {
 		t.Errorf("expected return %q and current %d, got %q and %d", 'a', 0, afterInit, lexer.current)
@@ -176,7 +179,7 @@ func TestScanIdentifier(t *testing.T) {
 	}
 	for _, tC := range testCases {
 		t.Run(tC.input, func(t *testing.T) {
-			lexer := New(tC.input)
+			lexer := New(tC.input, 0)
 			lexer.advance()
 			result := lexer.scanIdentifier()
 			if lexer.start != 0 {
@@ -205,7 +208,7 @@ func TestScanIdentifierKind(t *testing.T) {
 	}
 	for _, tC := range testCases {
 		t.Run(tC.input, func(t *testing.T) {
-			lexer := New(tC.input)
+			lexer := New(tC.input, 0)
 			lexer.advance()
 			result := lexer.scanIdentifierKind()
 			if result != tC.expected {
@@ -216,7 +219,7 @@ func TestScanIdentifierKind(t *testing.T) {
 }
 
 func TestMarkTokenStart(t *testing.T) {
-	lexer := New("let age be 20")
+	lexer := New("let age be 20", 0)
 	lexer.advance()
 	lexer.advance()
 	lexer.advance()
@@ -256,7 +259,7 @@ func TestMarkTokenStart(t *testing.T) {
 
 func TestMakeToken(t *testing.T) {
 	source := "let age"
-	lexer := New(source)
+	lexer := New(source, 0)
 	lexer.markTokenStart()
 	lexer.advance()
 	lexer.advance()
@@ -325,7 +328,7 @@ func TestSkipHorizontalWhitespace(t *testing.T) {
 	}
 	for _, tC := range testCases {
 		t.Run(tC.input, func(t *testing.T) {
-			lexer := New(tC.input)
+			lexer := New(tC.input, 0)
 			lexer.skipHorizontalWhitespace()
 
 			if lexer.current != tC.expectedCurrent {
@@ -345,7 +348,7 @@ func TestSkipHorizontalWhitespace(t *testing.T) {
 }
 
 func TestNewlineToken(t *testing.T) {
-	lexer := New("\nsay")
+	lexer := New("\nsay", 0)
 	lexer.markTokenStart()
 	lexer.advance()
 
@@ -388,7 +391,7 @@ func TestNextToken(t *testing.T) {
 	}
 	for _, tC := range testCases {
 		t.Run(tC.input, func(t *testing.T) {
-			lexer := New(tC.input)
+			lexer := New(tC.input, 0)
 			token, err := lexer.NextToken()
 
 			if err != nil {
@@ -425,7 +428,7 @@ func TestNextTokenSequence(t *testing.T) {
 		{TokenIdent, "player_1", 2, 5},
 		{TokenEOF, "", 2, 13},
 	}
-	lexer := New("let player_1 be\nsay player_1")
+	lexer := New("let player_1 be\nsay player_1", 0)
 	for _, tC := range testCases {
 		token, err := lexer.NextToken()
 		if err != nil {
@@ -484,7 +487,7 @@ func TestScanInteger(t *testing.T) {
 	}
 	for _, tC := range testCases {
 		t.Run(tC.input, func(t *testing.T) {
-			lexer := New(tC.input)
+			lexer := New(tC.input, 0)
 			lexer.advance()
 			result := lexer.scanInteger()
 			if lexer.start != 0 {
@@ -517,7 +520,7 @@ func TestNextTokenIntegerSequence(t *testing.T) {
 		{TokenInt, "20", 1, 12},
 		{TokenEOF, "", 1, 14},
 	}
-	lexer := New("let age be 20")
+	lexer := New("let age be 20", 0)
 	for _, tC := range testCases {
 		token, err := lexer.NextToken()
 		if err != nil {
@@ -563,126 +566,90 @@ func TestHasLeadingZero(t *testing.T) {
 }
 
 func TestNextTokenUnexpectedCharacter(t *testing.T) {
-	lexer := New("let age be @")
+	l := New("let age be @", 0)
 
-	for i := 0; i < 3; i++ {
-		_, err := lexer.NextToken()
-		if err != nil {
-			t.Fatalf("unexpected error before invalid character: %v", err)
+	for range 3 {
+		if _, diag := l.NextToken(); diag != nil {
+			t.Fatalf("unexpected diagnostic: %+v", diag)
 		}
 	}
 
-	token, err := lexer.NextToken()
-	if err == nil {
-		t.Fatal("expected lexical error, got nil")
-	}
+	token, diag := l.NextToken()
 
-	lexErr, ok := err.(*LexError)
-	if !ok {
-		t.Fatalf("expected *LexError, got %T", err)
-	}
+	assertLexicalDiagnostic(
+		t,
+		diag,
+		CodeUnexpectedCharacter,
+		"unexpected character",
+		source.ByteSpan{Start: 11, End: 12},
+	)
 
-	expectedMessage := "unexpected character"
-	if lexErr.Position.Line != 1 {
-		t.Errorf("expected error line %d, got %d", 1, lexErr.Position.Line)
-	}
-	if lexErr.Position.Column != 12 {
-		t.Errorf("expected error column %d, got %d", 12, lexErr.Position.Column)
-	}
-	if lexErr.Message != expectedMessage {
-		t.Errorf("expected message %q, got %q", expectedMessage, lexErr.Message)
-	}
-
-	if token.Kind != TokenInvalid {
-		t.Errorf("expected kind %s, got %s", TokenInvalid, token.Kind)
+	if token != (Token{}) {
+		t.Errorf("token = %+v, want zero-value token", token)
 	}
 }
 
 func TestNextTokenLeadingZero(t *testing.T) {
-	lexer := New("let age be 007")
+	l := New("let age be 007", 0)
 
-	for i := 0; i < 3; i++ {
-		_, err := lexer.NextToken()
-		if err != nil {
-			t.Fatalf("unexpected error before invalid integer literal: %v", err)
+	for range 3 {
+		if _, diag := l.NextToken(); diag != nil {
+			t.Fatalf("unexpected diagnostic: %+v", diag)
 		}
 	}
 
-	token, err := lexer.NextToken()
-	if err == nil {
-		t.Fatal("expected lexical error, got nil")
-	}
+	token, diag := l.NextToken()
 
-	lexErr, ok := err.(*LexError)
-	if !ok {
-		t.Fatalf("expected *LexError, got %T", err)
-	}
+	assertLexicalDiagnostic(
+		t,
+		diag,
+		CodeLeadingZero,
+		"integer literal cannot have leading zeros",
+		source.ByteSpan{Start: 11, End: 14},
+	)
 
-	expectedMessage := "integer literal cannot have leading zeros"
-	if lexErr.Position.Line != 1 {
-		t.Errorf("expected error line %d, got %d", 1, lexErr.Position.Line)
+	if token != (Token{}) {
+		t.Errorf("token = %+v, want zero-value token", token)
 	}
-	if lexErr.Position.Column != 12 {
-		t.Errorf("expected error column %d, got %d", 12, lexErr.Position.Column)
-	}
-	if lexErr.Message != expectedMessage {
-		t.Errorf("expected message %q, got %q", expectedMessage, lexErr.Message)
-	}
-
-	if token.Kind != TokenInvalid {
-		t.Errorf("expected kind %s, got %s", TokenInvalid, token.Kind)
-	}
-	if lexer.current != 14 {
-		t.Errorf("expected current %d, got %d", 14, lexer.current)
+	if l.current != 14 {
+		t.Errorf("current = %d, want 14", l.current)
 	}
 }
 
 func TestNextTokenInvalidIntegerSuffix(t *testing.T) {
-	testCases := []struct {
-		input               string
-		expectedLine        int
-		expectedColumn      int
-		expectedMessage     string
-		expectedValidTokens int
+	tests := []struct {
+		source          string
+		validTokenCount int
+		span            source.ByteSpan
 	}{
-		{"123abc", 1, 1, "invalid integer literal", 0},
-		{"42_name", 1, 1, "invalid integer literal", 0},
-		{"let age be 123abc", 1, 12, "invalid integer literal", 3},
-		{"007abc", 1, 1, "invalid integer literal", 0},
+		{"123abc", 0, source.ByteSpan{Start: 0, End: 3}},
+		{"42_name", 0, source.ByteSpan{Start: 0, End: 2}},
+		{"let age be 123abc", 3, source.ByteSpan{Start: 11, End: 14}},
+		{"007abc", 0, source.ByteSpan{Start: 0, End: 3}},
 	}
-	for _, tC := range testCases {
-		t.Run(tC.input, func(t *testing.T) {
-			lexer := New(tC.input)
 
-			for i := 0; i < tC.expectedValidTokens; i++ {
-				_, err := lexer.NextToken()
-				if err != nil {
-					t.Fatalf("unexpected error before invalid integer literal: %v", err)
+	for _, tt := range tests {
+		t.Run(tt.source, func(t *testing.T) {
+			l := New(tt.source, 0)
+
+			for range tt.validTokenCount {
+				if _, diag := l.NextToken(); diag != nil {
+					t.Fatalf("unexpected diagnostic: %+v", diag)
 				}
 			}
 
-			token, err := lexer.NextToken()
-			if err == nil {
-				t.Fatal("expected lexical error, got nil")
-			}
+			token, diag := l.NextToken()
 
-			lexErr, ok := err.(*LexError)
-			if !ok {
-				t.Fatalf("expected *LexError, got %T", err)
-			}
+			assertLexicalDiagnostic(
+				t,
+				diag,
+				CodeInvalidInteger,
+				"invalid integer literal",
+				tt.span,
+			)
 
-			if lexErr.Position.Line != tC.expectedLine {
-				t.Errorf("expected error line %d, got %d", tC.expectedLine, lexErr.Position.Line)
-			}
-			if lexErr.Position.Column != tC.expectedColumn {
-				t.Errorf("expected error column %d, got %d", tC.expectedColumn, lexErr.Position.Column)
-			}
-			if lexErr.Message != tC.expectedMessage {
-				t.Errorf("expected message %q, got %q", tC.expectedMessage, lexErr.Message)
-			}
-
-			if token.Kind != TokenInvalid {
-				t.Errorf("expected kind %s, got %s", TokenInvalid, token.Kind)
+			if token != (Token{}) {
+				t.Errorf("token = %+v, want zero-value token", token)
 			}
 		})
 	}
@@ -702,7 +669,7 @@ func TestNextTokenValidIntegers(t *testing.T) {
 
 	for _, tC := range testCases {
 		t.Run(tC.input, func(t *testing.T) {
-			lexer := New(tC.input)
+			lexer := New(tC.input, 0)
 
 			token, err := lexer.NextToken()
 			if err != nil {
@@ -726,7 +693,7 @@ func TestNextTokenValidIntegers(t *testing.T) {
 }
 
 func TestPopPendingToken(t *testing.T) {
-	l := New("")
+	l := New("", 0)
 
 	first := Token{
 		Kind:  TokenDedent,
@@ -763,7 +730,7 @@ func TestPopPendingToken(t *testing.T) {
 }
 
 func TestPopPendingTokenReusesStorage(t *testing.T) {
-	l := New("")
+	l := New("", 0)
 
 	l.pendingTokens = append(l.pendingTokens, Token{Kind: TokenIndent})
 	originalAddress := &l.pendingTokens[0]
@@ -795,7 +762,7 @@ func TestPopPendingTokenReusesStorage(t *testing.T) {
 
 func TestNextTokenPendingTokens(t *testing.T) {
 	source := "say"
-	l := New(source)
+	l := New(source, 0)
 
 	first := Token{Kind: TokenDedent, Start: 0, End: 0}
 	second := Token{Kind: TokenIndent, Start: 0, End: 0}
@@ -853,7 +820,7 @@ func TestMeasureIndentation(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			l := New(tc.source)
+			l := New(tc.source, 0)
 
 			width := l.measureIndentation()
 
@@ -986,7 +953,7 @@ func TestProcessIndentation(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			l := New("")
+			l := New("", 0)
 			l.line = 2
 			l.column = 5
 			l.indentStack = append([]int(nil), tt.initialStack...)
@@ -1070,7 +1037,7 @@ func TestProcessIndentationDedent(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			source := ""
-			l := New(source)
+			l := New(source, 0)
 			l.line = 3
 			l.column = tt.width + 1
 			l.indentStack = append([]int(nil), tt.initialStack...)
@@ -1108,7 +1075,7 @@ func TestProcessIndentationDedent(t *testing.T) {
 func TestNextTokenIndentation(t *testing.T) {
 	source := "say 1\n    say 2\n        say 3\n    say 4\n"
 
-	l := New(source)
+	l := New(source, 0)
 
 	expected := []expectedToken{
 		{Kind: TokenSay, Lexeme: "say", Span: Span{Start: Position{Line: 1, Column: 1}, End: Position{Line: 1, Column: 4}}},
@@ -1143,7 +1110,7 @@ func TestNextTokenIndentation(t *testing.T) {
 func TestNextTokenBlankLinesPreserveIndentation(t *testing.T) {
 	source := "say 1\n    say 2\n        \n\n    say 3\n"
 
-	l := New(source)
+	l := New(source, 0)
 
 	expectedKinds := []TokenKind{
 		TokenSay, TokenInt, TokenNewline,
@@ -1230,7 +1197,7 @@ func TestNextTokenEOFDedentation(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			l := New(tt.source)
+			l := New(tt.source, 0)
 
 			for i, want := range tt.expectedKinds {
 				got, err := l.NextToken()
@@ -1256,53 +1223,30 @@ func TestNextTokenEOFDedentation(t *testing.T) {
 
 func TestNextTokenRejectsTabs(t *testing.T) {
 	tests := []struct {
-		name          string
-		source        string
-		expectedError Position
+		name   string
+		source string
+		span   source.ByteSpan
 	}{
-		{
-			name:          "tab at beginning of file",
-			source:        "\tsay 1",
-			expectedError: Position{Line: 1, Column: 1},
-		},
-		{
-			name:          "tab after leading spaces",
-			source:        "    \tsay 1",
-			expectedError: Position{Line: 1, Column: 5},
-		},
-		{
-			name:          "tab between tokens",
-			source:        "say\t1",
-			expectedError: Position{Line: 1, Column: 4},
-		},
-		{
-			name:          "tab on subsequent line",
-			source:        "say 1\n\t say 2",
-			expectedError: Position{Line: 2, Column: 1},
-		},
+		{"tab at beginning of file", "\tsay 1", source.ByteSpan{Start: 0, End: 1}},
+		{"tab after leading spaces", "    \tsay 1", source.ByteSpan{Start: 4, End: 5}},
+		{"tab between tokens", "say\t1", source.ByteSpan{Start: 3, End: 4}},
+		{"tab on subsequent line", "say 1\n\t say 2", source.ByteSpan{Start: 6, End: 7}},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			l := New(tt.source)
-
+			l := New(tt.source, 0)
 			for {
-				token, err := l.NextToken()
-				if err != nil {
-					lexErr, ok := err.(*LexError)
-					if !ok {
-						t.Fatalf("expected *LexError, got %T: %v", err, err)
-					}
-
-					if lexErr.Position != tt.expectedError {
-						t.Errorf("error position = %+v, want %+v",
-							lexErr.Position, tt.expectedError)
+				token, diag := l.NextToken()
+				if diag != nil {
+					assertLexicalDiagnostic(t, diag, CodeUnexpectedCharacter, "unexpected character", tt.span)
+					if token != (Token{}) {
+						t.Errorf("token = %+v, want zero-value token", token)
 					}
 					return
 				}
-
 				if token.Kind == TokenEOF {
-					t.Fatal("expected lexical error for tab, got EOF")
+					t.Fatal("expected lexical diagnostic for tab, got EOF")
 				}
 			}
 		})
@@ -1354,7 +1298,7 @@ func TestSkipComment(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			l := New(tt.source)
+			l := New(tt.source, 0)
 
 			l.skipComment()
 
@@ -1447,7 +1391,7 @@ func TestNextTokenComments(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			l := New(tt.source)
+			l := New(tt.source, 0)
 
 			for i, want := range tt.expectedKinds {
 				got, err := l.NextToken()
@@ -1533,7 +1477,7 @@ func TestNextTokenIgnoredLinesAndIndentationBoundaries(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			l := New(tt.source)
+			l := New(tt.source, 0)
 
 			for i, want := range tt.expected {
 				got, err := l.NextToken()
@@ -1615,7 +1559,7 @@ func TestTokenKindString(t *testing.T) {
 
 func TestNextTokenColon(t *testing.T) {
 	source := "say:"
-	l := New(source)
+	l := New(source, 0)
 
 	expected := []expectedToken{
 		{
@@ -1780,7 +1724,7 @@ func TestNextTokenParentheses(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			l := New(tt.source)
+			l := New(tt.source, 0)
 
 			for i, want := range tt.expected {
 				got, err := l.NextToken()
@@ -1807,7 +1751,7 @@ func TestNextTokenInlineCommentsInsideParentheses(t *testing.T) {
 		TokenEOF,
 	}
 
-	l := New(source)
+	l := New(source, 0)
 
 	for i, want := range expected {
 		got, err := l.NextToken()
@@ -1854,7 +1798,7 @@ func TestNextTokenParenDepth(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			l := New(tt.source)
+			l := New(tt.source, 0)
 
 			for i, want := range tt.expectedDepth {
 				token, err := l.NextToken()
@@ -1921,31 +1865,12 @@ func TestNextTokenUnclosedOpeningParenthesis(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			l := New(tt.source)
+			l := New(tt.source, 0)
 
 			for {
 				token, err := l.NextToken()
 				if err != nil {
-					lexErr, ok := err.(*LexError)
-					if !ok {
-						t.Fatalf("expected *LexError, got %T: %v", err, err)
-					}
-
-					if lexErr.Position != tt.position {
-						t.Errorf(
-							"error position = %+v, want %+v",
-							lexErr.Position,
-							tt.position,
-						)
-					}
-
-					if lexErr.Message != "unclosed opening parenthesis" {
-						t.Errorf(
-							"error message = %q, want %q",
-							lexErr.Message,
-							"unclosed opening parenthesis",
-						)
-					}
+					assertLexicalDiagnostic(t, err, CodeUnclosedOpeningParen, "unclosed opening parenthesis", byteSpanAtPosition(tt.source, tt.position))
 
 					if token != (Token{}) {
 						t.Errorf(
@@ -2002,25 +1927,12 @@ func TestNextTokenUnmatchedClosingParenthesis(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			l := New(tt.source)
+			l := New(tt.source, 0)
 
 			for {
 				token, err := l.NextToken()
 				if err != nil {
-					lexErr, ok := err.(*LexError)
-					if !ok {
-						t.Fatalf("expected *LexError, got %T: %v", err, err)
-					}
-
-					if lexErr.Position != tt.position {
-						t.Errorf("error position = %+v, want %+v",
-							lexErr.Position, tt.position)
-					}
-
-					if lexErr.Message != "unmatched closing parenthesis" {
-						t.Errorf("error message = %q, want %q",
-							lexErr.Message, "unmatched closing parenthesis")
-					}
+					assertLexicalDiagnostic(t, err, CodeUnmatchedClosingParen, "unmatched closing parenthesis", byteSpanAtPosition(tt.source, tt.position))
 
 					if token != (Token{}) {
 						t.Errorf("error token = %+v, want zero-value Token", token)
@@ -2097,7 +2009,7 @@ func TestNextTokenPlus(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			l := New(tt.source)
+			l := New(tt.source, 0)
 
 			for i, want := range tt.expected {
 				got, err := l.NextToken()
@@ -2175,7 +2087,7 @@ func TestNextTokenMinus(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			l := New(tt.source)
+			l := New(tt.source, 0)
 
 			for i, want := range tt.expected {
 				got, err := l.NextToken()
@@ -2288,7 +2200,7 @@ func TestNextTokenStar(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			l := New(tt.source)
+			l := New(tt.source, 0)
 
 			for i, want := range tt.expected {
 				got, err := l.NextToken()
@@ -2401,7 +2313,7 @@ func TestNextTokenDivision(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			l := New(tt.source)
+			l := New(tt.source, 0)
 
 			for i, want := range tt.expected {
 				got, err := l.NextToken()
@@ -2494,7 +2406,7 @@ func TestNextTokenPercent(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			l := New(tt.source)
+			l := New(tt.source, 0)
 
 			for i, want := range tt.expected {
 				got, err := l.NextToken()
@@ -2593,7 +2505,7 @@ func TestNextTokenString(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			l := New(tt.source)
+			l := New(tt.source, 0)
 
 			for i, want := range tt.expected {
 				got, err := l.NextToken()
@@ -2651,30 +2563,33 @@ func TestNextTokenUnterminatedString(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			l := New(tt.source)
+			l := New(tt.source, 0)
 
-			var err error
 			for {
-				token, scanErr := l.NextToken()
-				if scanErr != nil {
-					err = scanErr
+				token, diag := l.NextToken()
+				if diag != nil {
+					expectedSpan := byteSpanAtPosition(tt.source, tt.position)
+					expectedSpan.End = uint32(len(tt.source))
+
+					if newline := strings.IndexByte(tt.source[expectedSpan.Start:], '\n'); newline >= 0 {
+						expectedSpan.End = expectedSpan.Start + uint32(newline)
+					}
+
+					assertLexicalDiagnostic(
+						t,
+						diag,
+						CodeUnterminatedString,
+						"unterminated string literal",
+						expectedSpan,
+					)
+					if token != (Token{}) {
+						t.Errorf("token = %+v, want zero-value token", token)
+					}
 					break
 				}
 				if token.Kind == TokenEOF {
-					t.Fatal("expected lexical error, got EOF")
+					t.Fatal("expected lexical diagnostic, got EOF")
 				}
-			}
-
-			var lexErr *LexError
-			if !errors.As(err, &lexErr) {
-				t.Fatalf("expected *LexError, got %T: %v", err, err)
-			}
-
-			if lexErr.Position != tt.position {
-				t.Errorf("position: got %+v, want %+v", lexErr.Position, tt.position)
-			}
-			if lexErr.Message != "unterminated string literal" {
-				t.Errorf("message: got %q, want %q", lexErr.Message, "unterminated string literal")
 			}
 		})
 	}
@@ -2733,7 +2648,7 @@ func TestNextTokenStringEscapes(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			l := New(tt.source)
+			l := New(tt.source, 0)
 
 			got, err := l.NextToken()
 			if err != nil {
@@ -2820,36 +2735,51 @@ func TestNextTokenInvalidStringEscapes(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			l := New(tt.source)
+			l := New(tt.source, 0)
 
-			var err error
 			for {
-				token, scanErr := l.NextToken()
-				if scanErr != nil {
-					err = scanErr
+				token, diag := l.NextToken()
+				if diag != nil {
+					expectedSpan := byteSpanAtPosition(tt.source, tt.position)
+					var expectedCode diagnostic.Code
+
+					if tt.message == "invalid escape sequence" {
+						expectedCode = CodeInvalidEscape
+						expectedSpan.End = expectedSpan.Start + 1
+
+						if int(expectedSpan.Start)+1 < len(tt.source) &&
+							tt.source[expectedSpan.Start+1] != '\n' {
+							expectedSpan.End++
+						}
+					} else {
+						expectedCode = CodeUnterminatedString
+						expectedSpan.End = uint32(len(tt.source))
+
+						if newline := strings.IndexByte(tt.source[expectedSpan.Start:], '\n'); newline >= 0 {
+							expectedSpan.End = expectedSpan.Start + uint32(newline)
+						}
+					}
+
+					assertLexicalDiagnostic(
+						t,
+						diag,
+						expectedCode,
+						tt.message,
+						expectedSpan,
+					)
+					if token != (Token{}) {
+						t.Errorf("token = %+v, want zero-value token", token)
+					}
 					break
 				}
 				if token.Kind == TokenEOF {
-					t.Fatal("expected lexical error, got EOF")
+					t.Fatal("expected lexical diagnostic, got EOF")
 				}
-			}
-
-			var lexErr *LexError
-			if !errors.As(err, &lexErr) {
-				t.Fatalf("expected *LexError, got %T: %v", err, err)
-			}
-
-			if lexErr.Position != tt.position {
-				t.Errorf("position: got %+v, want %+v", lexErr.Position, tt.position)
-			}
-			if lexErr.Message != tt.message {
-				t.Errorf("message: got %q, want %q", lexErr.Message, tt.message)
 			}
 		})
 	}
 }
 
-// TestNextTokenSpans verifies half-open source spans, including synthetic tokens.
 func TestNextTokenSpans(t *testing.T) {
 	tests := []struct {
 		name   string
@@ -2882,7 +2812,7 @@ func TestNextTokenSpans(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			l := New(tt.source)
+			l := New(tt.source, 0)
 			for i, want := range tt.spans {
 				token, err := l.NextToken()
 				if err != nil {
@@ -2925,4 +2855,50 @@ func TestLookupIdentifierConversationalKeywords(t *testing.T) {
 			}
 		})
 	}
+}
+
+func assertLexicalDiagnostic(
+	t *testing.T,
+	got *diagnostic.Diagnostic,
+	wantCode diagnostic.Code,
+	wantMessage string,
+	wantSpan source.ByteSpan,
+) {
+	t.Helper()
+
+	if got == nil {
+		t.Fatal("expected lexical diagnostic")
+	}
+	if got.Code != wantCode {
+		t.Errorf("code = %q, want %q", got.Code, wantCode)
+	}
+	if got.Severity != diagnostic.SeverityError {
+		t.Errorf("severity = %v, want error", got.Severity)
+	}
+	if got.Message != wantMessage {
+		t.Errorf("message = %q, want %q", got.Message, wantMessage)
+	}
+	if got.Primary.File != 0 {
+		t.Errorf("file ID = %d, want 0", got.Primary.File)
+	}
+	if got.Primary.Span != wantSpan {
+		t.Errorf("span = %+v, want %+v", got.Primary.Span, wantSpan)
+	}
+}
+
+// byteSpanAtPosition converts a test fixture's one-based line and column into a byte span.
+func byteSpanAtPosition(text string, pos Position) source.ByteSpan {
+	line, column := 1, 1
+	for i := 0; i < len(text); i++ {
+		if line == pos.Line && column == pos.Column {
+			return source.ByteSpan{Start: uint32(i), End: uint32(i + 1)}
+		}
+		if text[i] == '\n' {
+			line++
+			column = 1
+		} else {
+			column++
+		}
+	}
+	panic("test fixture position outside source")
 }

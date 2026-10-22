@@ -1,6 +1,6 @@
 # Eloque Technical Backlog
 
-**Status:** Living engineering decision register. M1 and post-M1 H2 frontend optimization are complete; M2 is the next implementation milestone. A review commitment is not a commitment to implement a particular technology.
+**Status:** Living engineering decision register. M1, post-M1 H2 frontend optimization, and pre-M2 structured diagnostic recovery are implemented. M2 remains the next implementation milestone. A review commitment is not a commitment to implement a particular technology.
 
 See [LANGUAGE_SPEC.md](LANGUAGE_SPEC.md) for intended language behavior, [DESIGN_DECISIONS.md](DESIGN_DECISIONS.md) for settled decisions, and [ROADMAP.md](ROADMAP.md) for implementation milestones.
 
@@ -232,6 +232,17 @@ meaningful regression attributable to token delivery.
 - **Next action:** Preserve the experimental results and retain the current arena policy.
 - **Next review trigger:** M2 integration reveals a measurable arena-related bottleneck, or frontend profiling after a significant grammar expansion identifies a new opportunity.
 
+### TB-026 — Post-recovery frontend performance validation
+
+- **Status:** Review required; further optimization deferred.
+- **Baseline:** The October 22–23 experimental post-recovery measurements, alongside the unchanged October 20 official H2 baseline.
+- **Trigger:** Representative mixed-program workloads, significant parser changes, or a measured frontend performance regression.
+- **Rationale:** The current controlled arithmetic benchmarks show modest recovery overhead on large valid inputs, but they do not establish performance across realistic source files or malformed-input distributions.
+- **Method:** Compare fail-fast and recovery-capable parsing using equivalent source inputs. Include valid and malformed programs, small and large files, repeated measurements, allocated bytes, allocation counts, and latency variability.
+- **Acceptance criteria:** Preserve correctness and recovery termination guarantees. Introduce optimizations only when repeatable improvements justify their complexity and memory trade-offs.
+- **Evidence:** `benchmarks/results/experimental/h2-post-recovery-report/REPORT.md`.
+- **Next action:** Retain the current implementation. Do not block M2 on further frontend optimization.
+
 ## Tooling, agents and execution safety
 
 ### TB-019 — Structured diagnostics
@@ -243,6 +254,13 @@ meaningful regression attributable to token delivery.
 - **Evidence:** Pending.
 - **M1 progress:** Tokens and AST nodes use shared half-open source spans. M1-P2 established expression source-location tracking, including the distinction between semantic AST node locations and complete syntactic grouping extents. M1-P3 extended source-span preservation and structured fail-fast diagnostics to `let`, `change`, and `say` statements and complete-program parsing. M1-P4 completed broader positive and negative frontend syntax conformance coverage with 29 additional fixtures covering valid programs, malformed syntax, EOF diagnostics, multiline source locations, nested expression errors, first-error behavior, and lexer/parser error boundaries. Tests verify diagnostic messages, source spans, expected/actual token metadata, and rejection of malformed programs without returning successful partial ASTs. Full Go tests, race detection, and `go vet` passed.
 - **Next action:** Preserve the completed M1 diagnostic contract through H2 and subsequent frontend changes. Extend diagnostics to name resolution and static type checking during M2. Multi-error recovery remains deferred under D-037, and the broader machine-readable diagnostic schema remains scheduled for review before M8 tooling.
+- **Post-M1 status:** Active implementation on `feat/structured-diagnostics`.
+- **Completed foundation:** Introduced the shared `internal/diagnostic` model with stable codes, severity, file identity, half-open byte spans, related locations, notes, and token-expectation metadata. Migrated the lexer, H2 parser, frontend, and associated tests to native structured diagnostics. Retired the legacy M1 pointer-based parser.
+- **Current objective:** Replace fail-fast frontend behavior with bounded multi-error recovery while preserving the canonical arena-backed AST and direct pull-based token streaming.
+- **Remaining work:** Diagnostic accumulation and ownership; explicit lexical recovery; parser synchronization at safe statement and nesting boundaries; error budgets; parse completion, recovery, and abortion outcomes; partial AST retention; and diagnostic cascade suppression.
+- **Acceptance criteria:** Multiple independent errors are reported deterministically; recovery always terminates; lexical diagnostics are not obscured by secondary parser errors; valid statements survive recovery where safe; malformed programs are never treated as valid for execution; and successful-path latency and allocations are validated against the preserved frontend baseline.
+- **Next action:** Finalize recovery contracts and integrate diagnostic accumulation with the existing lexer, token source, and H2 parser. Add recovery conformance tests and reproducible performance benchmarks.
+- **Next review trigger:** Completion of multi-error recovery integration and performance validation, before proceeding to M2.
 
 ### TB-020 — Sandboxed execution budgets
 - **Status:** Committed long-term capability; design review required.
@@ -350,13 +368,15 @@ The H2 measurements are frontend-only. They do not establish Eloque runtime perf
 
 **Acceptance criteria:** Resolver behavioral matrix R01–R28 in `ARCHITECTURE.md`, with scope-specific tests introduced as the relevant grammar becomes available.
 
-### Deferred: dense versus sparse reference storage
+### Deferred: diagnostic budget tuning
 
-**Trigger:** Representative resolver memory and lookup benchmarks.
+**Current baseline:** Recovery-capable parsing defaults to a maximum of 20 error-severity diagnostics. Positive limits are configurable; negative values disable the limit.
 
-**Rationale:** Dense arrays offer simple constant-time access but may waste memory when only a small fraction of AST nodes carry bindings.
+**Trigger:** Representative malformed-source workloads, editor integration, or evidence that the current default produces insufficient diagnostics or excessive recovery work.
 
-**Acceptance criteria:** Change only when measured memory or runtime improvements justify added complexity. Preserve the public resolution accessors.
+**Rationale:** The default of 20 provides a bounded initial recovery policy. Increasing it without representative evidence could add unnecessary processing or produce overwhelming diagnostic output.
+
+**Acceptance criteria:** Predictable termination, bounded resource consumption under the default configuration, actionable diagnostics, and no meaningful regression in normal frontend performance.
 
 ### Deferred: identifier interning
 
@@ -431,7 +451,10 @@ All deferred items must retain their rationale, reevaluation trigger, and accept
   optimization, establish updated performance baselines,
   and preserve reproducible benchmark evidence.
 - [x] **M1-P4:** Complete broader syntax diagnostics and positive/negative frontend conformance fixtures.
-- [ ] **M1-P5:** Complete lexer–parser integration, end-to-end frontend validation, and performance regression review.
+- [x] **M1-P5:** Complete lexer–parser integration, end-to-end frontend validation, and performance regression review.
+- [x] **Pre-M2:** Implement structured diagnostics and recovery-capable parsing.
+- [x] **Pre-M2:** Record post-recovery experimental frontend benchmarks.
+- [ ] **Future frontend review:** Revisit TB-026 when representative workloads or regressions justify it.
 - [ ] **M2:** Extend TB-019 diagnostics to name resolution and static type checking.
 - [ ] **Before M2:** TB-008 values, TB-012 checker, TB-013 numeric behavior, TB-011 scope.
 - [ ] **After working M2:** TB-001 stack/register review; TB-007 benchmark baseline.

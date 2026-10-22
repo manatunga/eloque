@@ -688,3 +688,53 @@ func TestArenaRejectsStatementAsExpression(t *testing.T) {
 		})
 	}
 }
+
+func TestArenaRollbackRestoresAllBuffers(t *testing.T) {
+	a := NewArena("1 2")
+
+	one := a.AddInteger(source.ByteSpan{Start: 0, End: 1})
+	a.AddStatement(a.AddSay(
+		source.ByteSpan{Start: 0, End: 1},
+		one,
+	))
+
+	checkpoint := a.Checkpoint()
+
+	two := a.AddInteger(source.ByteSpan{Start: 2, End: 3})
+
+	a.AddString(source.ByteSpan{Start: 2, End: 3}, "two")
+
+	a.AddBinaryPayload(BinaryPayload{})
+	a.AddUnaryPayload(UnaryPayload{})
+	a.AddBindingPayload(BindingPayload{})
+
+	a.AddStatement(a.AddSay(
+		source.ByteSpan{Start: 2, End: 3},
+		two,
+	))
+
+	a.Rollback(checkpoint)
+
+	if got := len(a.nodes); got != checkpoint.nodes {
+		t.Errorf("nodes = %d, want %d", got, checkpoint.nodes)
+	}
+	if got := len(a.strings); got != checkpoint.strings {
+		t.Errorf("strings = %d, want %d", got, checkpoint.strings)
+	}
+	if got := len(a.binaries); got != checkpoint.binaries {
+		t.Errorf("binaries = %d, want %d", got, checkpoint.binaries)
+	}
+	if got := len(a.unaries); got != checkpoint.unaries {
+		t.Errorf("unaries = %d, want %d", got, checkpoint.unaries)
+	}
+	if got := len(a.bindings); got != checkpoint.bindings {
+		t.Errorf("bindings = %d, want %d", got, checkpoint.bindings)
+	}
+	if got := len(a.statements); got != checkpoint.statements {
+		t.Errorf("statements = %d, want %d", got, checkpoint.statements)
+	}
+
+	if got := a.StatementCount(); got != 1 {
+		t.Errorf("preserved statement count = %d, want 1", got)
+	}
+}
