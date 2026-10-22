@@ -498,3 +498,108 @@ These findings support the performance of Eloque's current
 streaming frontend on the tested workloads. They do not establish
 general language-performance superiority, equivalent parser
 capabilities, or future compiler and runtime performance.
+
+## H2 post-recovery frontend comparison — Experimental (October 22–23, 2026)
+
+This experiment evaluates Eloque's frontend after the introduction of structured diagnostic recovery, statement-level AST preservation, and expression-depth protection.
+
+The experiment is separate from the official October 20 H2 baseline, which remains unchanged.
+
+### Results
+
+Ten measurements were collected for each Go benchmark configuration. Reported latencies are medians.
+
+| Frontend | N=10 | N=100 | N=1,000 | N=10,000 |
+|---|---:|---:|---:|---:|
+| Eloque fail-fast | 6.74 µs | 59.97 µs | 0.716 ms | 7.866 ms |
+| Eloque recovering | 7.51 µs | 71.31 µs | 0.819 ms | 8.122 ms |
+| Go compiler-native | 12.18 µs | 113.28 µs | 1.208 ms | 11.218 ms |
+| Go `go/parser` | 18.49 µs | 170.93 µs | 1.865 ms | 18.208 ms |
+| CPython 3.15.0rc2 | 87.46 µs | 908.59 µs | 11.106 ms | 141.661 ms |
+
+At 10,000 arithmetic declarations, recovery-enabled Eloque parsing incurred **3.25% median latency overhead** compared with fail-fast parsing, with effectively unchanged allocation counts and allocated bytes.
+
+Eloque fail-fast parsing recorded approximately 1.43× lower latency than the Go compiler-native parser, 2.31× lower latency than `go/parser`, and 18.01× lower latency than CPython `ast.parse()` on the selected workload.
+
+These are frontend-only measurements and are not general compiler or execution-performance rankings.
+
+### Environment
+
+- CPU: Intel Core Ultra 7 155H
+- Operating environment: Linux amd64 under WSL2
+- Go: 1.27.2
+- CPython: 3.15.0rc2, built with Clang 22.1.3
+- Workload sizes: 10, 100, 1,000, and 10,000 arithmetic declarations
+- Go measurements: 10 repetitions per configuration
+- CPython: 10 timing repetitions per size, with only the resulting medians retained in the available summary
+
+### Reproduction
+
+Run the commands from the repository root.
+
+**Eloque:**
+
+```bash
+go test ./internal/frontend/parser \
+  -run '^$' \
+  -bench '^BenchmarkControlledEloque(Frontend|RecoveringFrontend)$' \
+  -benchmem -benchtime=1s -count=10
+```
+
+**Go standard library:**
+
+```bash
+go test ./benchmarks/go \
+  -run '^$' \
+  -bench '^BenchmarkControlledGoFrontend$' \
+  -benchmem -benchtime=1s -count=10
+```
+
+**CPython:**
+
+```bash
+uv run --no-project --python 3.15 \
+  python benchmarks/cpython/frontend_controlled.py
+```
+
+**Go compiler-native:**
+
+The compiler-native benchmark uses `cmd/compile/internal/syntax` with a Go test overlay. Its overlay JSON must map the compiler package's `frontend_controlled_test.go` path to the local benchmark source file. The overlay contains absolute paths and must be generated or adjusted for the local checkout.
+
+Once the overlay is configured:
+
+```bash
+go test \
+  -overlay="$(pwd)/benchmarks/tmp/go-compiler/overlay.json" \
+  cmd/compile/internal/syntax \
+  -run '^$' \
+  -bench '^BenchmarkControlledGoCompilerFrontend$' \
+  -benchmem -benchtime=1s -count=10
+```
+
+### Saved evidence
+
+The experimental results are stored under `results/experimental/`.
+
+The generated report directory, `h2-post-recovery-report/`, contains:
+
+- `REPORT.md` — methodology, results, and limitations
+- `summary.csv` — per-frontend median measurements
+- `raw_go_samples.csv` — 160 individual Go benchmark measurements
+- `manifest.json` — source filenames and recorded language versions
+
+The report generator is `benchmarks/scripts/generate_h2_frontend_report.py`.
+
+### Interpretation and limitations
+
+The implementations use different language grammars, source wrappers, AST representations, and validation responsibilities. Consequently, their measured latencies and memory usage do not represent identical parsing work.
+
+Allocated bytes per operation are not equivalent to peak memory consumption. The reported throughput uses each implementation's language-specific source length.
+
+The CPython summary does not retain individual timing samples, so its sample-level variability cannot be calculated from the saved evidence.
+
+All benchmark runs were performed separately and may be affected by system load, scheduling, and thermal variation. No statistical-significance claim is made.
+
+The recovery-enabled benchmark uses valid source programs and measures the overhead of enabling recovery, not the cost of processing malformed source. Separate recovery stress and robustness tests cover malformed-input behavior.
+
+Further representative mixed-program benchmarks and runtime comparisons are deferred to appropriate future milestones.

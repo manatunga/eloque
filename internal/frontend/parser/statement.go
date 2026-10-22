@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"github.com/manatunga/eloque/internal/diagnostic"
 	"github.com/manatunga/eloque/internal/frontend/ast"
 	"github.com/manatunga/eloque/internal/frontend/lexer"
 	"github.com/manatunga/eloque/internal/source"
@@ -21,7 +22,7 @@ import (
 //
 // NEWLINE and EOF are left unconsumed for the program parser.
 // Malformed declarations return the same diagnostics as M1.
-func (p *FlatParser) parseFlatLetStatement() (ast.NodeID, *Diagnostic) {
+func (p *FlatParser) parseFlatLetStatement() (ast.NodeID, *diagnostic.Diagnostic) {
 	keyword := p.advance()
 
 	identifier, diagnostic := p.expect(
@@ -70,7 +71,7 @@ func (p *FlatParser) parseFlatLetStatement() (ast.NodeID, *Diagnostic) {
 //
 // Statement terminators remain unconsumed. Invalid assignments return
 // positioned diagnostics consistent with the M1 parser.
-func (p *FlatParser) parseFlatChangeStatement() (ast.NodeID, *Diagnostic) {
+func (p *FlatParser) parseFlatChangeStatement() (ast.NodeID, *diagnostic.Diagnostic) {
 	keyword := p.advance()
 
 	identifier, diagnostic := p.expect(
@@ -118,7 +119,7 @@ func (p *FlatParser) parseFlatChangeStatement() (ast.NodeID, *Diagnostic) {
 //
 // NEWLINE and EOF remain unconsumed. Missing or malformed expressions
 // produce the same positioned diagnostics as M1.
-func (p *FlatParser) parseFlatSayStatement() (ast.NodeID, *Diagnostic) {
+func (p *FlatParser) parseFlatSayStatement() (ast.NodeID, *diagnostic.Diagnostic) {
 	keyword := p.advance()
 
 	value, diagnostic := p.parseFlatExpression(0)
@@ -144,7 +145,7 @@ func (p *FlatParser) parseFlatSayStatement() (ast.NodeID, *Diagnostic) {
 //
 // Unsupported statement starters use the existing M1 diagnostic helper,
 // preserving its expected-token list and source location behavior.
-func (p *FlatParser) parseFlatStatement() (ast.NodeID, *Diagnostic) {
+func (p *FlatParser) parseFlatStatement() (ast.NodeID, *diagnostic.Diagnostic) {
 	switch p.peek().Kind {
 	case lexer.TokenLet:
 		return p.parseFlatLetStatement()

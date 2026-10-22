@@ -1,149 +1,73 @@
 package parser
 
 import (
-	"reflect"
+	"slices"
 	"testing"
 
+	"github.com/manatunga/eloque/internal/diagnostic"
 	"github.com/manatunga/eloque/internal/frontend/ast"
 	"github.com/manatunga/eloque/internal/frontend/lexer"
 	"github.com/manatunga/eloque/internal/source"
 )
 
-// conformanceParser tokenizes valid source text before constructing
-// a parser. Lexical errors are test setup failures, not syntax errors.
-func conformanceParser(t *testing.T, text string) *Parser {
-	t.Helper()
-
-	scanner := lexer.New(text)
-	tokens := make([]lexer.Token, 0, 16)
-
-	for {
-		token, err := scanner.NextToken()
-		if err != nil {
-			t.Fatalf("unexpected lexical error: %v", err)
-		}
-
-		tokens = append(tokens, token)
-		if token.Kind == lexer.TokenEOF {
-			break
-		}
-	}
-
-	return New(text, tokens)
-}
-
-func conformanceSpan(
-	startLine, startColumn, endLine, endColumn int,
-) source.Span {
-	return source.Span{
-		Start: source.Position{
-			Line: startLine, Column: startColumn,
-		},
-		End: source.Position{
-			Line: endLine, Column: endColumn,
-		},
-	}
-}
-
 func TestProgramConformanceValid(t *testing.T) {
 	tests := []struct {
 		name      string
 		source    string
-		wantTypes []ast.Statement
-		wantSpan  source.Span
+		wantKinds []ast.NodeKind
+		wantSpan  source.ByteSpan
 	}{
-		{
-			name:     "empty source",
-			source:   "",
-			wantSpan: conformanceSpan(1, 1, 1, 1),
-		},
-		{
-			name:     "blank lines",
-			source:   "\n\n",
-			wantSpan: conformanceSpan(3, 1, 3, 1),
-		},
-		{
-			name:      "integer output",
-			source:    "say 42",
-			wantTypes: []ast.Statement{&ast.SayStatement{}},
-			wantSpan:  conformanceSpan(1, 1, 1, 7),
-		},
-		{
-			name:      "variable declaration",
-			source:    "let age be 20",
-			wantTypes: []ast.Statement{&ast.LetStatement{}},
-			wantSpan:  conformanceSpan(1, 1, 1, 14),
-		},
-		{
-			name:      "variable reassignment",
-			source:    "change age to 21",
-			wantTypes: []ast.Statement{&ast.ChangeStatement{}},
-			wantSpan:  conformanceSpan(1, 1, 1, 17),
-		},
-		{
-			name:      "grouped arithmetic",
-			source:    "say (2 + 3) * 4",
-			wantTypes: []ast.Statement{&ast.SayStatement{}},
-			wantSpan:  conformanceSpan(1, 1, 1, 16),
-		},
-		{
-			name:      "unary exponentiation",
-			source:    "say -2 ** 3",
-			wantTypes: []ast.Statement{&ast.SayStatement{}},
-			wantSpan:  conformanceSpan(1, 1, 1, 12),
-		},
-		{
-			name:   "multiline program",
-			source: "let x be 1\nsay x",
-			wantTypes: []ast.Statement{
-				&ast.LetStatement{},
-				&ast.SayStatement{},
-			},
-			wantSpan: conformanceSpan(1, 1, 2, 6),
-		},
-		{
-			name:   "surrounding blank lines",
-			source: "\nlet x be 1\n\nsay x\n",
-			wantTypes: []ast.Statement{
-				&ast.LetStatement{},
-				&ast.SayStatement{},
-			},
-			wantSpan: conformanceSpan(2, 1, 4, 6),
-		},
+		{"empty source", "", nil, source.ByteSpan{Start: 0, End: 0}},
+		{"blank lines", "\n\n", nil, source.ByteSpan{Start: 2, End: 2}},
+		{"integer output", "say 42",
+			[]ast.NodeKind{ast.NodeSayStatement}, source.ByteSpan{Start: 0, End: 6}},
+		{"variable declaration", "let age be 20",
+			[]ast.NodeKind{ast.NodeLetStatement}, source.ByteSpan{Start: 0, End: 13}},
+		{"variable reassignment", "change age to 21",
+			[]ast.NodeKind{ast.NodeChangeStatement}, source.ByteSpan{Start: 0, End: 16}},
+		{"grouped arithmetic", "say (2 + 3) * 4",
+			[]ast.NodeKind{ast.NodeSayStatement}, source.ByteSpan{Start: 0, End: 15}},
+		{"unary exponentiation", "say -2 ** 3",
+			[]ast.NodeKind{ast.NodeSayStatement}, source.ByteSpan{Start: 0, End: 11}},
+		{"multiline program", "let x be 1\nsay x",
+			[]ast.NodeKind{ast.NodeLetStatement, ast.NodeSayStatement},
+			source.ByteSpan{Start: 0, End: 16}},
+		{"surrounding blank lines", "\nlet x be 1\n\nsay x\n",
+			[]ast.NodeKind{ast.NodeLetStatement, ast.NodeSayStatement},
+			source.ByteSpan{Start: 1, End: 18}},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			p := conformanceParser(t, tt.source)
-			program, diagnostic := p.parseProgram()
-
-			if diagnostic != nil {
-				t.Fatalf("unexpected diagnostic: %+v", diagnostic)
+			p := NewFlatParser(tt.source)
+			program, diag := p.parseFlatProgram()
+			if diag != nil {
+				t.Fatalf("unexpected diagnostic: %+v", diag)
 			}
 			if program == nil {
-				t.Fatal("expected a program, got nil")
-			}
-			if len(program.Statements) != len(tt.wantTypes) {
-				t.Fatalf(
-					"statement count = %d, want %d",
-					len(program.Statements), len(tt.wantTypes),
-				)
+				t.Fatal("expected program")
 			}
 
-			for i, want := range tt.wantTypes {
-				if reflect.TypeOf(program.Statements[i]) != reflect.TypeOf(want) {
-					t.Errorf(
-						"statement %d = %T, want %T",
-						i, program.Statements[i], want,
-					)
+			ids := program.Arena.StatementRange(program.Statements)
+			if len(ids) != len(tt.wantKinds) {
+				t.Fatalf("statement count = %d, want %d",
+					len(ids), len(tt.wantKinds))
+			}
+
+			for i, id := range ids {
+				node := program.Arena.Get(id)
+				if node.Kind != tt.wantKinds[i] {
+					t.Errorf("statement %d kind = %v, want %v",
+						i, node.Kind, tt.wantKinds[i])
 				}
 			}
 
-			if got := program.Span(); got != tt.wantSpan {
-				t.Errorf("span = %+v, want %+v", got, tt.wantSpan)
+			if program.Span != tt.wantSpan {
+				t.Errorf("program span = %+v, want %+v",
+					program.Span, tt.wantSpan)
 			}
-			if p.peek().Kind != lexer.TokenEOF {
-				t.Errorf("remaining token = %v, want EOF", p.peek().Kind)
+			if got := p.peek().Kind; got != lexer.TokenEOF {
+				t.Errorf("remaining token = %v, want EOF", got)
 			}
 		})
 	}
@@ -151,309 +75,203 @@ func TestProgramConformanceValid(t *testing.T) {
 
 func TestProgramConformanceInvalid(t *testing.T) {
 	expressionStarters := []lexer.TokenKind{
-		lexer.TokenInt,
-		lexer.TokenString,
-		lexer.TokenIdent,
-		lexer.TokenLeftParen,
-		lexer.TokenPlus,
-		lexer.TokenMinus,
+		lexer.TokenInt, lexer.TokenString, lexer.TokenIdent,
+		lexer.TokenLeftParen, lexer.TokenPlus, lexer.TokenMinus,
 	}
 
 	tests := []struct {
-		name         string
-		source       string
-		wantMessage  string
-		wantSpan     source.Span
-		wantExpected []lexer.TokenKind
-		wantActual   lexer.TokenKind
+		name     string
+		source   string
+		message  string
+		span     source.ByteSpan
+		expected []lexer.TokenKind
+		actual   lexer.TokenKind
 	}{
 		{
-			name:         "missing declaration name",
-			source:       "let be 20",
-			wantMessage:  "expected a variable name after 'let'",
-			wantSpan:     conformanceSpan(1, 5, 1, 7),
-			wantExpected: []lexer.TokenKind{lexer.TokenIdent},
-			wantActual:   lexer.TokenBe,
+			"missing declaration name", "let be 20",
+			"expected a variable name after 'let'",
+			source.ByteSpan{Start: 4, End: 6},
+			[]lexer.TokenKind{lexer.TokenIdent}, lexer.TokenBe,
 		},
 		{
-			name:         "missing be keyword",
-			source:       "let x 20",
-			wantMessage:  "expected 'be' after variable name to initialize a variable value",
-			wantSpan:     conformanceSpan(1, 7, 1, 9),
-			wantExpected: []lexer.TokenKind{lexer.TokenBe},
-			wantActual:   lexer.TokenInt,
+			"missing be keyword", "let x 20",
+			"expected 'be' after variable name to initialize a variable value",
+			source.ByteSpan{Start: 6, End: 8},
+			[]lexer.TokenKind{lexer.TokenBe}, lexer.TokenInt,
 		},
 		{
-			name:         "missing to keyword",
-			source:       "change x 10",
-			wantMessage:  "expected 'to' after variable name to assign a new variable value",
-			wantSpan:     conformanceSpan(1, 10, 1, 12),
-			wantExpected: []lexer.TokenKind{lexer.TokenTo},
-			wantActual:   lexer.TokenInt,
+			"missing to keyword", "change x 10",
+			"expected 'to' after variable name to assign a new variable value",
+			source.ByteSpan{Start: 9, End: 11},
+			[]lexer.TokenKind{lexer.TokenTo}, lexer.TokenInt,
 		},
 		{
-			name:         "missing output expression",
-			source:       "say",
-			wantMessage:  "expected an expression",
-			wantSpan:     conformanceSpan(1, 4, 1, 4),
-			wantExpected: expressionStarters,
-			wantActual:   lexer.TokenEOF,
+			"missing output expression", "say",
+			"expected an expression",
+			source.ByteSpan{Start: 3, End: 3}, expressionStarters, lexer.TokenEOF,
 		},
 		{
-			name:         "missing grouped operand",
-			source:       "say (1 + )",
-			wantMessage:  "expected an expression",
-			wantSpan:     conformanceSpan(1, 10, 1, 11),
-			wantExpected: expressionStarters,
-			wantActual:   lexer.TokenRightParen,
+			"missing grouped operand", "say (1 + )",
+			"expected an expression",
+			source.ByteSpan{Start: 9, End: 10}, expressionStarters, lexer.TokenRightParen,
 		},
 		{
-			name:         "trailing operator",
-			source:       "say 1 +",
-			wantMessage:  "expected an expression",
-			wantSpan:     conformanceSpan(1, 8, 1, 8),
-			wantExpected: expressionStarters,
-			wantActual:   lexer.TokenEOF,
+			"trailing operator", "say 1 +",
+			"expected an expression",
+			source.ByteSpan{Start: 7, End: 7}, expressionStarters, lexer.TokenEOF,
 		},
 		{
-			name:        "missing statement separator",
-			source:      "say 1 say 2",
-			wantMessage: "expected a newline or end of file after statement",
-			wantSpan:    conformanceSpan(1, 7, 1, 10),
-			wantExpected: []lexer.TokenKind{
-				lexer.TokenNewline, lexer.TokenEOF,
-			},
-			wantActual: lexer.TokenSay,
+			"missing statement separator", "say 1 say 2",
+			"expected a newline or end of file after statement",
+			source.ByteSpan{Start: 6, End: 9},
+			[]lexer.TokenKind{lexer.TokenNewline, lexer.TokenEOF},
+			lexer.TokenSay,
 		},
 		{
-			name:         "invalid second statement",
-			source:       "let x be 1\nsay (2 + )",
-			wantMessage:  "expected an expression",
-			wantSpan:     conformanceSpan(2, 10, 2, 11),
-			wantExpected: expressionStarters,
-			wantActual:   lexer.TokenRightParen,
+			"invalid second statement", "let x be 1\nsay (2 + )",
+			"expected an expression",
+			source.ByteSpan{Start: 20, End: 21}, expressionStarters, lexer.TokenRightParen,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			p := conformanceParser(t, tt.source)
-			program, diagnostic := p.parseProgram()
+			p := NewFlatParser(tt.source)
+			program, diag := p.parseFlatProgram()
 
-			if diagnostic == nil {
-				t.Fatal("expected a syntax diagnostic")
-			}
 			if program != nil {
-				t.Errorf("malformed program returned an AST: %+v", program)
+				t.Errorf("malformed source returned a program: %+v", program)
 			}
-			if diagnostic.Message != tt.wantMessage {
-				t.Errorf(
-					"message = %q, want %q",
-					diagnostic.Message, tt.wantMessage,
-				)
-			}
-			if diagnostic.Location != tt.wantSpan {
-				t.Errorf(
-					"location = %+v, want %+v",
-					diagnostic.Location, tt.wantSpan,
-				)
-			}
-			if !reflect.DeepEqual(diagnostic.Expected, tt.wantExpected) {
-				t.Errorf(
-					"expected tokens = %v, want %v",
-					diagnostic.Expected, tt.wantExpected,
-				)
-			}
-			if diagnostic.Actual == nil {
-				t.Fatal("missing actual token metadata")
-			}
-			if *diagnostic.Actual != tt.wantActual {
-				t.Errorf(
-					"actual token = %v, want %v",
-					*diagnostic.Actual, tt.wantActual,
-				)
-			}
+			assertConformanceDiagnostic(
+				t, diag, tt.message, tt.span, tt.expected, tt.actual,
+			)
 		})
 	}
 }
 
 func TestProgramConformanceDiagnosticEdges(t *testing.T) {
 	expressionStarters := []lexer.TokenKind{
-		lexer.TokenInt,
-		lexer.TokenString,
-		lexer.TokenIdent,
-		lexer.TokenLeftParen,
-		lexer.TokenPlus,
-		lexer.TokenMinus,
+		lexer.TokenInt, lexer.TokenString, lexer.TokenIdent,
+		lexer.TokenLeftParen, lexer.TokenPlus, lexer.TokenMinus,
 	}
 
 	tests := []struct {
-		name         string
-		source       string
-		wantMessage  string
-		wantSpan     source.Span
-		wantExpected []lexer.TokenKind
-		wantActual   lexer.TokenKind
+		name     string
+		source   string
+		message  string
+		span     source.ByteSpan
+		expected []lexer.TokenKind
+		actual   lexer.TokenKind
 	}{
 		{
-			name:         "missing let identifier at EOF",
-			source:       "let",
-			wantMessage:  "expected a variable name after 'let'",
-			wantSpan:     conformanceSpan(1, 4, 1, 4),
-			wantExpected: []lexer.TokenKind{lexer.TokenIdent},
-			wantActual:   lexer.TokenEOF,
+			"missing let identifier at EOF", "let",
+			"expected a variable name after 'let'",
+			source.ByteSpan{Start: 3, End: 3},
+			[]lexer.TokenKind{lexer.TokenIdent}, lexer.TokenEOF,
 		},
 		{
-			name:         "missing be at EOF",
-			source:       "let value",
-			wantMessage:  "expected 'be' after variable name to initialize a variable value",
-			wantSpan:     conformanceSpan(1, 10, 1, 10),
-			wantExpected: []lexer.TokenKind{lexer.TokenBe},
-			wantActual:   lexer.TokenEOF,
+			"missing be at EOF", "let value",
+			"expected 'be' after variable name to initialize a variable value",
+			source.ByteSpan{Start: 9, End: 9},
+			[]lexer.TokenKind{lexer.TokenBe}, lexer.TokenEOF,
 		},
 		{
-			name:         "missing change identifier at EOF",
-			source:       "change",
-			wantMessage:  "expected a variable name after 'change'",
-			wantSpan:     conformanceSpan(1, 7, 1, 7),
-			wantExpected: []lexer.TokenKind{lexer.TokenIdent},
-			wantActual:   lexer.TokenEOF,
+			"missing change identifier at EOF", "change",
+			"expected a variable name after 'change'",
+			source.ByteSpan{Start: 6, End: 6},
+			[]lexer.TokenKind{lexer.TokenIdent}, lexer.TokenEOF,
 		},
 		{
-			name:         "missing to at EOF",
-			source:       "change value",
-			wantMessage:  "expected 'to' after variable name to assign a new variable value",
-			wantSpan:     conformanceSpan(1, 13, 1, 13),
-			wantExpected: []lexer.TokenKind{lexer.TokenTo},
-			wantActual:   lexer.TokenEOF,
+			"missing to at EOF", "change value",
+			"expected 'to' after variable name to assign a new variable value",
+			source.ByteSpan{Start: 12, End: 12},
+			[]lexer.TokenKind{lexer.TokenTo}, lexer.TokenEOF,
 		},
 		{
-			name:         "missing initializer on second line",
-			source:       "say 1\nlet value be",
-			wantMessage:  "expected an expression",
-			wantSpan:     conformanceSpan(2, 13, 2, 13),
-			wantExpected: expressionStarters,
-			wantActual:   lexer.TokenEOF,
+			"missing initializer on second line", "say 1\nlet value be",
+			"expected an expression",
+			source.ByteSpan{Start: 18, End: 18},
+			expressionStarters, lexer.TokenEOF,
 		},
 		{
-			name:         "missing operand before newline",
-			source:       "say 1 +\nsay 2",
-			wantMessage:  "expected an expression",
-			wantSpan:     conformanceSpan(1, 8, 2, 1),
-			wantExpected: expressionStarters,
-			wantActual:   lexer.TokenNewline,
+			"missing operand before newline", "say 1 +\nsay 2",
+			"expected an expression",
+			source.ByteSpan{Start: 7, End: 8},
+			expressionStarters, lexer.TokenNewline,
 		},
 		{
-			name:         "nested grouping error on third line",
-			source:       "say 1\nsay 2\nsay (3 * (4 + ))",
-			wantMessage:  "expected an expression",
-			wantSpan:     conformanceSpan(3, 15, 3, 16),
-			wantExpected: expressionStarters,
-			wantActual:   lexer.TokenRightParen,
+			"nested grouping error on third line",
+			"say 1\nsay 2\nsay (3 * (4 + ))",
+			"expected an expression",
+			source.ByteSpan{Start: 26, End: 27},
+			expressionStarters, lexer.TokenRightParen,
 		},
 		{
-			name:         "first of two syntax errors",
-			source:       "say 1 +\nlet be 2",
-			wantMessage:  "expected an expression",
-			wantSpan:     conformanceSpan(1, 8, 2, 1),
-			wantExpected: expressionStarters,
-			wantActual:   lexer.TokenNewline,
+			"first of two syntax errors", "say 1 +\nlet be 2",
+			"expected an expression",
+			source.ByteSpan{Start: 7, End: 8},
+			expressionStarters, lexer.TokenNewline,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			p := conformanceParser(t, tt.source)
-			program, diagnostic := p.parseProgram()
+			p := NewFlatParser(tt.source)
+			program, diag := p.parseFlatProgram()
 
-			if diagnostic == nil {
-				t.Fatal("expected a syntax diagnostic")
-			}
 			if program != nil {
-				t.Errorf("malformed program returned an AST: %+v", program)
+				t.Errorf("malformed source returned a program: %+v", program)
 			}
-			if diagnostic.Message != tt.wantMessage {
-				t.Errorf(
-					"message = %q, want %q",
-					diagnostic.Message, tt.wantMessage,
-				)
-			}
-			if diagnostic.Location != tt.wantSpan {
-				t.Errorf(
-					"location = %+v, want %+v",
-					diagnostic.Location, tt.wantSpan,
-				)
-			}
-			if !reflect.DeepEqual(diagnostic.Expected, tt.wantExpected) {
-				t.Errorf(
-					"expected tokens = %v, want %v",
-					diagnostic.Expected, tt.wantExpected,
-				)
-			}
-			if diagnostic.Actual == nil {
-				t.Fatal("missing actual token metadata")
-			}
-			if *diagnostic.Actual != tt.wantActual {
-				t.Errorf(
-					"actual token = %v, want %v",
-					*diagnostic.Actual, tt.wantActual,
-				)
-			}
+			assertConformanceDiagnostic(
+				t, diag, tt.message, tt.span, tt.expected, tt.actual,
+			)
 		})
 	}
 }
 
 func TestProgramConformanceLexicalBoundaries(t *testing.T) {
 	tests := []struct {
-		name        string
-		source      string
-		wantMessage string
-		wantLine    int
-		wantColumn  int
+		name    string
+		source  string
+		code    diagnostic.Code
+		message string
+		span    source.ByteSpan
 	}{
 		{
-			name:        "unclosed parenthesis",
-			source:      "say (1 + 2",
-			wantMessage: "unclosed opening parenthesis",
-			wantLine:    1,
-			wantColumn:  5,
+			"unclosed parenthesis", "say (1 + 2",
+			lexer.CodeUnclosedOpeningParen,
+			"unclosed opening parenthesis",
+			source.ByteSpan{Start: 4, End: 5},
 		},
 		{
-			name:        "unmatched closing parenthesis",
-			source:      "say 1)",
-			wantMessage: "unmatched closing parenthesis",
-			wantLine:    1,
-			wantColumn:  6,
+			"unmatched closing parenthesis", "say 1)",
+			lexer.CodeUnmatchedClosingParen,
+			"unmatched closing parenthesis",
+			source.ByteSpan{Start: 5, End: 6},
 		},
 		{
-			name:        "invalid integer suffix",
-			source:      "say 123abc",
-			wantMessage: "invalid integer literal",
-			wantLine:    1,
-			wantColumn:  5,
+			"invalid integer suffix", "say 123abc",
+			lexer.CodeInvalidInteger,
+			"invalid integer literal",
+			source.ByteSpan{Start: 4, End: 7},
 		},
 		{
-			name:        "leading zero",
-			source:      "say 007",
-			wantMessage: "integer literal cannot have leading zeros",
-			wantLine:    1,
-			wantColumn:  5,
+			"leading zero", "say 007",
+			lexer.CodeLeadingZero,
+			"integer literal cannot have leading zeros",
+			source.ByteSpan{Start: 4, End: 7},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			scanner := lexer.New(tt.source)
-			var lexicalError *lexer.LexError
+			scanner := lexer.New(tt.source, 0)
+			var diag *diagnostic.Diagnostic
 
 			for {
-				token, err := scanner.NextToken()
-				if err != nil {
-					var ok bool
-					lexicalError, ok = err.(*lexer.LexError)
-					if !ok {
-						t.Fatalf("unexpected error type: %T", err)
-					}
+				token, nextDiag := scanner.NextToken()
+				if nextDiag != nil {
+					diag = nextDiag
 					break
 				}
 				if token.Kind == lexer.TokenEOF {
@@ -461,25 +279,72 @@ func TestProgramConformanceLexicalBoundaries(t *testing.T) {
 				}
 			}
 
-			if lexicalError == nil {
-				t.Fatal("expected lexical error")
+			if diag == nil {
+				t.Fatal("expected lexical diagnostic")
 			}
-			if lexicalError.Message != tt.wantMessage {
-				t.Errorf(
-					"message = %q, want %q",
-					lexicalError.Message, tt.wantMessage,
-				)
+			if diag.Code != tt.code {
+				t.Errorf("code = %q, want %q", diag.Code, tt.code)
 			}
-			if lexicalError.Position.Line != tt.wantLine ||
-				lexicalError.Position.Column != tt.wantColumn {
-				t.Errorf(
-					"position = %d:%d, want %d:%d",
-					lexicalError.Position.Line,
-					lexicalError.Position.Column,
-					tt.wantLine,
-					tt.wantColumn,
-				)
+			if diag.Severity != diagnostic.SeverityError {
+				t.Errorf("severity = %v, want error", diag.Severity)
+			}
+			if diag.Message != tt.message {
+				t.Errorf("message = %q, want %q", diag.Message, tt.message)
+			}
+			if diag.Primary.File != 0 {
+				t.Errorf("file = %d, want 0", diag.Primary.File)
+			}
+			if diag.Primary.Span != tt.span {
+				t.Errorf("span = %+v, want %+v",
+					diag.Primary.Span, tt.span)
 			}
 		})
+	}
+}
+
+func assertConformanceDiagnostic(
+	t *testing.T,
+	diag *diagnostic.Diagnostic,
+	message string,
+	span source.ByteSpan,
+	expected []lexer.TokenKind,
+	actual lexer.TokenKind,
+) {
+	t.Helper()
+
+	if diag == nil {
+		t.Fatal("expected syntax diagnostic")
+	}
+	if diag.Code != CodeUnexpectedToken {
+		t.Errorf("code = %q, want %q", diag.Code, CodeUnexpectedToken)
+	}
+	if diag.Severity != diagnostic.SeverityError {
+		t.Errorf("severity = %v, want error", diag.Severity)
+	}
+	if diag.Message != message {
+		t.Errorf("message = %q, want %q", diag.Message, message)
+	}
+	if diag.Primary.File != 0 {
+		t.Errorf("file = %d, want 0", diag.Primary.File)
+	}
+	if diag.Primary.Span != span {
+		t.Errorf("span = %+v, want %+v", diag.Primary.Span, span)
+	}
+	if diag.TokenExpectation == nil {
+		t.Fatal("missing token expectation")
+	}
+
+	wantExpected := make([]string, len(expected))
+	for i, kind := range expected {
+		wantExpected[i] = kind.String()
+	}
+
+	if !slices.Equal(diag.TokenExpectation.Expected, wantExpected) {
+		t.Errorf("expected = %v, want %v",
+			diag.TokenExpectation.Expected, wantExpected)
+	}
+	if diag.TokenExpectation.Actual != actual.String() {
+		t.Errorf("actual = %q, want %q",
+			diag.TokenExpectation.Actual, actual.String())
 	}
 }

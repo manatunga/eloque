@@ -1,0 +1,46 @@
+goos: linux
+goarch: amd64
+pkg: cmd/compile/internal/syntax
+cpu: Intel(R) Core(TM) Ultra 7 155H
+BenchmarkControlledGoCompilerFrontend/N10-22         	   93273	     12192 ns/op	  36.91 MB/s	   19880 B/op	     197 allocs/op
+BenchmarkControlledGoCompilerFrontend/N10-22         	   96242	     12194 ns/op	  36.90 MB/s	   19880 B/op	     197 allocs/op
+BenchmarkControlledGoCompilerFrontend/N10-22         	  103723	     11969 ns/op	  37.60 MB/s	   19880 B/op	     197 allocs/op
+BenchmarkControlledGoCompilerFrontend/N10-22         	  101176	     11994 ns/op	  37.52 MB/s	   19880 B/op	     197 allocs/op
+BenchmarkControlledGoCompilerFrontend/N10-22         	   97219	     12317 ns/op	  36.54 MB/s	   19880 B/op	     197 allocs/op
+BenchmarkControlledGoCompilerFrontend/N10-22         	  101812	     11004 ns/op	  40.89 MB/s	   19880 B/op	     197 allocs/op
+BenchmarkControlledGoCompilerFrontend/N10-22         	  113312	     11680 ns/op	  38.53 MB/s	   19880 B/op	     197 allocs/op
+BenchmarkControlledGoCompilerFrontend/N10-22         	   97545	     12242 ns/op	  36.76 MB/s	   19880 B/op	     197 allocs/op
+BenchmarkControlledGoCompilerFrontend/N10-22         	   96018	     12169 ns/op	  36.98 MB/s	   19880 B/op	     197 allocs/op
+BenchmarkControlledGoCompilerFrontend/N10-22         	   98805	     12447 ns/op	  36.15 MB/s	   19880 B/op	     197 allocs/op
+BenchmarkControlledGoCompilerFrontend/N100-22        	   10000	    112397 ns/op	  39.24 MB/s	  153452 B/op	    2000 allocs/op
+BenchmarkControlledGoCompilerFrontend/N100-22        	   10000	    112944 ns/op	  39.05 MB/s	  153451 B/op	    2000 allocs/op
+BenchmarkControlledGoCompilerFrontend/N100-22        	   10000	    106870 ns/op	  41.27 MB/s	  153451 B/op	    2000 allocs/op
+BenchmarkControlledGoCompilerFrontend/N100-22        	   10000	    114680 ns/op	  38.45 MB/s	  153451 B/op	    2000 allocs/op
+BenchmarkControlledGoCompilerFrontend/N100-22        	   10000	    114236 ns/op	  38.60 MB/s	  153451 B/op	    2000 allocs/op
+BenchmarkControlledGoCompilerFrontend/N100-22        	   10000	    118528 ns/op	  37.21 MB/s	  153451 B/op	    2000 allocs/op
+BenchmarkControlledGoCompilerFrontend/N100-22        	   10000	    114700 ns/op	  38.45 MB/s	  153451 B/op	    2000 allocs/op
+BenchmarkControlledGoCompilerFrontend/N100-22        	   10000	    113607 ns/op	  38.82 MB/s	  153451 B/op	    2000 allocs/op
+BenchmarkControlledGoCompilerFrontend/N100-22        	   10000	    112159 ns/op	  39.32 MB/s	  153452 B/op	    2000 allocs/op
+BenchmarkControlledGoCompilerFrontend/N100-22        	    9920	    105458 ns/op	  41.82 MB/s	  153452 B/op	    2000 allocs/op
+BenchmarkControlledGoCompilerFrontend/N1000-22       	     963	   1087983 ns/op	  42.93 MB/s	 1480190 B/op	   20003 allocs/op
+BenchmarkControlledGoCompilerFrontend/N1000-22       	    1045	   1139308 ns/op	  41.00 MB/s	 1480197 B/op	   20003 allocs/op
+BenchmarkControlledGoCompilerFrontend/N1000-22       	    1075	   1220012 ns/op	  38.29 MB/s	 1480191 B/op	   20003 allocs/op
+BenchmarkControlledGoCompilerFrontend/N1000-22       	     931	   1235454 ns/op	  37.81 MB/s	 1480191 B/op	   20003 allocs/op
+BenchmarkControlledGoCompilerFrontend/N1000-22       	     980	   1115761 ns/op	  41.86 MB/s	 1480190 B/op	   20003 allocs/op
+BenchmarkControlledGoCompilerFrontend/N1000-22       	    1108	   1170520 ns/op	  39.91 MB/s	 1480189 B/op	   20003 allocs/op
+BenchmarkControlledGoCompilerFrontend/N1000-22       	     961	   1195195 ns/op	  39.08 MB/s	 1480190 B/op	   20003 allocs/op
+BenchmarkControlledGoCompilerFrontend/N1000-22       	     940	   1255400 ns/op	  37.21 MB/s	 1480195 B/op	   20003 allocs/op
+BenchmarkControlledGoCompilerFrontend/N1000-22       	     943	   1268803 ns/op	  36.81 MB/s	 1480190 B/op	   20003 allocs/op
+BenchmarkControlledGoCompilerFrontend/N1000-22       	     934	   1284062 ns/op	  36.38 MB/s	 1480189 B/op	   20003 allocs/op
+BenchmarkControlledGoCompilerFrontend/N10000-22      	     103	  11539954 ns/op	  43.04 MB/s	15119288 B/op	  200010 allocs/op
+BenchmarkControlledGoCompilerFrontend/N10000-22      	     104	  11426933 ns/op	  43.47 MB/s	15118977 B/op	  200010 allocs/op
+BenchmarkControlledGoCompilerFrontend/N10000-22      	     104	  11377111 ns/op	  43.66 MB/s	15118980 B/op	  200010 allocs/op
+BenchmarkControlledGoCompilerFrontend/N10000-22      	     100	  11168103 ns/op	  44.48 MB/s	15118979 B/op	  200010 allocs/op
+BenchmarkControlledGoCompilerFrontend/N10000-22      	     100	  11219412 ns/op	  44.27 MB/s	15118982 B/op	  200010 allocs/op
+BenchmarkControlledGoCompilerFrontend/N10000-22      	     100	  11217270 ns/op	  44.28 MB/s	15118981 B/op	  200010 allocs/op
+BenchmarkControlledGoCompilerFrontend/N10000-22      	      91	  11302415 ns/op	  43.95 MB/s	15118975 B/op	  200010 allocs/op
+BenchmarkControlledGoCompilerFrontend/N10000-22      	     100	  11160067 ns/op	  44.51 MB/s	15118982 B/op	  200010 allocs/op
+BenchmarkControlledGoCompilerFrontend/N10000-22      	     100	  11040120 ns/op	  44.99 MB/s	15118982 B/op	  200010 allocs/op
+BenchmarkControlledGoCompilerFrontend/N10000-22      	     109	  10959101 ns/op	  45.32 MB/s	15118985 B/op	  200010 allocs/op
+PASS
+ok  	cmd/compile/internal/syntax	46.622s

@@ -1,0 +1,12 @@
+{
+  "source_files": {
+    "eloque": "benchmarks/results/experimental/h2-post-recovery_eloque-comparison_20261022.txt",
+    "go_parser": "benchmarks/results/experimental/h2-post-recovery_go-parser-controlled_20261023.txt",
+    "go_compiler": "benchmarks/results/experimental/h2-post-recovery_go-compiler-controlled_20261023.txt",
+    "cpython": "benchmarks/results/experimental/h2-post-recovery_cpython-controlled_20261023.txt"
+  },
+  "go_samples": 160,
+  "cpython_summary_rows": 4,
+  "go_version": "go1.27.2",
+  "python_version": "3.15.0rc2"
+}

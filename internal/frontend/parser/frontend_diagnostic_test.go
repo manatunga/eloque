@@ -1,166 +1,88 @@
 package parser
 
 import (
-	"errors"
-	"reflect"
 	"testing"
 
+	"github.com/manatunga/eloque/internal/diagnostic"
 	"github.com/manatunga/eloque/internal/frontend/lexer"
+	"github.com/manatunga/eloque/internal/source"
 )
 
-type frontendDiagnosticCase struct {
-	name          string
-	source        string
-	wantErrorKind string
-	wantLine      int
-	wantColumn    int
-}
-
-func classifyFrontendError(err error) string {
-	if err == nil {
-		return "none"
-	}
-
-	var lexErr *lexer.LexError
-	if errors.As(err, &lexErr) {
-		return "lexical"
-	}
-
-	return "syntax"
-}
-
 func TestFrontendDiagnostics(t *testing.T) {
-	cases := []frontendDiagnosticCase{
+	tests := []struct {
+		name   string
+		source string
+		code   diagnostic.Code
+		span   source.ByteSpan
+	}{
 		{
-			name:          "unexpected character",
-			source:        "say @\n",
-			wantErrorKind: "lexical",
-			wantLine:      1,
-			wantColumn:    5,
+			"unexpected character", "say @\n",
+			lexer.CodeUnexpectedCharacter,
+			source.ByteSpan{Start: 4, End: 5},
 		},
 		{
-			name:          "invalid integer",
-			source:        "say 12abc\n",
-			wantErrorKind: "lexical",
-			wantLine:      1,
-			wantColumn:    5,
+			"invalid integer", "say 12abc\n",
+			lexer.CodeInvalidInteger,
+			source.ByteSpan{Start: 4, End: 6},
 		},
 		{
-			name:          "leading zero",
-			source:        "say 012\n",
-			wantErrorKind: "lexical",
-			wantLine:      1,
-			wantColumn:    5,
+			"leading zero", "say 012\n",
+			lexer.CodeLeadingZero,
+			source.ByteSpan{Start: 4, End: 7},
 		},
 		{
-			name:          "unterminated string",
-			source:        "say \"hello\n",
-			wantErrorKind: "lexical",
-			wantLine:      1,
-			wantColumn:    5,
+			"unterminated string", "say \"hello\n",
+			lexer.CodeUnterminatedString,
+			source.ByteSpan{Start: 4, End: 10},
 		},
 		{
-			name:          "unmatched closing parenthesis",
-			source:        "say 1)\n",
-			wantErrorKind: "lexical",
-			wantLine:      1,
-			wantColumn:    6,
+			"unmatched closing parenthesis", "say 1)\n",
+			lexer.CodeUnmatchedClosingParen,
+			source.ByteSpan{Start: 5, End: 6},
 		},
 		{
-			name:          "missing expression",
-			source:        "say\n",
-			wantErrorKind: "syntax",
+			"missing expression", "say\n",
+			CodeUnexpectedToken,
+			source.ByteSpan{Start: 3, End: 4},
 		},
 		{
-			name:          "missing declaration initializer",
-			source:        "let value be\n",
-			wantErrorKind: "syntax",
+			"missing declaration initializer", "let value be\n",
+			CodeUnexpectedToken,
+			source.ByteSpan{Start: 12, End: 13},
 		},
 		{
-			name:          "syntax before lexical error",
-			source:        "say\nsay @\n",
-			wantErrorKind: "syntax",
+			"syntax before lexical error", "say\nsay @\n",
+			CodeUnexpectedToken,
+			source.ByteSpan{Start: 3, End: 4},
 		},
 		{
-			name:          "lexical before syntax error",
-			source:        "say @\nsay\n",
-			wantErrorKind: "lexical",
-			wantLine:      1,
-			wantColumn:    5,
+			"lexical before syntax error", "say @\nsay\n",
+			lexer.CodeUnexpectedCharacter,
+			source.ByteSpan{Start: 4, End: 5},
 		},
 	}
 
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			_, err := Parse(tc.source)
-			if err == nil {
-				t.Fatal("expected an error")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			program, diag := Parse(tt.source)
+			if diag == nil {
+				t.Fatal("expected diagnostic")
 			}
-
-			kind := classifyFrontendError(err)
-			if kind != tc.wantErrorKind {
-				t.Fatalf(
-					"error kind = %s, want %s: %v",
-					kind, tc.wantErrorKind, err,
-				)
+			if program != nil {
+				t.Errorf("program = %+v, want nil", program)
 			}
-
-			if kind == "lexical" {
-				var lexErr *lexer.LexError
-				if !errors.As(err, &lexErr) {
-					t.Fatal("expected *lexer.LexError")
-				}
-
-				if lexErr.Position.Line != tc.wantLine ||
-					lexErr.Position.Column != tc.wantColumn {
-					t.Errorf(
-						"position = %d:%d, want %d:%d",
-						lexErr.Position.Line,
-						lexErr.Position.Column,
-						tc.wantLine,
-						tc.wantColumn,
-					)
-				}
+			if diag.Code != tt.code {
+				t.Errorf("code = %q, want %q", diag.Code, tt.code)
 			}
-		})
-	}
-}
-
-func TestFrontendDiagnosticParity(t *testing.T) {
-	sources := []string{
-		"say @\n",
-		"say 12abc\n",
-		"say 012\n",
-		"say \"hello\n",
-		"say 1)\n",
-		"say\n",
-		"let value be\n",
-		"say @\nsay\n",
-	}
-
-	for _, source := range sources {
-		t.Run(source, func(t *testing.T) {
-			_, legacyErr := parseLegacy(source)
-			_, flatErr := Parse(source)
-
-			if classifyFrontendError(legacyErr) !=
-				classifyFrontendError(flatErr) {
-				t.Fatalf(
-					"error category mismatch: buffered=%v streaming=%v",
-					legacyErr, flatErr,
-				)
+			if diag.Severity != diagnostic.SeverityError {
+				t.Errorf("severity = %v, want error", diag.Severity)
 			}
-
-			var bufferedLex, streamingLex *lexer.LexError
-
-			if errors.As(legacyErr, &bufferedLex) &&
-				errors.As(flatErr, &streamingLex) {
-				if !reflect.DeepEqual(bufferedLex, streamingLex) {
-					t.Errorf(
-						"lexical diagnostics differ: buffered=%+v streaming=%+v",
-						bufferedLex, streamingLex,
-					)
-				}
+			if diag.Primary.File != 0 {
+				t.Errorf("file ID = %d, want 0", diag.Primary.File)
+			}
+			if diag.Primary.Span != tt.span {
+				t.Errorf("span = %+v, want %+v",
+					diag.Primary.Span, tt.span)
 			}
 		})
 	}

@@ -1,8 +1,11 @@
 package parser
 
 import (
+	"slices"
+	"strings"
 	"testing"
 
+	diagnosticpkg "github.com/manatunga/eloque/internal/diagnostic"
 	"github.com/manatunga/eloque/internal/frontend/ast"
 	"github.com/manatunga/eloque/internal/frontend/lexer"
 )
@@ -265,19 +268,45 @@ func TestFlatExpressionStringDecoding(t *testing.T) {
 
 func TestFlatExpressionInvalidSyntax(t *testing.T) {
 	tests := []struct {
-		name        string
-		source      string
-		wantMessage string
+		name         string
+		source       string
+		wantMessage  string
+		wantStart    uint32
+		wantEnd      uint32
+		wantExpected []string
+		wantActual   string
 	}{
 		{
 			name:        "missing right operand",
 			source:      "2 +",
 			wantMessage: "expected an expression",
+			wantStart:   3,
+			wantEnd:     3,
+			wantExpected: []string{
+				lexer.TokenInt.String(),
+				lexer.TokenString.String(),
+				lexer.TokenIdent.String(),
+				lexer.TokenLeftParen.String(),
+				lexer.TokenPlus.String(),
+				lexer.TokenMinus.String(),
+			},
+			wantActual: lexer.TokenEOF.String(),
 		},
 		{
 			name:        "empty grouping",
 			source:      "()",
 			wantMessage: "expected an expression",
+			wantStart:   1,
+			wantEnd:     2,
+			wantExpected: []string{
+				lexer.TokenInt.String(),
+				lexer.TokenString.String(),
+				lexer.TokenIdent.String(),
+				lexer.TokenLeftParen.String(),
+				lexer.TokenPlus.String(),
+				lexer.TokenMinus.String(),
+			},
+			wantActual: lexer.TokenRightParen.String(),
 		},
 	}
 
@@ -297,6 +326,344 @@ func TestFlatExpressionInvalidSyntax(t *testing.T) {
 				t.Errorf("message = %q, want %q",
 					diagnostic.Message, tt.wantMessage)
 			}
+			if diagnostic.Code != CodeUnexpectedToken {
+				t.Errorf("code = %q, want %q",
+					diagnostic.Code, CodeUnexpectedToken)
+			}
+
+			if diagnostic.Severity != diagnosticpkg.SeverityError {
+				t.Errorf("severity = %v, want error",
+					diagnostic.Severity)
+			}
+
+			if diagnostic.Primary.Span.Start != tt.wantStart ||
+				diagnostic.Primary.Span.End != tt.wantEnd {
+				t.Errorf("span = %+v, want [%d,%d)",
+					diagnostic.Primary.Span, tt.wantStart, tt.wantEnd)
+			}
+
+			if !slices.Equal(
+				diagnostic.TokenExpectation.Expected,
+				tt.wantExpected,
+			) {
+				t.Errorf(
+					"expected tokens = %v, want %v",
+					diagnostic.TokenExpectation.Expected,
+					tt.wantExpected,
+				)
+			}
+
+			if diagnostic.TokenExpectation.Actual != tt.wantActual {
+				t.Errorf("actual token = %q, want %q",
+					diagnostic.TokenExpectation.Actual, tt.wantActual)
+			}
+
+			if len(diagnostic.TokenExpectation.Expected) == 0 {
+				t.Error("expected token set is empty")
+			}
 		})
+	}
+}
+
+func TestFlatExpressionBoundaries(t *testing.T) {
+	tests := []struct {
+		name          string
+		source        string
+		wantKind      ast.NodeKind
+		wantRemaining lexer.TokenKind
+	}{
+		{
+			name:          "newline boundary",
+			source:        "42\n",
+			wantKind:      ast.NodeIntegerLiteral,
+			wantRemaining: lexer.TokenNewline,
+		},
+		{
+			name:          "EOF boundary",
+			source:        "42",
+			wantKind:      ast.NodeIntegerLiteral,
+			wantRemaining: lexer.TokenEOF,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p := &FlatParser{
+				Parser: newStreamingParser(tt.source),
+				arena:  ast.NewArena(tt.source),
+			}
+
+			result, diag := p.parseFlatExpression(0)
+			if diag != nil {
+				t.Fatalf("unexpected diagnostic: %+v", diag)
+			}
+
+			node := p.arena.Get(result.id)
+			if node.Kind != tt.wantKind {
+				t.Errorf(
+					"root kind = %v, want %v",
+					node.Kind,
+					tt.wantKind,
+				)
+			}
+
+			if got := p.peek().Kind; got != tt.wantRemaining {
+				t.Errorf(
+					"remaining token = %v, want %v",
+					got,
+					tt.wantRemaining,
+				)
+			}
+		})
+	}
+}
+
+func TestFlatExpressionMinimumBindingPower(t *testing.T) {
+	tests := []struct {
+		name          string
+		source        string
+		minPower      int
+		wantKind      ast.NodeKind
+		wantRemaining lexer.TokenKind
+	}{
+		{
+			name:          "addition below minimum",
+			source:        "2 + 3",
+			minPower:      bindingPowerAdditive + 1,
+			wantKind:      ast.NodeIntegerLiteral,
+			wantRemaining: lexer.TokenPlus,
+		},
+		{
+			name:          "multiplication below minimum",
+			source:        "2 * 3",
+			minPower:      bindingPowerMultiplicative + 1,
+			wantKind:      ast.NodeIntegerLiteral,
+			wantRemaining: lexer.TokenStar,
+		},
+		{
+			name:          "exponentiation below minimum",
+			source:        "2 ** 3",
+			minPower:      bindingPowerExponentiation + 1,
+			wantKind:      ast.NodeIntegerLiteral,
+			wantRemaining: lexer.TokenPower,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p := &FlatParser{
+				Parser: newStreamingParser(tt.source),
+				arena:  ast.NewArena(tt.source),
+			}
+
+			result, diag := p.parseFlatExpression(tt.minPower)
+			if diag != nil {
+				t.Fatalf("unexpected diagnostic: %+v", diag)
+			}
+
+			node := p.arena.Get(result.id)
+			if node.Kind != tt.wantKind {
+				t.Errorf("root kind = %v, want %v", node.Kind, tt.wantKind)
+			}
+
+			if got := p.peek().Kind; got != tt.wantRemaining {
+				t.Errorf("remaining token = %v, want %v", got, tt.wantRemaining)
+			}
+		})
+	}
+}
+
+func TestFlatExpressionNestedUnary(t *testing.T) {
+	sourceText := "--42"
+
+	p := &FlatParser{
+		Parser: newStreamingParser(sourceText),
+		arena:  ast.NewArena(sourceText),
+	}
+
+	result, diag := p.parseFlatExpression(0)
+	if diag != nil {
+		t.Fatalf("unexpected diagnostic: %+v", diag)
+	}
+
+	outer := p.arena.Get(result.id)
+	if outer.Kind != ast.NodeUnaryExpression {
+		t.Fatalf("outer kind = %v, want unary", outer.Kind)
+	}
+
+	outerPayload := p.arena.UnaryPayload(outer.Data)
+	if outerPayload.Operator != lexer.TokenMinus {
+		t.Errorf("outer operator = %v, want minus", outerPayload.Operator)
+	}
+
+	inner := p.arena.Get(outerPayload.Operand)
+	if inner.Kind != ast.NodeUnaryExpression {
+		t.Fatalf("inner kind = %v, want unary", inner.Kind)
+	}
+
+	innerPayload := p.arena.UnaryPayload(inner.Data)
+	if innerPayload.Operator != lexer.TokenMinus {
+		t.Errorf("inner operator = %v, want minus", innerPayload.Operator)
+	}
+
+	operand := p.arena.Get(innerPayload.Operand)
+	if operand.Kind != ast.NodeIntegerLiteral {
+		t.Errorf("operand kind = %v, want integer", operand.Kind)
+	}
+
+	if got := p.peek().Kind; got != lexer.TokenEOF {
+		t.Errorf("remaining token = %v, want EOF", got)
+	}
+}
+
+func TestFlatExpressionStringEscapeCases(t *testing.T) {
+	tests := []struct {
+		name   string
+		source string
+		want   string
+	}{
+		{"empty string", `""`, ""},
+		{"single quoted", `'hello'`, "hello"},
+		{"newline", `"a\nb"`, "a\nb"},
+		{"tab", `"a\tb"`, "a\tb"},
+		{"carriage return", `"a\rb"`, "a\rb"},
+		{"backslash", `"a\\b"`, "a\\b"},
+		{"double quote", `"a\"b"`, "a\"b"},
+		{"single quote", `'a\'b'`, "a'b"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p := NewFlatParser(tt.source)
+
+			result, diag := p.parseFlatExpression(0)
+			if diag != nil {
+				t.Fatalf("unexpected diagnostic: %+v", diag)
+			}
+
+			node := p.arena.Get(result.id)
+			if node.Kind != ast.NodeStringLiteral {
+				t.Fatalf("node kind = %v, want string literal", node.Kind)
+			}
+
+			if got := p.arena.StringValue(result.id); got != tt.want {
+				t.Errorf("decoded value = %q, want %q", got, tt.want)
+			}
+
+			if got := p.peek().Kind; got != lexer.TokenEOF {
+				t.Errorf("remaining token = %v, want EOF", got)
+			}
+		})
+	}
+}
+
+func TestFlatExpressionFloorDivisionModuloAssociativity(t *testing.T) {
+	p := NewFlatParser("20 // 3 % 2")
+
+	result, diag := p.parseFlatExpression(0)
+	if diag != nil {
+		t.Fatalf("unexpected diagnostic: %+v", diag)
+	}
+
+	root := p.arena.Get(result.id)
+	if root.Kind != ast.NodeBinaryExpression {
+		t.Fatalf("root kind = %v, want binary", root.Kind)
+	}
+
+	modulo := p.arena.BinaryPayload(root.Data)
+	if modulo.Operator != lexer.TokenPercent {
+		t.Errorf("root operator = %v, want %%", modulo.Operator)
+	}
+
+	left := p.arena.Get(modulo.Left)
+	if left.Kind != ast.NodeBinaryExpression {
+		t.Fatalf("left kind = %v, want binary", left.Kind)
+	}
+
+	division := p.arena.BinaryPayload(left.Data)
+	if division.Operator != lexer.TokenFloorDiv {
+		t.Errorf("left operator = %v, want //", division.Operator)
+	}
+}
+
+func TestFlatExpressionLongExponentiationChain(t *testing.T) {
+	p := NewFlatParser("2 ** 3 ** 4 ** 5 ** 6")
+
+	result, diag := p.parseFlatExpression(0)
+	if diag != nil {
+		t.Fatalf("unexpected diagnostic: %+v", diag)
+	}
+
+	current := result.id
+
+	for i := 0; i < 4; i++ {
+		node := p.arena.Get(current)
+		if node.Kind != ast.NodeBinaryExpression {
+			t.Fatalf("chain level %d: kind = %v, want binary", i, node.Kind)
+		}
+
+		payload := p.arena.BinaryPayload(node.Data)
+		if payload.Operator != lexer.TokenPower {
+			t.Fatalf("chain level %d: operator = %v, want power", i, payload.Operator)
+		}
+
+		left := p.arena.Get(payload.Left)
+		if left.Kind != ast.NodeIntegerLiteral {
+			t.Errorf("chain level %d: left kind = %v, want integer", i, left.Kind)
+		}
+
+		current = payload.Right
+	}
+
+	last := p.arena.Get(current)
+	if last.Kind != ast.NodeIntegerLiteral {
+		t.Errorf("final operand kind = %v, want integer", last.Kind)
+	}
+
+	if got := p.peek().Kind; got != lexer.TokenEOF {
+		t.Errorf("remaining token = %v, want EOF", got)
+	}
+}
+
+func TestFlatExpressionDeeplyNestedParentheses(t *testing.T) {
+	const depth = 100
+
+	sourceText := strings.Repeat("(", depth) +
+		"42" +
+		strings.Repeat(")", depth)
+
+	p := NewFlatParser(sourceText)
+
+	result, diag := p.parseFlatExpression(0)
+	if diag != nil {
+		t.Fatalf("unexpected diagnostic: %+v", diag)
+	}
+
+	node := p.arena.Get(result.id)
+	if node.Kind != ast.NodeIntegerLiteral {
+		t.Fatalf("node kind = %v, want integer literal", node.Kind)
+	}
+
+	if node.Span.Start != uint32(depth) ||
+		node.Span.End != uint32(depth+2) {
+		t.Errorf(
+			"literal span = %+v, want [%d,%d)",
+			node.Span,
+			depth,
+			depth+2,
+		)
+	}
+
+	if result.extent.Start != 0 ||
+		result.extent.End != uint32(len(sourceText)) {
+		t.Errorf(
+			"expression extent = %+v, want [0,%d)",
+			result.extent,
+			len(sourceText),
+		)
+	}
+
+	if got := p.peek().Kind; got != lexer.TokenEOF {
+		t.Errorf("remaining token = %v, want EOF", got)
 	}
 }

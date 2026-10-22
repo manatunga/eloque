@@ -1,6 +1,6 @@
 # Eloque Roadmap
 
-**Status:** Active implementation roadmap — M0 and M1 completed; post-M1 H2 frontend optimization and package reorganization completed. M2 (First execution) is next. Milestones and versions are planning aids, not release commitments. Eloque, `.elq`, and the CLI name remain provisional.
+**Status:** Active implementation roadmap — M0 and M1 completed; post-M1 H2 frontend optimization, package reorganization, and pre-M2 structured diagnostic recovery implemented. M2 (First execution) is next. Milestones and versions are planning aids, not release commitments.
 
 ## Delivery principles
 
@@ -348,9 +348,13 @@ Once there is a working VM:
 
 ## Pre-M2 prerequisite: structured diagnostics and frontend recovery
 
-**Status:** Approved; not yet implemented.
+**Status:** Implemented; final branch verification and integration pending.
 
-Before implementing the M2 name resolver, Eloque will migrate its existing H2 frontend from first-error termination to controlled, structured multi-error reporting.
+The H2 frontend now supports structured diagnostic collection and recovery-capable parsing through `ParseRecovering(sourceText, ParseOptions)`, while retaining the original fail-fast `Parse(sourceText)` API.
+
+The implementation includes lexical recovery, parser synchronization, statement-level AST preservation, configurable error budgets, expression-depth protection, and dedicated regression, robustness, stress, and performance tests.
+
+Recovery-capable parsing returns a termination status and may retain a partial AST. It does not establish semantic validity or execution eligibility. Name resolution, mandatory static type checking, bytecode compilation, and VM execution remain M2 work.
 
 The work includes:
 
@@ -378,7 +382,7 @@ The M2 design is documented in `DESIGN_DECISIONS.md` and `ARCHITECTURE.md`.
 
 The detailed resolver acceptance matrix and deferred optimization triggers are preserved in `ARCHITECTURE.md` and `TECHNICAL_BACKLOG.md`.
 
-This roadmap addition does not mark the diagnostic migration or any M2 execution stage as implemented.
+The diagnostic recovery implementation is complete pending final integration checks. No M2 name resolution, static checking, bytecode compilation, or execution stage is marked implemented.
 
 ## Versioning and compatibility
 
@@ -405,7 +409,10 @@ Eloque intends to use Semantic Versioning as a guideline:
 - [x] Complete H2 arena-backed flat AST and streaming parser optimization.
 - [x] Validate H2 against the legacy M1 frontend using differential tests and controlled benchmarks.
 - [x] Reorganize the frontend under `internal/frontend/`.
-- [ ] Synchronize documentation with the completed H2 implementation.
+- [x] Synchronize documentation with the completed H2 implementation.
+- [x] Implement structured diagnostics and recovery-capable frontend parsing.
+- [x] Establish post-recovery experimental frontend benchmark evidence.
+- [x] Complete final recovery-branch verification and merge.
 - [ ] Review the M2 runtime value representation and compiler-stage interfaces.
 - [ ] Implement name resolution and mandatory basic static type checking.
 - [ ] Implement bytecode compilation and the initial stack-based VM.

@@ -3,11 +3,23 @@
 **Status:** Active design decision register, updated October 2026.
 **Normative language specification:** [LANGUAGE_SPEC.md](LANGUAGE_SPEC.md).
 
-This register records accepted design choices, provisional directions, deferred work, and selected implementation decisions. **Decided** means agreed, not necessarily implemented. **Provisional** requires further specification or validation. **Deferred** is deliberately postponed. **Implemented (M1)** identifies behavior or architecture established during Milestone 1. **Implemented (H2)** identifies the post-M1 frontend optimization and architectural migration. Neither status implies that Eloque programs can execute.
+This register records accepted design choices, provisional directions, deferred work, and selected implementation decisions. **Decided** means agreed, not necessarily implemented. **Provisional** requires further specification or validation. **Deferred** is deliberately postponed. **Implemented (M1)** identifies behavior or architecture established during Milestone 1. **Implemented (H2)** identifies the post-M1 frontend optimization and architectural migration. Neither status implies that Eloque programs can execute. **Implemented (post-H2)** identifies frontend functionality added after the H2 optimization, including structured diagnostic recovery. It does not imply that semantic analysis or execution is available.
 
 ## Current implementation baseline — M1 and H2
 
 Milestone 1 established Eloque's Go lexer, parser, AST construction, structured fail-fast lexical and syntax diagnostics, and canonical `Parse(sourceText)` entry point.
+
+### Post-H2 structured diagnostics and recovery
+
+The production frontend additionally supports `ParseRecovering(sourceText, ParseOptions)`, which returns a `ParseResult` containing a potentially partial arena-backed AST, collected diagnostics, and a termination status.
+
+The possible statuses are `ParseComplete`, `ParseRecovered`, and `ParseAborted`. Recovery is bounded by a configurable error budget: zero selects the default of 20 errors, positive values specify a limit, and negative values disable the limit.
+
+The recovery architecture preserves successfully completed statements where possible, while avoiding retention of incomplete AST construction. The frontend also guards against excessive expression nesting.
+
+The original `Parse(sourceText)` API remains available for fail-fast parsing. Recovery-capable parsing is intended for diagnostics and tooling; a partial AST is not evidence of semantic validity or executability.
+
+These capabilities are implemented frontend behavior, not changes to the language's normative grammar.
 
 The supported syntax subset includes literals, identifiers, arithmetic expressions, and `let`, `change`, and `say` statements.
 

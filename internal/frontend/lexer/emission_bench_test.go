@@ -22,7 +22,7 @@ var (
 func BenchmarkTokenEmission(b *testing.B) {
 	source := "example_identifier"
 
-	l := New(source)
+	l := New(source, 0)
 	l.start = 0
 	l.current = len(source)
 	l.startPosition = Position{Line: 1, Column: 1}

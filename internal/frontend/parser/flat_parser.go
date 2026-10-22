@@ -19,7 +19,8 @@ import (
 // strings.
 type FlatParser struct {
 	*Parser
-	arena *ast.Arena
+	arena           *ast.Arena
+	expressionDepth int
 }
 
 // flatExpressionResult represents the result of parsing an H2 expression.
@@ -50,6 +51,18 @@ type flatExpressionResult struct {
 func NewFlatParser(sourceText string) *FlatParser {
 	return &FlatParser{
 		Parser: newStreamingParser(sourceText),
+		arena:  ast.NewArena(sourceText),
+	}
+}
+
+// newRecoveringFlatParser constructs an arena-backed parser configured
+// to collect multiple diagnostics from malformed Eloque source.
+//
+// It shares the existing expression and statement parsing logic,
+// while enabling recovery-aware lexical scanning and synchronization.
+func newRecoveringFlatParser(sourceText string) *FlatParser {
+	return &FlatParser{
+		Parser: newRecoveringParser(sourceText),
 		arena:  ast.NewArena(sourceText),
 	}
 }

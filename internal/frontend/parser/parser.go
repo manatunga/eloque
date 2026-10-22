@@ -1,8 +1,7 @@
 package parser
 
 import (
-	"sort"
-
+	"github.com/manatunga/eloque/internal/diagnostic"
 	"github.com/manatunga/eloque/internal/frontend/lexer"
 	"github.com/manatunga/eloque/internal/source"
 )
@@ -22,27 +21,8 @@ import (
 // current identifies the next token to consume. Tokens must appear in
 // source order and end with a terminal EOF token.
 type Parser struct {
-	source       string
-	tokenSource  tokenSource
-	lineOffsets  []int
-	positionLine int
-}
-
-// buildLineOffsets returns the starting byte offset of every source line.
-//
-// The first entry is always zero, representing line 1. Each subsequent
-// entry identifies the byte immediately following a newline character.
-// The resulting offsets are sorted in ascending order.
-func buildLineOffsets(sourceText string) []int {
-	offsets := []int{0}
-
-	for i := 0; i < len(sourceText); i++ {
-		if sourceText[i] == '\n' {
-			offsets = append(offsets, i+1)
-		}
-	}
-
-	return offsets
+	source      string
+	tokenSource tokenSource
 }
 
 // New constructs a parser for the given source text and token sequence.
@@ -52,7 +32,6 @@ func New(sourceText string, tokens []lexer.Token) *Parser {
 	return &Parser{
 		source:      sourceText,
 		tokenSource: newBufferedTokenSource(tokens),
-		lineOffsets: buildLineOffsets(sourceText),
 	}
 }
 
@@ -62,59 +41,24 @@ func newStreamingParser(sourceText string) *Parser {
 	return &Parser{
 		source:      sourceText,
 		tokenSource: newStreamingTokenSource(sourceText),
-		lineOffsets: buildLineOffsets(sourceText),
 	}
 }
 
-// offsetPosition converts a source byte offset into a 1-based line and
-// column position.
+// newRecoveringParser constructs a parser configured for recoverable
+// lexical scanning and parser-directed synchronization.
 //
-// Forward lookups advance from the cached line index, avoiding repeated
-// binary searches during sequential parsing. Backward lookups use binary
-// search to recover the correct line.
-//
-// The cache is updated after every lookup. Columns are measured in bytes,
-// consistent with the lexer's current source-position representation.
-func (p *Parser) offsetPosition(offset uint32) source.Position {
-	byteOffset := int(offset)
-	lineIndex := p.positionLine
-
-	if byteOffset < p.lineOffsets[lineIndex] {
-		lineIndex = sort.Search(
-			len(p.lineOffsets),
-			func(i int) bool {
-				return p.lineOffsets[i] > byteOffset
-			},
-		) - 1
-	} else {
-		for lineIndex+1 < len(p.lineOffsets) &&
-			p.lineOffsets[lineIndex+1] <= byteOffset {
-			lineIndex++
-		}
-	}
-
-	p.positionLine = lineIndex
-
-	return source.Position{
-		Line:   lineIndex + 1,
-		Column: byteOffset - p.lineOffsets[lineIndex] + 1,
+// It preserves the normal parser's source-position tracking while
+// using a recovery-aware streaming token source.
+func newRecoveringParser(sourceText string) *Parser {
+	return &Parser{
+		source:      sourceText,
+		tokenSource: newRecoveringTokenSource(sourceText),
 	}
 }
 
 // lexeme returns the source substring represented by a token.
 func (p *Parser) lexeme(token lexer.Token) string {
 	return p.source[int(token.Start):int(token.End)]
-}
-
-// tokenSpan reconstructs a token's half-open source span.
-//
-// The token's start and end byte offsets are converted into 1-based
-// line and column positions using the parser's cached line lookup.
-func (p *Parser) tokenSpan(token lexer.Token) source.Span {
-	return source.Span{
-		Start: p.offsetPosition(token.Start),
-		End:   p.offsetPosition(token.End),
-	}
 }
 
 // peek returns the current token without consuming it.
@@ -148,25 +92,34 @@ func (p *Parser) match(kinds ...lexer.TokenKind) bool {
 	return false
 }
 
-// unexpectedToken constructs a positioned diagnostic for a token mismatch.
+// unexpectedToken constructs a structured diagnostic for a token mismatch.
 //
-// The diagnostic records the expected token kind, the actual token kind,
-// and the offending token's source span. It does not consume any tokens.
+// The diagnostic identifies the offending token by its half-open source
+// byte span and preserves the expected and actual token kinds as stable
+// string names for compiler tooling.
 //
-// Keeping diagnostic construction on the failure path avoids unnecessary
-// heap allocations during successful parsing.
+// It does not consume tokens. Diagnostic construction occurs only on
+// the failure path, avoiding allocations during successful parsing.
 func (p *Parser) unexpectedToken(
 	token lexer.Token,
 	expected lexer.TokenKind,
 	message string,
-) *Diagnostic {
-	actual := token.Kind
-
-	return &Diagnostic{
+) *diagnostic.Diagnostic {
+	return &diagnostic.Diagnostic{
+		Code:     CodeUnexpectedToken,
+		Severity: diagnostic.SeverityError,
 		Message:  message,
-		Location: p.tokenSpan(token),
-		Expected: []lexer.TokenKind{expected},
-		Actual:   &actual,
+		Primary: diagnostic.Location{
+			File: 0,
+			Span: source.ByteSpan{
+				Start: token.Start,
+				End:   token.End,
+			},
+		},
+		TokenExpectation: &diagnostic.TokenExpectation{
+			Expected: []string{expected.String()},
+			Actual:   token.Kind.String(),
+		},
 	}
 }
 
@@ -178,7 +131,7 @@ func (p *Parser) unexpectedToken(
 func (p *Parser) expect(
 	kind lexer.TokenKind,
 	message string,
-) (lexer.Token, *Diagnostic) {
+) (lexer.Token, *diagnostic.Diagnostic) {
 	token := p.peek()
 
 	if token.Kind == kind {

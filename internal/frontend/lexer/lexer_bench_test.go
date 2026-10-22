@@ -26,7 +26,7 @@ say 0
 	b.ResetTimer()
 
 	for b.Loop() {
-		l := New(source)
+		l := New(source, 0)
 
 		for {
 			token, err := l.NextToken()
@@ -58,7 +58,7 @@ say result
 	b.ResetTimer()
 
 	for b.Loop() {
-		l := New(source)
+		l := New(source, 0)
 
 		for {
 			token, err := l.NextToken()
@@ -103,7 +103,7 @@ say 0
 			b.ResetTimer()
 
 			for b.Loop() {
-				l := New(source)
+				l := New(source, 0)
 
 				for {
 					token, err := l.NextToken()

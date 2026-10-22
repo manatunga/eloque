@@ -1,10 +1,11 @@
 package parser
 
 import (
-	"errors"
 	"testing"
 
+	"github.com/manatunga/eloque/internal/diagnostic"
 	"github.com/manatunga/eloque/internal/frontend/lexer"
+	"github.com/manatunga/eloque/internal/source"
 )
 
 func TestStreamingTokenSource(t *testing.T) {
@@ -48,26 +49,43 @@ func TestStreamingTokenSource(t *testing.T) {
 		}
 	})
 
-	t.Run("lexical error is preserved", func(t *testing.T) {
+	t.Run("lexical diagnostic is preserved", func(t *testing.T) {
 		s := newStreamingTokenSource("say @")
 
 		s.advance()
 
-		var lexErr *lexer.LexError
-		if !errors.As(s.lexicalError(), &lexErr) {
-			t.Fatalf(
-				"expected LexError, got %v",
-				s.lexicalError(),
+		diag := s.lexicalError()
+		if diag == nil {
+			t.Fatal("expected lexical diagnostic")
+		}
+		if diag.Code != lexer.CodeUnexpectedCharacter {
+			t.Errorf(
+				"code = %q, want %q",
+				diag.Code,
+				lexer.CodeUnexpectedCharacter,
 			)
 		}
-
-		original := s.lexicalError()
+		if diag.Severity != diagnostic.SeverityError {
+			t.Errorf(
+				"severity = %v, want error",
+				diag.Severity,
+			)
+		}
+		if diag.Primary.File != 0 {
+			t.Errorf("file ID = %d, want 0", diag.Primary.File)
+		}
+		if diag.Primary.Span != (source.ByteSpan{Start: 4, End: 5}) {
+			t.Errorf(
+				"span = %+v, want [4,5)",
+				diag.Primary.Span,
+			)
+		}
 
 		for range 10 {
 			s.advance()
 
-			if s.lexicalError() != original {
-				t.Fatal("lexical error changed")
+			if s.lexicalError() != diag {
+				t.Fatal("lexical diagnostic changed")
 			}
 		}
 	})

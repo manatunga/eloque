@@ -1,9 +1,10 @@
 package parser
 
 import (
-	"reflect"
+	"slices"
 	"testing"
 
+	"github.com/manatunga/eloque/internal/diagnostic"
 	"github.com/manatunga/eloque/internal/frontend/ast"
 	"github.com/manatunga/eloque/internal/frontend/lexer"
 	"github.com/manatunga/eloque/internal/source"
@@ -164,29 +165,46 @@ func TestFlatProgramStatementSpans(t *testing.T) {
 func TestFlatProgramInvalidSeparator(t *testing.T) {
 	p := newFlatStatementTestParser("let age be 20 say age")
 
-	program, diagnostic := p.parseFlatProgram()
-	if diagnostic == nil {
+	program, diag := p.parseFlatProgram()
+	if diag == nil {
 		t.Fatal("expected diagnostic, got nil")
 	}
 	if program != nil {
 		t.Errorf("program = %+v, want nil", program)
 	}
 
-	if diagnostic.Message != "expected a newline or end of file after statement" {
-		t.Errorf("message = %q", diagnostic.Message)
+	if diag.Code != CodeUnexpectedToken {
+		t.Errorf("code = %q, want %q", diag.Code, CodeUnexpectedToken)
 	}
 
-	wantExpected := []lexer.TokenKind{
-		lexer.TokenNewline,
-		lexer.TokenEOF,
+	if diag.Severity != diagnostic.SeverityError {
+		t.Errorf("severity = %v, want error", diag.Severity)
 	}
-	if !reflect.DeepEqual(diagnostic.Expected, wantExpected) {
+
+	if diag.Message != "expected a newline or end of file after statement" {
+		t.Errorf("message = %q", diag.Message)
+	}
+
+	if diag.Primary.Span != (source.ByteSpan{Start: 14, End: 17}) {
+		t.Errorf("span = %+v, want [14,17)", diag.Primary.Span)
+	}
+
+	if diag.TokenExpectation == nil {
+		t.Fatal("missing token expectation")
+	}
+
+	wantExpected := []string{
+		lexer.TokenNewline.String(),
+		lexer.TokenEOF.String(),
+	}
+	if !slices.Equal(diag.TokenExpectation.Expected, wantExpected) {
 		t.Errorf("expected = %v, want %v",
-			diagnostic.Expected, wantExpected)
+			diag.TokenExpectation.Expected, wantExpected)
 	}
 
-	if diagnostic.Actual == nil || *diagnostic.Actual != lexer.TokenSay {
-		t.Errorf("actual = %v, want SAY", diagnostic.Actual)
+	if diag.TokenExpectation.Actual != lexer.TokenSay.String() {
+		t.Errorf("actual = %q, want SAY",
+			diag.TokenExpectation.Actual)
 	}
 
 	if got := p.arena.StatementCount(); got != 0 {
@@ -203,25 +221,35 @@ func TestFlatProgramDiagnosticPropagation(t *testing.T) {
 		"let age be 20\nsay age\nchange age to",
 	)
 
-	program, diagnostic := p.parseFlatProgram()
-	if diagnostic == nil {
+	program, diag := p.parseFlatProgram()
+	if diag == nil {
 		t.Fatal("expected diagnostic, got nil")
 	}
 	if program != nil {
 		t.Errorf("program = %+v, want nil", program)
 	}
 
-	if diagnostic.Message != "expected an expression" {
-		t.Errorf("message = %q, want expected expression",
-			diagnostic.Message)
+	if diag.Code != CodeUnexpectedToken {
+		t.Errorf("code = %q, want %q", diag.Code, CodeUnexpectedToken)
 	}
 
-	if diagnostic.Actual == nil || *diagnostic.Actual != lexer.TokenEOF {
-		t.Errorf("actual = %v, want EOF", diagnostic.Actual)
+	if diag.Severity != diagnostic.SeverityError {
+		t.Errorf("severity = %v, want error", diag.Severity)
 	}
 
-	// Successfully parsed statements remain in the arena, even
-	// though no completed FlatProgram is returned.
+	if diag.Message != "expected an expression" {
+		t.Errorf("message = %q, want expected expression", diag.Message)
+	}
+
+	if diag.TokenExpectation == nil {
+		t.Fatal("missing token expectation")
+	}
+
+	if diag.TokenExpectation.Actual != lexer.TokenEOF.String() {
+		t.Errorf("actual = %q, want EOF",
+			diag.TokenExpectation.Actual)
+	}
+
 	if got := p.arena.StatementCount(); got != 2 {
 		t.Errorf("stored statements = %d, want 2", got)
 	}
@@ -230,6 +258,7 @@ func TestFlatProgramDiagnosticPropagation(t *testing.T) {
 		t.Errorf("remaining token = %v, want EOF", got)
 	}
 }
+
 func TestFlatProgramRangeOffset(t *testing.T) {
 	p := newFlatStatementTestParser("say 42")
 

@@ -1,9 +1,14 @@
 package parser
 
 import (
+	"github.com/manatunga/eloque/internal/diagnostic"
 	"github.com/manatunga/eloque/internal/frontend/lexer"
 	"github.com/manatunga/eloque/internal/source"
 )
+
+// maxExpressionDepth bounds recursive Pratt parsing to prevent
+// pathological expressions from exhausting the Go stack.
+const maxExpressionDepth = 1024
 
 // parseFlatPrefix parses a prefix unary expression or delegates to
 // parseFlatPrimary when no unary operator is present.
@@ -18,9 +23,8 @@ import (
 //
 // Malformed operands produce positioned diagnostics without constructing
 // the enclosing unary node.
-func (p *FlatParser) parseFlatPrefix() (flatExpressionResult, *Diagnostic) {
+func (p *FlatParser) parseFlatPrefix() (flatExpressionResult, *diagnostic.Diagnostic) {
 	operator := p.peek()
-
 	if operator.Kind != lexer.TokenPlus && operator.Kind != lexer.TokenMinus {
 		return p.parseFlatPrimary()
 	}
@@ -62,12 +66,35 @@ func (p *FlatParser) parseFlatPrefix() (flatExpressionResult, *Diagnostic) {
 // stores its operator in a compact binary payload. The returned extent
 // includes any grouping parentheses consumed by child expressions.
 //
-// Syntax errors return positioned diagnostics. Nodes constructed before
-// an error may remain in the arena; the parser does not roll back
-// partially constructed expressions.
+// Syntax errors return positioned diagnostics. Expression parsing does not
+// independently roll back partially constructed nodes. Recovery-enabled
+// statement parsing uses arena checkpoints to discard nodes from unsuccessful
+// statements.
 func (p *FlatParser) parseFlatExpression(
 	minBindingPower int,
-) (flatExpressionResult, *Diagnostic) {
+) (flatExpressionResult, *diagnostic.Diagnostic) {
+	if p.expressionDepth >= maxExpressionDepth {
+		token := p.peek()
+
+		return flatExpressionResult{}, &diagnostic.Diagnostic{
+			Code:     CodeExpressionTooDeep,
+			Severity: diagnostic.SeverityError,
+			Message:  "expression nesting exceeds the supported limit",
+			Primary: diagnostic.Location{
+				File: 0,
+				Span: source.ByteSpan{
+					Start: token.Start,
+					End:   token.End,
+				},
+			},
+		}
+	}
+
+	p.expressionDepth++
+	defer func() {
+		p.expressionDepth--
+	}()
+
 	left, diagnostic := p.parseFlatPrefix()
 	if diagnostic != nil {
 		return flatExpressionResult{}, diagnostic
@@ -112,20 +139,14 @@ func (p *FlatParser) parseFlatExpression(
 	return left, nil
 }
 
-// parseFlatPrefix parses a prefix unary expression or delegates to
-// parseFlatPrimary when no unary operator is present.
+// parseFlatPrimary parses integer, string, and identifier expressions,
+// as well as parenthesized expressions.
 //
-// Unary plus and minus are right-nesting operators. Their operands
-// are parsed at the unary binding power, allowing exponentiation to
-// bind more tightly than unary operators.
+// Parenthesized expressions reuse the inner expression's AST node
+// while extending its syntactic extent to include the parentheses.
 //
-// The resulting unary node is stored in the AST arena and references
-// its operand through a NodeID. Its source span extends from the unary
-// operator to the end of the operand's complete syntactic extent.
-//
-// Malformed operands produce positioned diagnostics without constructing
-// the enclosing unary node.
-func (p *FlatParser) parseFlatPrimary() (flatExpressionResult, *Diagnostic) {
+// Invalid primary expressions return positioned diagnostics.
+func (p *FlatParser) parseFlatPrimary() (flatExpressionResult, *diagnostic.Diagnostic) {
 	token := p.peek()
 
 	span := source.ByteSpan{
