@@ -1,6 +1,8 @@
 # Eloque Technical Backlog
 
-**Status:** Living engineering decision register. M1, post-M1 H2 frontend optimization, and pre-M2 structured diagnostic recovery are implemented. M2 remains the next implementation milestone. A review commitment is not a commitment to implement a particular technology.
+**Status:** Living engineering decision register. M1, post-M1 H2 frontend optimization, and pre-M2 structured diagnostic recovery are implemented. Monowire has been selected as Eloque's register-based production VM, superseding the previous Go stack-VM plan. The pre-M2 Monowire implementation-language experiment is complete; Zig is provisionally preferred, subject to integration validation. M2 — First Execution remains the next implementation milestone.
+
+A review commitment is not automatically a commitment to implement an exploratory technology. Resolved architectural decisions must not be reopened merely because their implementation is pending.
 
 See [LANGUAGE_SPEC.md](LANGUAGE_SPEC.md) for intended language behavior, [DESIGN_DECISIONS.md](DESIGN_DECISIONS.md) for settled decisions, and [ROADMAP.md](ROADMAP.md) for implementation milestones.
 
@@ -15,23 +17,32 @@ At each milestone, inspect items whose triggers have arrived. Record the decisio
 
 ## VM and performance
 
-### TB-001 — Stack-based versus register-based VM
-- **Status:** Review required.
-- **Baseline:** Go stack-based bytecode VM, with local slots and call frames.
-- **Trigger:** After first working VM and repeatable benchmark harness (approximately M2).
-- **Method:** Profile dispatch, stack traffic, bytecode size and representative programs. Compare simpler stack optimizations before prototyping a register VM.
-- **Criterion:** Measurable end-to-end gains that justify additional compiler/runtime complexity.
-- **Evidence:** Pending.
+### TB-001 — VM architecture: stack-based versus register-based
+
+- **Status:** Resolved — Monowire selected.
+- **Previous baseline:** Go-hosted stack-based bytecode VM with local slots and call frames.
+- **Decision date:** October 23, 2026.
+- **Decision:** Replace the stack-first plan with **Monowire**, Eloque's register-based bytecode virtual machine. Monowire is the initial production execution architecture and belongs in M2 — First Execution.
+- **Architecture:** Explicit register operands, function call frames, and overlapping caller-outgoing/callee-incoming register windows.
+- **Rationale:** The register-based architecture provides explicit operand locations and a foundation for register-window calling conventions. Selecting it before the first executable runtime avoids implementing and subsequently replacing a stack-based architecture solely to satisfy the previous roadmap.
+- **Evidence:** The pre-M2 Monowire experiment implemented arithmetic, branching, call-loop, and recursion workloads in Go, Rust, and two Zig dispatch variants. The October 23, 2026 results favor Zig in all four measured prototype workloads. These results support implementation-language investigation but do not constitute a controlled stack-versus-register performance comparison.
+- **Superseded requirement:** Implement a stack VM first, then reconsider a register VM after benchmarking.
+- **Acceptance criterion:** The architectural decision is recorded in `DESIGN_DECISIONS.md` and `ARCHITECTURE.md`, with Monowire incorporated into M2 and no remaining stack-VM prerequisite.
+- **Next action:** Implement Monowire through the M2 bytecode compiler and VM workstream, after validating the required execution contracts.
+- **Reevaluation policy:** Do not reopen the stack-versus-register decision as an ordinary performance optimization. Any proposed reversal requires substantial new correctness, feasibility, or maintainability evidence and a separate architectural decision record.
 
 ### TB-002 — Safe native concurrency
+
 - **Status:** Committed long-term goal; design review required.
-- **Baseline:** Sequential VM; avoid unnecessary global mutable state.
-- **Trigger:** Once functions, value ownership and mutation semantics are stable, before concurrency implementation (M9 or later).
-- **Method:** Design task lifetime, cancellation, isolation, error propagation, and explicit shared-state rules. Prototype goroutine-backed execution contexts and test race safety.
-- **Criterion:** Safe, understandable semantics with useful concurrency; Go goroutines are an implementation mechanism, not the language contract.
+- **Baseline:** Sequential Monowire VM with independent execution contexts as a future architectural capability. Avoid unnecessary global mutable execution state and a global VM execution lock.
+- **Trigger:** Once function execution, runtime ownership, and mutation semantics are stable; before native concurrency implementation (M9 or later).
+- **Method:** Define task lifetime, cancellation, scheduling, isolation, error propagation, and explicit shared-state rules. Evaluate concurrency mechanisms compatible with the selected Monowire implementation language. Prototype independent execution contexts and test race safety.
+- **Criterion:** Safe, understandable language semantics, correct memory ownership, reliable cancellation and error propagation, and demonstrable useful concurrency without an unnecessary global execution lock.
 - **Evidence:** Pending.
+- **Implementation note:** Go goroutines are not an assumed Monowire scheduling mechanism. The compiler's implementation language does not determine the VM's concurrency architecture.
 
 ### TB-003 — Adaptive bytecode specialization
+
 - **Status:** Exploratory.
 - **Baseline:** Correct generic bytecode operations.
 - **Trigger:** After meaningful workloads and profiling expose hot operations.
@@ -40,6 +51,7 @@ At each milestone, inspect items whose triggers have arrived. Record the decisio
 - **Evidence:** Pending.
 
 ### TB-004 — JIT compilation
+
 - **Status:** Exploratory.
 - **Baseline:** Bytecode interpretation.
 - **Trigger:** Baseline VM optimized and remaining bottlenecks documented; formal review after initial stabilization.
@@ -48,39 +60,46 @@ At each milestone, inspect items whose triggers have arrived. Record the decisio
 - **Evidence:** Pending.
 
 ### TB-005 — AOT/native backend
+
 - **Status:** Exploratory.
-- **Baseline:** Go-hosted bytecode VM.
+- **Baseline:** Monowire register-based bytecode interpretation, with Zig provisionally preferred as the VM implementation language. AOT/native compilation remains exploratory.
 - **Trigger:** Stable semantics and a concrete deployment/performance use case, no later than 1.0 architecture planning.
 - **Method:** Compare native backend, transpilation and bytecode packaging.
 - **Criterion:** Practical advantage and manageable compatibility burden.
 - **Evidence:** Pending.
 
 ### TB-006 — WebAssembly
+
 - **Status:** Exploratory.
-- **Baseline:** Native Go runtime.
+- **Baseline:** Native Monowire register-based VM; WebAssembly deployment is not yet implemented.
 - **Trigger:** Concrete browser, portable sandbox or embedded execution requirement; otherwise 1.0 ecosystem planning.
-- **Method:** Compare compiling Go runtime to Wasm against a dedicated backend.
+- **Method:** Evaluate compiling the selected Monowire runtime to WebAssembly, using a dedicated WebAssembly backend, or packaging an appropriate portable runtime. Compare portability, runtime compatibility, integration complexity, and sandboxing requirements.
 - **Criterion:** Clear use case with sustainable support costs.
 - **Evidence:** Pending.
 
 ### TB-007 — CPython comparative performance
+
 - **Status:** Committed measurement program; parity is an aspiration, not a guarantee.
 - **Baseline:** Frontend-only comparisons have been completed during M1-P5 and H2. No Eloque runtime execution comparisons are possible yet.
-- **Trigger:** First usable VM (M2), then major runtime milestones.
+- **Trigger:** First working production Monowire VM in M2, followed by major runtime milestones.
 - **Method:** Pin versions, hardware, warmup and inputs. Compare equivalent, correctness-tested arithmetic, loops, calls, strings, collections and object workloads as implemented.
 - **Criterion:** Reproducible findings that guide optimization, not marketing claims based on isolated microbenchmarks.
 - **Evidence:** M1-P5 compared the streaming frontend with Go and CPython 3.15.0rc2. H2's official controlled arithmetic comparison recorded median frontend latencies at 10,000 units of 7.16 ms for Eloque H2, 14.12 ms for the Go compiler syntax parser, 23.92 ms for Go go/parser, and 147.86 ms for CPython 3.14.4 ast.parse. These results concern different language grammars and AST representations and do not establish execution-performance parity.
-- **Next action:** Preserve the frontend measurements as historical baselines. Begin correctness-equivalent execution benchmarks after the first working Eloque VM.
+- **Next action:** Preserve the frontend and pre-M2 Monowire prototype measurements as separate historical evidence. Begin correctness-equivalent execution comparisons against CPython after Eloque can execute programs through its production compiler and Monowire runtime. Distinguish VM-only execution time from end-to-end process latency.
 
-### TB-008 — Runtime value representation
+### TB-008 — Monowire runtime value representation
+
 - **Status:** Review required.
-- **Baseline:** Undecided; Go GC can manage Go-allocated objects.
-- **Trigger:** Before implementing the first VM value type (M2).
-- **Method:** Compare Go interfaces, tagged representations and pointer-based values against checked `Int`, binary64 `Float`, `Bool`, `String`, optional values and future collections.
-- **Criterion:** Correct semantics, maintainability, acceptable allocation/dispatch costs.
+- **Baseline:** Register-based Monowire with a proposed 64-bit register-slot direction. The concrete representation of runtime values is undecided.
+- **Trigger:** Before implementing production VM values in M2.
+- **Method:** Evaluate tagged values, direct primitive storage, and references to heap-backed objects. Test the representation against checked `Int`, binary64 `Float`, `Bool`, `String`, optional values, and eventual collections.
+- **Rationale:** Monowire requires a value representation compatible with register operations, the Go–Zig integration boundary, and future managed heap objects. Go's garbage collector cannot automatically be assumed to manage Zig-owned runtime memory.
+- **Criterion:** Correct Eloque semantics, unambiguous ownership and lifetime rules, safe representation of all required values, acceptable memory usage, and measurable execution overhead.
 - **Evidence:** Pending.
+- **Next action:** Define the minimum M2 value representation and document its invariants before implementing VM instructions.
 
 ### TB-009 — Intermediate representation and backend separation
+
 - **Status:** Review required.
 - **Baseline:** AST directly to bytecode; frontend semantics independent of VM.
 - **Trigger:** Second backend approved or optimization passes become unwieldy.
@@ -100,6 +119,61 @@ At each milestone, inspect items whose triggers have arrived. Record the decisio
 - **Next action:** Retain the benchmark suite and reprofile when new lexical features materially change scanner behavior.
 - **Next review trigger:** Completion of M1 lexical coverage or a measured regression in representative workloads.
 
+### TB-027 — Monowire implementation language and Go integration
+
+- **Status:** Review required; Zig provisionally preferred.
+- **Baseline:** Go compiler frontend and semantic analysis; Zig-preferred Monowire runtime; Rust fallback.
+- **Trigger:** Before production VM integration in M2.
+- **Rationale:** The pre-M2 prototypes favor Zig in the measured workloads, but performance alone does not establish practical interoperability, ownership safety, portability, or build reliability.
+- **Method:** Build a minimal Go-to-Zig integration prototype that transfers a validated bytecode program, executes it, returns a result, and propagates a controlled runtime error. Verify memory ownership, build/link behavior, and platform compatibility.
+- **Acceptance criteria:** Reproducible builds, correct data transfer, explicit ownership, reliable error propagation, passing integration tests, and no unacceptable integration or deployment complexity.
+- **Evidence:** `benchmarks/monowire/README.md`, `SPEC.md`, and the October 23, 2026 comparison results.
+- **Next action:** Validate the production integration approach before expanding the VM implementation.
+
+### TB-028 — Monowire bytecode format and register-window contract
+
+- **Status:** Review required; register-window architecture decided.
+- **Baseline:** Register-based instructions with explicit operands and overlapping caller-outgoing/callee-incoming register windows.
+- **Trigger:** Before implementing the production bytecode compiler and VM in M2.
+- **Rationale:** The experimental instruction encoding and frame layout are not yet a production bytecode specification.
+- **Method:** Specify instruction operands, register bounds, constant references, function descriptors, frame-base calculations, argument mapping, return-value placement, and branch-target validity.
+- **Acceptance criteria:** A documented executable bytecode subset; deterministic instruction semantics; validated register and frame invariants; passing tests for nested calls, returns, invalid operands, and capacity exhaustion.
+- **Evidence:** Pre-M2 Monowire prototypes and experimental specification.
+- **Next action:** Define the smallest production instruction set required for M2, keeping later language-level function features separate from internal VM calling mechanisms.
+
+### TB-029 — Monowire dispatch strategy
+
+- **Status:** Review required; conventional switch dispatch selected as initial baseline.
+- **Baseline:** Conventional switch-based instruction dispatch.
+- **Trigger:** After a working Monowire VM and representative VM-only profiling.
+- **Rationale:** Zig labeled-switch dispatch produced small median advantages in the prototype workloads, but the evidence does not establish a reliable production benefit.
+- **Method:** Compare switch and labeled-switch dispatch using identical production bytecode, equivalent memory-management behavior, warmups, repeated measurements, and generated-code inspection where useful.
+- **Acceptance criteria:** Reproducible performance improvement without correctness regressions or disproportionate portability and maintenance costs.
+- **Evidence:** October 23, 2026 Monowire implementation-language experiment.
+- **Next action:** Implement the conventional switch baseline first; defer optimization until representative profiling identifies a meaningful opportunity.
+
+### TB-030 — Monowire heap management and garbage collection
+
+- **Status:** Review required; tracing garbage collection is a planned direction.
+- **Baseline:** Explicitly managed runtime storage sufficient for the initial M2 executable subset. No production garbage collector has been implemented.
+- **Trigger:** Before introducing heap-backed language values requiring automatic lifetime management, particularly strings, collections, and structured values.
+- **Rationale:** Monowire's register and call-frame architecture must provide a safe foundation for object lifetime management, while Eloque's value semantics require logical independence under assignment.
+- **Method:** Define object layout, ownership, allocation, root discovery, collection safety, and integration with register windows. Evaluate a tracing collector against the requirements of implemented value types and future concurrency.
+- **Acceptance criteria:** No premature reclamation of reachable objects, safe handling of cycles where supported, correct roots across active frames, deterministic cleanup of non-GC resources where applicable, and acceptable memory/performance characteristics.
+- **Evidence:** Pending.
+- **Next action:** Establish memory-ownership invariants during M2 and revisit collector implementation when the supported runtime values require it.
+
+### TB-031 — Monowire production correctness and performance baseline
+
+- **Status:** Committed; implementation pending.
+- **Baseline:** Four synthetic pre-M2 workloads, not a complete Eloque runtime.
+- **Trigger:** First executable Monowire VM during M2.
+- **Rationale:** Prototype interpreter benchmarks do not measure complete compilation-to-execution behavior or adequately represent real Eloque workloads.
+- **Method:** Develop instruction-level correctness tests, invalid-bytecode tests, end-to-end Eloque program tests, and reproducible VM-only and process-level benchmarks. Track execution latency, variance, memory usage, and relevant bytecode metrics.
+- **Acceptance criteria:** All supported instructions satisfy their documented semantics; malformed execution states fail safely; representative Eloque programs execute correctly; reproducible baseline measurements and environment metadata are retained.
+- **Evidence:** Pre-M2 prototype results provide historical comparison only.
+- **Next action:** Establish the production baseline once the M2 bytecode compiler and VM execute the supported language subset.
+
 ## Frontend and language semantics
 
 ### TB-010 — Conversational grammar and call parsing
@@ -114,14 +188,19 @@ At each milestone, inspect items whose triggers have arrived. Record the decisio
 - **Note:** The historical `call ... with ...` and bare built-in invocation alternatives remain superseded.
 
 ### TB-011 — Scope, capture and immutability
-- **Status:** Review required.
-- **Baseline:** Block scopes, no shadowing of enclosing visible names, `fixed` binding immutability and `frozen` deep immutability.
-- **Trigger:** Scope resolution in M2; revisit alias/capture behavior before mutable collections and closures.
-- **Method:** Test nested scopes, assignment, recursion, frozen values and aliasing. Define capture mechanics only when closures enter scope.
-- **Criterion:** No accidental mutation through alternate references; diagnostics reflect declared rules.
-- **Evidence:** Pending.
+
+- **Status:** Lexical scope and shadowing semantics resolved; M2 resolver implementation pending. Capture and deep-immutability implementation details require later review.
+- **Baseline:** Lexical block scopes with nearest-declaration lookup. Shadowing an enclosing declaration in a nested scope is permitted but produces a nonfatal warning identifying the shadowed declaration. Redeclaration within the same scope is an error. `fixed` prevents rebinding; `frozen` enforces deep immutability.
+- **Decision:** A declaration introduces its binding before its initializer is resolved. Consequently, `let x be x + 1` refers to the newly declared `x`, and definite-assignment analysis must reject the uninitialized read.
+- **Trigger:** Implement the approved lexical binding rules during M2 name resolution. Revisit capture mechanics before closures and aliasing/ownership details before mutable collections.
+- **Method:** Validate declaration-before-use, nearest-visible-name lookup, duplicate declarations, nested shadowing warnings, assignment-target resolution, initializer self-reference, and definite assignment. Later validate closure capture, frozen values, and aliasing when those features become available.
+- **Criterion:** Resolver behavior matches the approved R01–R28 behavioral matrix in `ARCHITECTURE.md`. Diagnostics distinguish fatal duplicate-declaration errors from nonfatal shadowing warnings. Future immutability implementations preserve the specified mutation guarantees.
+- **Evidence:** Approved language semantics in `LANGUAGE_SPEC.md`, the M2 resolver blueprint in `ARCHITECTURE.md`, and the corresponding entries in `DESIGN_DECISIONS.md`.
+- **Next action:** Implement and test the approved M2 resolver behavior without reopening the shadowing decision.
+- **Next review trigger:** M2 resolver implementation for lexical binding; M5 for mutable collection ownership and deep immutability; a future closure implementation milestone for capture semantics.
 
 ### TB-012 — Static type inference and checking
+
 - **Status:** Committed; implementation review required.
 - **Baseline:** Strict static types, explicit parameter annotations, local inference and `T?`; type errors block normal execution.
 - **Trigger:** Before first executable subset in M2.
@@ -130,6 +209,7 @@ At each milestone, inspect items whose triggers have arrived. Record the decisio
 - **Evidence:** Pending.
 
 ### TB-013 — Numeric semantics and conversions
+
 - **Status:** Review required.
 - **Baseline:** Checked signed 64-bit `Int`; IEEE 754 binary64 `Float`; floor division/remainder; exact-only implicit Int-to-Float promotion.
 - **Trigger:** Before arithmetic checker and VM implementation (M2).
@@ -138,6 +218,7 @@ At each milestone, inspect items whose triggers have arrived. Record the decisio
 - **Evidence:** Pending.
 
 ### TB-014 — Collection value semantics and mutation
+
 - **Status:** Review required.
 - **Baseline:** Lists, maps and structured values are logically independent when assigned; negative sequence indexing and optional safe lookup are designed.
 - **Trigger:** Before mutable collections in M5.
@@ -146,6 +227,7 @@ At each milestone, inspect items whose triggers have arrived. Record the decisio
 - **Evidence:** Pending.
 
 ### TB-015 — Unicode and string indexing
+
 - **Status:** Review required.
 - **Baseline:** Immutable UTF-8-backed Unicode strings with character-oriented access, not raw byte indexing.
 - **Trigger:** Before string indexing/slicing in M5.
@@ -154,6 +236,7 @@ At each milestone, inspect items whose triggers have arrived. Record the decisio
 - **Evidence:** Pending.
 
 ### TB-016 — Exceptions and cleanup
+
 - **Status:** Review required.
 - **Baseline:** Typed unchecked exceptions, `try`/`catch`/`finally`, and source-aware failures.
 - **Trigger:** Before exception implementation (M7).
@@ -162,6 +245,7 @@ At each milestone, inspect items whose triggers have arrived. Record the decisio
 - **Evidence:** Pending.
 
 ### TB-017 — Modules and visibility
+
 - **Status:** Review required.
 - **Baseline:** `import`, aliases with `named`, public-by-default top-level symbols, underscore-private names, once-only initialization and rejected circular imports.
 - **Trigger:** Before module implementation (M7).
@@ -170,6 +254,7 @@ At each milestone, inspect items whose triggers have arrived. Record the decisio
 - **Evidence:** Pending.
 
 ### TB-018 — Structured types, interfaces and matching
+
 - **Status:** Review required.
 - **Baseline:** `define` structured values, implicit `self`, structural interfaces and `match`/`when` without fallthrough; no class inheritance.
 - **Trigger:** Before M6.
@@ -246,6 +331,7 @@ meaningful regression attributable to token delivery.
 ## Tooling, agents and execution safety
 
 ### TB-019 — Structured diagnostics
+
 - **Status:** Committed; schema review required.
 - **Baseline:** Human-readable diagnostics plus machine-readable output for agents and editor tools.
 - **Trigger:** Begin source spans in M1; finalize initial schema before M8 tooling.
@@ -263,6 +349,7 @@ meaningful regression attributable to token delivery.
 - **Next review trigger:** Completion of multi-error recovery integration and performance validation, before proceeding to M2.
 
 ### TB-020 — Sandboxed execution budgets
+
 - **Status:** Committed long-term capability; design review required.
 - **Baseline:** Normal CLI has no arbitrary global instruction limit. Sandboxed runs should support configurable instruction, time and memory budgets.
 - **Trigger:** Before agent-oriented execution or untrusted-code hosting (M9 or earlier if required).
@@ -271,6 +358,7 @@ meaningful regression attributable to token delivery.
 - **Evidence:** Pending.
 
 ### TB-021 — References and ownership
+
 - **Status:** Review required.
 - **Baseline:** Value semantics by default; explicit shared mutable references are deferred.
 - **Trigger:** Before public concurrency/shared-state syntax.
@@ -320,7 +408,7 @@ See [`benchmarks/README.md`](../benchmarks/README.md) for reproduction instructi
 - **Next action:** Preserve official and experimental benchmark results, extend the frontend as required by future language milestones, and avoid optimization without profiling evidence.
 - **Next review trigger:** M2 integration reveals a meaningful frontend bottleneck, a new grammar feature changes AST allocation patterns, or representative benchmarks demonstrate a regression.
 
-The H2 measurements are frontend-only. They do not establish Eloque runtime performance or justify changing the planned stack-based VM baseline.
+The H2 measurements are frontend-only. They do not establish Eloque runtime performance or provide evidence for choosing between stack-based and register-based VM architectures. Monowire's register-based architecture was subsequently selected through a separate architectural decision. Production runtime performance remains unmeasured.
 
 ---
 
@@ -368,15 +456,23 @@ The H2 measurements are frontend-only. They do not establish Eloque runtime perf
 
 **Acceptance criteria:** Resolver behavioral matrix R01–R28 in `ARCHITECTURE.md`, with scope-specific tests introduced as the relevant grammar becomes available.
 
-### Deferred: diagnostic budget tuning
+### Deferred: diagnostic budget policy and tuning
 
-**Current baseline:** Recovery-capable parsing defaults to a maximum of 20 error-severity diagnostics. Positive limits are configurable; negative values disable the limit.
-
-**Trigger:** Representative malformed-source workloads, editor integration, or evidence that the current default produces insufficient diagnostics or excessive recovery work.
-
-**Rationale:** The default of 20 provides a bounded initial recovery policy. Increasing it without representative evidence could add unnecessary processing or produce overwhelming diagnostic output.
-
-**Acceptance criteria:** Predictable termination, bounded resource consumption under the default configuration, actionable diagnostics, and no meaningful regression in normal frontend performance.
+- **Status:** Parser-level recovery budget implemented; compilation-wide budget policy requires review during semantic-analysis integration.
+- **Current implemented baseline:** `ParseRecovering` defaults to a maximum of 20 error-severity diagnostics. Positive limits are configurable; negative values disable the limit.
+- **Historical proposal:** An initial compilation-wide budget of 100 errors was considered in the M2 diagnostic architecture. This is a proposal, not the implemented parser default or an approved universal limit.
+- **Trigger:** M2 integration of parser, name-resolver, and type-checker diagnostics; subsequent review when representative malformed-source workloads or editor integration expose limitations.
+- **Rationale:** Individual stages must terminate predictably without producing excessive cascading diagnostics. A future compiler-wide policy must also prevent the total diagnostic allowance from being unintentionally multiplied across stages.
+- **Method:** Test malformed-source workloads with errors distributed across lexical, syntactic, resolution, and typing stages. Measure diagnostic usefulness, ordering, truncation behavior, runtime cost, and recovery progress.
+- **Acceptance criteria:**
+  - The existing parser-level default remains documented accurately.
+  - Compilation-wide and stage-local budgets have explicit, nonconflicting semantics.
+  - Diagnostics remain deterministic and actionable.
+  - Resource consumption remains bounded under the default configuration.
+  - Truncation and termination behavior are documented.
+  - Valid-program frontend performance does not regress materially.
+- **Next action:** Preserve the current parser-level policy. Define the compilation-wide policy when the M2 compiler driver integrates semantic diagnostics.
+- **Next review trigger:** M2 compiler-driver and semantic-diagnostic integration, or earlier evidence of a practical recovery-budget problem.
 
 ### Deferred: identifier interning
 
@@ -402,14 +498,6 @@ The H2 measurements are frontend-only. They do not establish Eloque runtime perf
 
 **Acceptance criteria:** Deterministic output, stable codes, accurate locations, extensible metadata, and documented compatibility expectations.
 
-### Deferred: diagnostic budget tuning
-
-**Trigger:** Realistic malformed-file and tooling workloads.
-
-**Rationale:** An initial candidate of 100 errors may not suit every compilation context.
-
-**Acceptance criteria:** Bounded resource use, actionable diagnostic output, and predictable truncation behavior.
-
 ### Deferred: multi-file source management
 
 **Trigger:** Module imports and multi-file compilation, expected around M7.
@@ -418,13 +506,21 @@ The H2 measurements are frontend-only. They do not establish Eloque runtime perf
 
 **Acceptance criteria:** Correct cross-file locations, source ownership, module identity, and acceptable memory use.
 
-### Deferred: runtime architecture optimization
+### Monowire runtime architecture and deferred optimizations
 
-**Trigger:** First executable stack VM and reproducible runtime benchmarks.
+**Current decision:** Monowire is Eloque's selected register-based production VM. The stack-first plan is superseded.
 
-**Rationale:** Register VMs, JIT, AOT, WebAssembly, and alternative backends cannot be justified solely from frontend performance measurements.
+**Immediate M2 requirements:** Validate the compiler/runtime integration boundary, define production bytecode and register-window invariants, select a viable runtime value representation, and implement a correctness-tested VM.
 
-**Acceptance criteria:** Demonstrated runtime or deployment advantages against representative workloads, accounting for implementation and maintenance costs.
+**Deferred optimizations:** Advanced register allocation, dispatch specialization, JIT, AOT, WebAssembly, and other alternative execution strategies.
+
+**Trigger:** A working Monowire implementation, representative profiling evidence, or a concrete deployment requirement.
+
+**Rationale:** The architecture decision is settled, but optimization work should be justified by measured production behavior rather than synthetic prototype results alone.
+
+**Acceptance criteria:** Demonstrable execution or deployment improvements, preserved language semantics, reproducible measurements, and manageable implementation and maintenance costs.
+
+**Related items:** TB-001, TB-003 through TB-009, and TB-027 through TB-031.
 
 ### Documentation consistency requirement
 
@@ -454,11 +550,23 @@ All deferred items must retain their rationale, reevaluation trigger, and accept
 - [x] **M1-P5:** Complete lexer–parser integration, end-to-end frontend validation, and performance regression review.
 - [x] **Pre-M2:** Implement structured diagnostics and recovery-capable parsing.
 - [x] **Pre-M2:** Record post-recovery experimental frontend benchmarks.
+- [x] **Pre-M2:** Resolve TB-001 — select Monowire as Eloque's register-based VM.
+- [x] **Pre-M2:** Complete the initial Monowire implementation-language benchmark experiment.
+- [x] **Pre-M2:** Resolve TB-011 lexical scope and shadowing semantics.
 - [ ] **Future frontend review:** Revisit TB-026 when representative workloads or regressions justify it.
 - [ ] **M2:** Extend TB-019 diagnostics to name resolution and static type checking.
-- [ ] **Before M2:** TB-008 values, TB-012 checker, TB-013 numeric behavior, TB-011 scope.
-- [ ] **After working M2:** TB-001 stack/register review; TB-007 benchmark baseline.
+- [ ] **M2:** Implement and validate TB-011 lexical binding behavior through the name resolver.
+- [ ] **M2:** Define the compilation-wide diagnostic budget policy during semantic-analysis integration.
+- [ ] **Before closures:** Review TB-011 capture mechanics.
+- [ ] **M2:** Validate TB-027 Go–Zig integration.
+- [ ] **M2:** Specify TB-028 production bytecode and register-window invariants.
+- [ ] **M2:** Complete TB-008 runtime value representation review.
+- [ ] **M2:** Establish TB-031 correctness and performance baseline.
+- [ ] **After working Monowire VM:** Review TB-029 dispatch optimization if profiling justifies it.
+- [ ] **Before managed heap values:** Review TB-030 memory management and garbage collection.
+- [ ] **After working M2:** Begin TB-007 CPython execution comparisons.
 - [ ] **Before M5:** TB-014 collections/immutability; TB-015 Unicode.
+- [ ] **Before M5:** Review TB-011 aliasing and deep-immutability implementation details.
 - [ ] **Before M6:** TB-018 custom types/interfaces/matching.
 - [ ] **Before M7:** TB-016 exceptions; TB-017 modules.
 - [ ] **M8:** TB-019 diagnostics/tooling schema.

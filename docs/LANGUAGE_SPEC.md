@@ -4,9 +4,13 @@
 **Language name:** Eloque
 **Source file extension:** `.elq` (selected)
 **Planned CLI command:** `eloque` (subject to availability checks)
-**Implementation architecture:** Go-based compiler and runtime.
+**Implementation architecture:** Go-based compiler frontend and semantic analysis, targeting the Monowire register-based bytecode VM. Zig is provisionally preferred for the Monowire runtime implementation, with Rust retained as a fallback pending integration and portability validation.
 
-The lexer, parser, and arena-backed flat AST construction are implemented. The canonical `Parse(sourceText)` entry point returns `(*ast.FlatProgram, error)`. Name resolution, static type checking, bytecode compilation, and the stack-based virtual machine are planned.
+The lexer, parser, and arena-backed flat AST construction are implemented. The canonical `Parse(sourceText)` entry point returns `(*ast.FlatProgram, error)`. Recovery-capable parsing is also implemented through `ParseRecovering(sourceText, ParseOptions)`.
+
+Name resolution, mandatory static type checking, Monowire bytecode compilation, and production VM execution remain unimplemented. These stages are planned for M2 — First Execution.
+
+**Monowire** is the selected register-based execution architecture. The previous stack-based VM plan has been superseded.
 
 **Status labels:**
 
@@ -319,6 +323,8 @@ The `.elq` source extension and the documented import forms represent the intend
 
 Normal execution is sequential by default. Assignment evaluates its right-hand side before changing the target. Runtime failures are typed and include source locations. Human-readable diagnostics are the default; structured machine-readable diagnostics (e.g. JSON) are a design requirement for agent tooling. The runtime should support configurable instruction/time/memory limits for sandboxed execution; normal CLI execution has no arbitrary universal instruction cap. Native safe concurrency is a language goal, but syntax, ownership and shared-state rules are **deferred**.
 
+**Implementation status:** Structured frontend diagnostics and recovery-capable parsing are implemented. Name resolution, static type checking, bytecode compilation, Monowire execution, and runtime resource controls remain unimplemented. The Monowire architecture has been selected, but no production runtime functionality is implied by that decision.
+
 **Lexical diagnostics [Implemented in M1]:** The production lexer uses fail-fast error handling, stopping at the first detected lexical error. Diagnostics identify the source line and column and describe the invalid input.
 
 **Runtime implementation status:** Eloque does not yet have an executable runtime. Sequential execution, typed runtime failures, assignment evaluation semantics, and configurable execution limits are requirements for future implementation.
@@ -327,17 +333,73 @@ Native concurrency, ownership rules, and shared-state synchronization remain def
 
 The canonical `Parse(sourceText)` frontend propagates lexical errors through the parser while preserving their source locations. Lexical errors are compiler diagnostics, not runtime exceptions.
 
-**Compiler diagnostics [Approved architecture; implementation pending]:** Eloque uses a shared structured diagnostic model across lexical analysis, parsing, name resolution, and static type checking. Compiler stages collect multiple independent errors where recovery is safe, while suppressing misleading cascading errors.
+**Compiler diagnostics [Partially implemented]:** Eloque uses structured diagnostics for lexical and syntactic errors. The production frontend supports both fail-fast parsing through `Parse(sourceText)` and recovery-capable parsing through `ParseRecovering(sourceText, ParseOptions)`.
 
-Diagnostics carry stable machine-readable codes, severity, source locations, and optional related locations and explanatory notes. Warnings are nonfatal by default.
+Recovery-capable parsing can collect multiple independent diagnostics, preserve successfully recovered statements, and report whether parsing completed, recovered, or aborted. Recovery is bounded by configurable diagnostic limits and expression-depth safeguards.
 
-The compiler distinguishes complete, recovered, and aborted stage outcomes. Recovered or incomplete syntax trees are not eligible for normal bytecode compilation. Any blocking compilation error prevents executable code generation and execution.
+Recovered or incomplete syntax trees are not eligible for normal bytecode compilation or execution.
 
-The existing M1/H2 frontend still implements first-error termination. Controlled multi-error recovery is an approved prerequisite to M2 name-resolution implementation, not functionality already delivered.
+The approved architecture extends the structured diagnostic model to name resolution and static type checking during M2. Compiler stages will report stable machine-readable codes, severity, source locations, and relevant contextual information while suppressing misleading cascading errors.
 
-## 14. Tooling and backend [Provisional roadmap]
+Warnings are nonfatal by default. Blocking compilation errors prevent executable code generation and execution.
 
-Planned commands include `eloque run`, `eloque check`, `eloque fmt` and eventually a REPL. The Go implementation currently provides the lexer, parser, and AST construction stages through the canonical `Parse(sourceText)` frontend. Mandatory static type checking, bytecode compilation, and stack-based VM execution are planned for subsequent milestones. The completed M1 frontend supports only a subset of the specified syntax. The first executable release will extend that subset with the semantic analysis, compilation, and runtime functionality required to execute Eloque programs.
+**Implementation boundary:** Lexical and syntactic recovery are implemented. Resolver diagnostics, type-checker diagnostics, compilation-wide diagnostic coordination, and runtime error reporting remain future implementation work.
+
+## 14. Tooling and backend [Decided architecture; implementation in progress]
+
+Planned CLI commands include `eloque run`, `eloque check`, `eloque fmt`, and eventually a REPL.
+
+### Compiler frontend
+
+The Go implementation currently provides:
+
+- Lexical analysis with direct token streaming.
+- Pratt expression parsing.
+- Arena-backed flat AST construction.
+- Source-aware structured diagnostics.
+- Fail-fast and recovery-capable parsing.
+
+The canonical frontend entry point is `Parse(sourceText)`. Recovery-capable parsing is available through `ParseRecovering(sourceText, ParseOptions)`.
+
+Name resolution, mandatory static type checking, and bytecode compilation remain planned for M2.
+
+### Execution backend
+
+Eloque's selected execution backend is **Monowire**, a register-based bytecode virtual machine.
+
+Monowire uses explicit register operands and is designed around call frames with overlapping caller-outgoing and callee-incoming register windows.
+
+The previous Go-hosted stack-based VM plan has been superseded.
+
+Zig is provisionally preferred as the implementation language for Monowire, with Rust retained as a fallback pending integration, correctness, portability, and maintenance validation.
+
+The production Monowire VM is not yet implemented.
+
+### First executable milestone
+
+M2 — First Execution will introduce:
+
+- Lexical name resolution.
+- Mandatory static type checking, including definite-assignment analysis.
+- Monowire register-based bytecode compilation.
+- Sequential Monowire execution.
+- End-to-end correctness and runtime diagnostics for the supported language subset.
+
+The initial executable subset covers supported literals, arithmetic, `let`, `change`, and `say` statements.
+
+Control flow, language-level functions, collections, custom types, modules, and native concurrency remain assigned to subsequent milestones.
+
+### Language semantics and backend independence
+
+Monowire is an implementation architecture, not a change to Eloque's language semantics.
+
+Observable program behavior must remain consistent with this specification regardless of the runtime implementation language, bytecode representation, register allocation, or instruction-dispatch strategy.
+
+The production bytecode format, runtime value layout, garbage collection strategy, and Go-to-Monowire integration mechanism remain engineering decisions to be finalized during their relevant implementation stages.
+
+These details are documented in `ARCHITECTURE.md` and tracked in `TECHNICAL_BACKLOG.md` rather than defined as source-language syntax.
+
+The first executable release will support a narrower subset than the complete language specification.
 
 ## 15. Remaining specification work
 

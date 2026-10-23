@@ -1,6 +1,6 @@
 # Eloque Roadmap
 
-**Status:** Active implementation roadmap — M0 and M1 completed; post-M1 H2 frontend optimization, package reorganization, and pre-M2 structured diagnostic recovery implemented. M2 (First execution) is next. Milestones and versions are planning aids, not release commitments.
+**Status:** Active implementation roadmap — M0 and M1 completed; post-M1 H2 frontend optimization, package reorganization, and pre-M2 structured diagnostic recovery implemented. The pre-M2 Monowire implementation-language experiment is complete. Monowire has been selected as Eloque's register-based production VM, replacing the previous stack-VM plan. Zig is provisionally preferred as its implementation language, subject to integration validation. M2 (First execution) is next. Milestones and versions are planning aids, not release commitments.
 
 ## Delivery principles
 
@@ -19,7 +19,7 @@ These are development checkpoints, **not** promises that each becomes a public r
 |---|---|---|
 | **M0 — Foundation** | Go module, repository structure as needed, CLI skeleton, tests, initial conformance fixtures | `go test ./...` succeeds; a minimal CLI starts; specification and decisions are aligned |
 | **M1 — Frontend foundations** | Lexer, four-space indentation, source spans, parser, AST, syntax diagnostics | Parse a small valid `.elq` program; reject malformed input with locations |
-| **M2 — First execution** | Name resolution, **mandatory basic type checking**, bytecode compiler, stack VM, literals, `let`, `change`, arithmetic, `say` | Run a typed hello-world and arithmetic program; reject basic type errors before execution |
+| **M2 — First execution** | Name resolution, **mandatory basic static type checking**, Monowire register-based bytecode compiler and VM, literals, `let`, `change`, arithmetic, `say` | Execute statically checked hello-world and arithmetic programs through Monowire; reject invalid programs before execution; establish initial runtime correctness and performance baselines |
 | **M3 — Control flow** | Comparisons, Boolean logic, `if`/`otherwise if`/`otherwise`, `repeat`, `for each` after minimal list/iteration support, `skip`, `stop` | Execute conditional and looping programs with verified scope rules |
 | **M4 — Functions** | Typed parameters, `giving`, calls with mandatory `with (...)`, return checking, recursion, default/named arguments in stages | Execute statically checked functions, including valid and invalid call examples |
 | **M5 — Values and collections** | `Int` overflow, `Float` rules, optional `T?`, Unicode strings, lists/maps, safe access, slicing, value semantics, `fixed`/`frozen` | Verify value independence, mutation rules, numeric failures and safe lookup |
@@ -228,39 +228,100 @@ This checkpoint transitions Eloque's frontend from the M1 fail-fast diagnostic m
 
 **Multi-error recovery: In progress**
 
-- [ ] Finalize diagnostic accumulation, ownership, and recovery-session contracts.
-- [ ] Implement explicit lexical recovery with guaranteed forward progress.
-- [ ] Implement parser synchronization and suppression of cascading diagnostics.
-- [ ] Introduce configurable error budgets and explicit parse outcomes.
-- [ ] Preserve valid AST structures where recovery is safe.
-- [ ] Verify multi-error behavior through conformance, robustness, and regression tests.
-- [ ] Benchmark successful parsing and recovery workloads against the retained frontend baseline.
-- [ ] Update architecture, language specification, and diagnostic documentation to reflect verified behavior.
+- [x] Introduce structured diagnostic collection and recovery-capable frontend parsing.
+- [x] Implement safe lexical recovery and parser synchronization with guaranteed progress.
+- [x] Preserve valid AST structures where appropriate while distinguishing recovered programs from fully valid programs.
+- [x] Verify multi-error behavior through conformance, robustness, and regression tests.
+- [x] Benchmark successful parsing and recovery workloads against the retained frontend baseline.
+- [x] Update architecture, language specification, and diagnostic documentation to reflect verified behavior.
 
 **Completion criteria:** Eloque reports multiple independent lexical and syntax errors from a single source file, terminates safely on malformed input, preserves valid AST structures where appropriate, and maintains acceptable successful-path performance without abandoning direct token streaming.
 
+### Pre-M2 — Monowire implementation-language experiment: Completed
+
+**Completed:** October 23, 2026.
+
+Before beginning production runtime implementation, an independent experimental benchmark suite was developed to evaluate implementation-language options for Monowire.
+
+The experiment compared:
+
+- Go.
+- Rust.
+- Zig with conventional switch dispatch.
+- Zig with labeled-switch dispatch.
+
+Four synthetic workloads were implemented:
+
+1. Repeated function calls and register-window operations.
+2. Integer arithmetic.
+3. Conditional branching.
+4. Recursive calls and frame management.
+
+The comparison harness built and executed all 16 measured configurations, checked expected outputs, and recorded repeated subprocess wall-clock measurements.
+
+**Recorded median results (milliseconds):**
+
+| Implementation | Call loop | Arithmetic | Branch | Recursion |
+|---|---:|---:|---:|---:|
+| Zig labeled | 18.802 | 9.268 | 15.919 | 14.033 |
+| Zig switch | 19.794 | 9.280 | 15.985 | 14.413 |
+| Rust | 33.049 | 11.892 | 21.395 | 23.859 |
+| Go | 53.362 | 18.262 | 29.022 | 39.246 |
+
+Zig recorded the lowest median wall-clock time in every measured workload.
+
+However, the prototypes differ in memory-allocation strategies, and the measurements include subprocess startup overhead. These results do not establish production VM performance or prove that register-based execution is universally faster than stack-based execution.
+
+**Architectural outcome:** Monowire's register-based architecture is selected.
+
+**Implementation-language outcome:** Zig is provisionally preferred, subject to Go integration, ownership, portability, build, and correctness validation.
+
+**Dispatch outcome:** Conventional switch dispatch is the initial implementation baseline. Labeled-switch dispatch remains a future optimization candidate.
+
+**Evidence:** `benchmarks/monowire/README.md`, `benchmarks/monowire/SPEC.md`, and the recorded October 23, 2026 benchmark outputs.
+
+The experiment is complete, but production Monowire implementation remains part of M2.
+
 ### Transition to M2 — First execution: Not started
 
-The next development phase will introduce the smallest statically checked executable subset.
+The next development phase will introduce Eloque's first statically checked executable subset.
 
-M2 will build upon the H2 frontend and add:
+M2 builds upon the implemented H2 frontend and structured diagnostic recovery.
 
-1. Name resolution and scope validation.
-2. Mandatory basic static type checking.
-3. Bytecode compilation.
-4. A sequential stack-based virtual machine.
+Its primary implementation stages are:
+
+1. Dedicated lexical name resolution and scope validation.
+2. Mandatory basic static type checking, including definite-assignment analysis.
+3. Monowire register-based bytecode compilation.
+4. A sequential Monowire virtual machine.
 5. End-to-end execution and diagnostic tests.
+6. Initial runtime correctness and performance benchmarks.
 
-Before implementing VM values, the runtime value representation must be reviewed.
+**VM architecture:** Monowire is the selected register-based execution architecture. The previous Go stack-VM plan has been superseded.
 
-The initial executable subset will focus on literals, arithmetic, `let`, `change`, and `say`. Expanded control flow, functions, collections, and concurrency remain assigned to later milestones.
+**Implementation language:** Zig is provisionally preferred for the Monowire runtime, with Rust retained as a fallback. Go remains the implementation language for the existing frontend and planned semantic-analysis stages.
 
-**M2 completion criterion:** Eloque executes representative valid programs through the bytecode VM and rejects supported type-invalid programs before execution.
+Before production VM implementation, the relevant engineering work must establish:
 
-**Next milestone:** M2 — Refer to the milestone definition below.
+- The compiler-to-runtime integration approach.
+- The production bytecode format and register conventions.
+- The minimum runtime value representation.
+- Memory ownership and lifetime rules.
+- Error propagation across the compiler/runtime boundary.
 
-Eloque can parse supported source programs into an AST but cannot yet
-execute them.
+These investigations may proceed alongside name-resolution and static-checker development. They do not require delaying the resolver until the complete runtime design is finished.
+
+The initial executable subset focuses on literals, arithmetic, `let`, `change`, and `say`.
+
+Expanded control flow, language-level functions, collections, custom types, modules, and native concurrency remain assigned to later milestones.
+
+Monowire may introduce internal call-frame machinery before Eloque supports user-defined functions. Internal VM capabilities must not be confused with implemented language features.
+
+**M2 completion criterion:** Eloque executes representative valid programs through the production Monowire bytecode VM, rejects supported type-invalid programs before execution, handles supported runtime failures correctly, and has reproducible correctness and performance baselines.
+
+**Next milestone:** M2 — First execution.
+
+Eloque can currently parse supported source programs into an AST but cannot yet execute them.
 
 ## Public release planning
 
@@ -322,8 +383,9 @@ Do not require a lengthy Go course before M0. Introduce small Go exercises along
 
 Keep the [technical backlog](TECHNICAL_BACKLOG.md) active:
 
-- **Before the first VM:** choose a practical value representation; test it against `Int`, `Float`, `Bool`, `String`, and eventual collections.
-- **After the first working VM:** establish a reproducible performance baseline and review the stack-versus-register question based on evidence, not preference.
+- **Before production Monowire implementation:** Validate the compiler/runtime integration boundary, register-window contract, bytecode format, runtime value representation, and memory-ownership rules.
+- **After the first working Monowire VM:** Establish reproducible correctness and execution-performance baselines. Reevaluate dispatch optimizations and other implementation details only when representative profiling justifies them.
+- **VM architecture:** Resolved — Monowire's register-based execution model is selected. No stack-based VM prerequisite remains.
 - **Before mutable collections:** validate deep immutability and logical value independence.
 - **Before modules/exceptions:** settle initialization order, typed error matching, and cleanup semantics.
 - **Before concurrency:** settle explicit references, ownership, cancellation, and safe shared state.
@@ -342,13 +404,13 @@ Once there is a working VM:
 4. Report wall-clock time, variance, memory usage, and warmup methodology.
 5. Profile before optimizing; rerun correctness and performance regression suites.
 
-**CPython parity is a long-term aspiration, not a forecast.** A stack-based VM remains the initial baseline until evidence supports a different architecture.
+**CPython parity is a long-term aspiration, not a forecast.** Monowire is the selected register-based execution architecture. The pre-M2 implementation-language benchmarks support provisional selection of Zig but do not establish complete Eloque execution performance. Comparisons with CPython must use equivalent, correctness-tested executable workloads after the production Monowire VM is operational.
 
 ---
 
 ## Pre-M2 prerequisite: structured diagnostics and frontend recovery
 
-**Status:** Implemented; final branch verification and integration pending.
+**Status:** Completed — implemented, validated, and merged before M2.
 
 The H2 frontend now supports structured diagnostic collection and recovery-capable parsing through `ParseRecovering(sourceText, ParseOptions)`, while retaining the original fail-fast `Parse(sourceText)` API.
 
@@ -358,31 +420,67 @@ Recovery-capable parsing returns a termination status and may retain a partial A
 
 The work includes:
 
-1. Introduce the shared diagnostic representation and minimal compilation-local source registry.
-2. Define stage-specific result and recovery contracts.
-3. Adapt the streaming lexer and token source to safe lexical recovery.
-4. Adapt the arena-backed parser to statement-level recovery and guaranteed progress.
-5. Enforce compilation eligibility so recovered or malformed programs cannot execute.
-6. Add diagnostic and recovery regression tests.
-7. Benchmark the migration against the existing M1/H2 frontend baseline.
-8. Begin M2 name resolution only after the migration passes its acceptance criteria.
+- [x] Introduce the shared diagnostic representation and minimal compilation-local source registry.
+- [x] Define stage-specific result and recovery contracts.
+- [x] Adapt the streaming lexer and token source to safe lexical recovery.
+- [x] Adapt the arena-backed parser to statement-level recovery and guaranteed progress.
+- [x] Enforce compilation eligibility so recovered or malformed programs cannot execute.
+- [x] Add diagnostic and recovery regression tests.
+- [x] Benchmark the migration against the existing M1/H2 frontend baseline.
+- [x] Complete the recovery migration's acceptance criteria and clear the prerequisite for beginning M2 name resolution.
+
+**Outcome:** The pre-M2 structured diagnostic and frontend recovery prerequisite is complete. M2 name resolution is the next implementation stage.
 
 ### M2 implementation order
 
-After frontend recovery is validated:
+After the completed frontend recovery work, proceed through the following implementation stages:
 
-1. Dedicated lexical name resolver.
-2. Mandatory static type checker, including definite-assignment analysis.
-3. Bytecode compiler.
-4. Baseline stack-based virtual machine.
-5. First executable Eloque programs.
-6. Runtime correctness and performance benchmarks.
+1. **Name resolution**
+   - Implement the dedicated lexical resolver.
+   - Establish symbol identities, scope relationships, and identifier bindings.
+   - Validate the approved resolver behavioral matrix.
+
+2. **Mandatory static type checking**
+   - Implement typing rules for the supported executable subset.
+   - Include definite-assignment analysis.
+   - Prevent execution of programs with blocking semantic diagnostics.
+
+3. **Monowire execution contracts**
+   - Validate the Go compiler-to-Monowire integration boundary.
+   - Define the production bytecode instruction subset.
+   - Specify register operands, register-window invariants, and runtime value representation.
+   - Establish memory ownership and runtime error-propagation rules.
+
+4. **Monowire bytecode compiler**
+   - Translate statically validated programs into register-based bytecode.
+   - Preserve Eloque's required evaluation order and runtime semantics.
+   - Produce valid instructions, register references, and source metadata.
+
+5. **Monowire virtual machine**
+   - Implement the initial sequential register-based interpreter.
+   - Support constants, arithmetic, bindings, reassignment, and output.
+   - Validate register access, instruction semantics, and supported runtime failures.
+
+6. **First executable Eloque programs**
+   - Integrate the frontend, resolver, checker, compiler, and VM.
+   - Execute representative valid programs.
+   - Reject invalid programs before execution.
+
+7. **Runtime correctness and performance benchmarks**
+   - Establish instruction-level and end-to-end correctness coverage.
+   - Record reproducible VM-only and process-level performance baselines.
+   - Preserve environment and toolchain metadata.
+   - Compare with CPython only using equivalent, correctness-tested executable workloads.
+
+The stages describe logical dependencies, not a requirement to complete all runtime design work before beginning name resolution.
+
+Compiler/runtime integration investigation may proceed in parallel with semantic-analysis development.
 
 The M2 design is documented in `DESIGN_DECISIONS.md` and `ARCHITECTURE.md`.
 
-The detailed resolver acceptance matrix and deferred optimization triggers are preserved in `ARCHITECTURE.md` and `TECHNICAL_BACKLOG.md`.
+Outstanding engineering reviews and their acceptance criteria are tracked in `TECHNICAL_BACKLOG.md`.
 
-The diagnostic recovery implementation is complete pending final integration checks. No M2 name resolution, static checking, bytecode compilation, or execution stage is marked implemented.
+**Implementation status:** Name resolution, static checking, production Monowire bytecode compilation, and production VM execution are not yet implemented.
 
 ## Versioning and compatibility
 
@@ -413,8 +511,14 @@ Eloque intends to use Semantic Versioning as a guideline:
 - [x] Implement structured diagnostics and recovery-capable frontend parsing.
 - [x] Establish post-recovery experimental frontend benchmark evidence.
 - [x] Complete final recovery-branch verification and merge.
-- [ ] Review the M2 runtime value representation and compiler-stage interfaces.
-- [ ] Implement name resolution and mandatory basic static type checking.
-- [ ] Implement bytecode compilation and the initial stack-based VM.
+- [x] Complete the pre-M2 Monowire implementation-language experiment.
+- [x] Select Monowire as Eloque's register-based VM architecture.
+- [ ] Begin M2 dedicated lexical name resolution.
+- [ ] Implement mandatory basic static type checking and definite-assignment analysis.
+- [ ] Validate the Go–Monowire integration boundary and provisional Zig implementation choice.
+- [ ] Specify the production Monowire bytecode format, register-window invariants, and runtime value representation.
+- [ ] Implement the Monowire register-based bytecode compiler.
+- [ ] Implement the initial sequential Monowire VM.
 - [ ] Validate the first executable Eloque subset end to end.
+- [ ] Establish production runtime correctness and performance baselines.
 - [ ] Expand grammar and static-checking rules alongside subsequent executable features.

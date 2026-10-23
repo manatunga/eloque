@@ -1,0 +1,15 @@
+# Compiled benchmark executables
+monowire-go
+monowire-rust
+monowire-switch
+monowire-labeled
+main
+main.o
+
+# Zig object files
+*.o
+
+# Python
+__pycache__/
+*.pyc
+.venv/

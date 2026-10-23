@@ -6,7 +6,11 @@
 
 **Eloque** is a proposed general-purpose programming language with structured, conversational-English-inspired syntax and precise, statically checked semantics. It is intended to be approachable for beginners while providing predictable diagnostics and tooling for AI-assisted development.
 
-> **Status:** Early development — Milestone 1, the post-M1 H2 frontend optimization, and structured diagnostic recovery are implemented. Eloque has a working Go lexer and parser using direct pull-based token streaming and an arena-backed flat AST. The frontend supports both fail-fast parsing through `Parse(sourceText)` and recovery-capable parsing through `ParseRecovering(sourceText, ParseOptions)`, with structured, source-aware diagnostics. Name resolution, static type checking, bytecode compilation, and VM execution are not yet implemented. The examples below are **illustrative, not executable**.
+> **Status:** Early development — M1, the post-M1 H2 frontend optimization, and pre-M2 structured diagnostic recovery are implemented. Eloque has a working Go lexer and parser using direct pull-based token streaming and an arena-backed flat AST. Both fail-fast and recovery-capable parsing are supported, with structured, source-aware diagnostics.
+>
+> **Next milestone:** M2 — First Execution. Eloque will use **Monowire**, its selected register-based bytecode VM, with Zig provisionally preferred as the runtime implementation language. Name resolution, mandatory static type checking, production bytecode compilation, and VM execution are not yet implemented.
+>
+> The examples below are **illustrative, not executable**.
 
 ## A glimpse of Eloque
 
@@ -45,7 +49,7 @@ This example illustrates the intended language, including features that will arr
 - **Predictable behavior:** strict booleans, checked integer arithmetic, explicit mutation and defined value semantics.
 - **Useful diagnostics:** errors should be clear to beginners and available in structured form for editors and AI agents.
 - **Concurrency by design:** safe native concurrency is a longer-term goal, not a feature of the initial implementation.
-- **Measure before optimizing:** the first runtime is a Go-based stack bytecode VM; future optimization and backend choices depend on evidence.
+- **Evidence-driven execution:** Monowire is the selected register-based bytecode VM, using overlapping register windows for function calls. Runtime implementation and optimization decisions are guided by reproducible benchmarks, correctness, and maintainability.
 
 ## Documentation
 
@@ -57,37 +61,39 @@ This example illustrates the intended language, including features that will arr
 
 ## Implementation architecture
 
-Eloque is implemented in **Go**.
+Eloque uses a **Go compiler frontend** targeting **Monowire**, its register-based bytecode virtual machine.
 
-Its production frontend is operational. The semantic analysis and execution stages are planned.
+The production frontend is operational. Semantic analysis, bytecode compilation, and runtime execution are planned for M2 — First Execution.
 
 ```text
 .elq source
     |
     v
-Lexer (direct token streaming)
+Lexer (direct token streaming)       [implemented]
     |
     v
-Parser (Pratt expressions)
+Parser (Pratt expressions)           [implemented]
     |
     v
-Arena-backed flat AST
+Arena-backed flat AST                [implemented]
     |
     v
-Name resolution             [planned]
+Name resolution                      [planned — M2]
     |
     v
-Static type checker         [planned]
+Static type checker                  [planned — M2]
     |
     v
-Bytecode compiler           [planned]
+Monowire bytecode compiler           [planned — M2]
     |
     v
-Stack-based VM              [planned]
+Monowire register-based VM           [planned — M2]
     |
     v
 Program execution
 ```
+
+### Compiler frontend
 
 The frontend packages are organized under `internal/frontend/`, with shared source-location utilities in `internal/source/`.
 
@@ -98,15 +104,44 @@ The production frontend exposes two parsing entry points:
 
 Recovery-capable parsing supports configurable error budgets and preserves successfully completed statements where possible. Its termination statuses are `ParseComplete`, `ParseRecovered`, and `ParseAborted`.
 
-A recovered or partial AST is not semantically validated or executable. See [Architecture](docs/ARCHITECTURE.md) for the recovery contract and implementation details.
+A recovered or partial AST is not semantically validated or executable.
 
 The original M1 parser and interface-based AST remain available internally for regression testing and performance comparisons.
 
-The next development phase, **M2 — First execution**, will implement the smallest statically checked executable subset, including name resolution, basic type checking, bytecode compilation, and VM execution.
+### Monowire execution engine
 
-More advanced language features will be introduced incrementally.
+**Monowire** is Eloque's selected register-based bytecode virtual machine.
+
+Its architecture uses explicit register operands and overlapping caller-outgoing/callee-incoming register windows for function execution.
+
+The previous Go-based stack-VM plan has been superseded.
+
+The runtime implementation language is not yet finalized:
+
+- **Zig:** Provisionally preferred following the pre-M2 implementation-language experiment.
+- **Rust:** Retained as a fallback if integration, portability, ownership, or maintenance constraints make Zig unsuitable.
+
+Conventional switch-based dispatch is the initial baseline. More specialized dispatch strategies remain subject to production profiling.
+
+The production Monowire VM has **not yet been implemented**.
+
+### Next implementation milestone
+
+**M2 — First Execution** will introduce:
+
+- Lexical name resolution.
+- Mandatory basic static type checking and definite-assignment analysis.
+- Monowire register-based bytecode compilation.
+- Sequential Monowire VM execution.
+- End-to-end correctness tests and initial runtime performance baselines.
+
+The initial executable subset will cover supported literals, arithmetic, `let`, `change`, and `say`.
+
+Control flow, language-level functions, collections, custom types, modules, and native concurrency are planned for later milestones.
 
 There are no installation instructions for executing Eloque programs yet because the runtime has not been implemented.
+
+See [Architecture](docs/ARCHITECTURE.md) for implementation details and [Technical Backlog](docs/TECHNICAL_BACKLOG.md) for unresolved engineering decisions.
 
 ## Project status
 
@@ -127,12 +162,13 @@ The following checkpoints are complete:
 - **Post-M1 H2 optimization:** Replaced the production interface-based AST with an arena-backed flat AST, retained direct pull-based token streaming, preserved the legacy M1 parser for regression comparisons, and validated the new frontend using differential tests, arena-invariant tests, and controlled benchmarks.
 - **Frontend package migration:** Reorganized the lexer, parser, and AST packages under `internal/frontend/`, retaining shared source-location utilities in `internal/source/`.
 - **Pre-M2 structured diagnostics and recovery:** Introduced shared diagnostic infrastructure, lexer and parser recovery, configurable error budgets, statement-level AST preservation, expression-depth safeguards, and dedicated regression and stress tests. Retained the existing fail-fast parsing API.
+- **Pre-M2 Monowire experiment:** Implemented equivalent synthetic register-VM workloads in Go, Rust, Zig with conventional switch dispatch, and Zig with labeled-switch dispatch. Benchmarked arithmetic, branching, repeated calls, and recursion. Selected Monowire as the production register-based VM architecture and provisionally preferred Zig as its implementation language, subject to integration validation.
 
 The production frontend processes source text through `Parse(sourceText)`, incrementally requesting lexer tokens and constructing an arena-backed `FlatProgram`. The original M1 parser and buffered token-delivery implementation remain available as reference implementations.
 
-**Current status:** M1, H2, and pre-M2 structured diagnostic recovery are implemented. M2 — First execution — is the next implementation milestone.
+**Current status:** M1, H2, structured diagnostic recovery, and the pre-M2 Monowire implementation-language experiment are complete. Monowire's register-based architecture is selected, but its production implementation has not begun.
 
-**Next milestone:** M2, as defined in the project roadmap.
+**Next milestone:** M2 — First Execution, beginning with lexical name resolution and mandatory static type checking, followed by Monowire bytecode compilation and VM execution.
 
 ### Performance benchmarks
 
@@ -159,10 +195,48 @@ At 10,000 arithmetic declarations, Eloque recorded median frontend latencies of 
 
 These experimental measurements do not replace the October 20 official H2 baseline. The complete report, methodology, raw Go measurements, and limitations are available in [the post-recovery benchmark report](benchmarks/results/experimental/h2-post-recovery-report/REPORT.md).
 
+### Monowire implementation-language experiment
+
+On October 23, 2026, Eloque completed a pre-M2 experiment comparing four implementations of a synthetic register-based VM:
+
+- Go.
+- Rust.
+- Zig with conventional switch dispatch.
+- Zig with labeled-switch dispatch.
+
+The experiment covered arithmetic, conditional branching, repeated function calls, and recursion.
+
+**Median subprocess wall-clock times (milliseconds):**
+
+| Implementation | Call loop | Arithmetic | Branch | Recursion |
+|---|---:|---:|---:|---:|
+| Zig (labeled switch) | 18.802 | 9.268 | 15.919 | 14.033 |
+| Zig (switch) | 19.794 | 9.280 | 15.985 | 14.413 |
+| Rust | 33.049 | 11.892 | 21.395 | 23.859 |
+| Go | 53.362 | 18.262 | 29.022 | 39.246 |
+
+Zig recorded the lowest median time across all four workloads. The labeled-switch variant showed a smaller additional advantage over conventional switch dispatch.
+
+**Limitations:** These are synthetic prototype measurements, not production Eloque execution benchmarks. They include subprocess startup overhead, and the implementations differ in memory-allocation strategies. The experiment does not establish complete runtime performance or prove that Zig will remain the fastest choice in production.
+
+**Outcome:** Zig is provisionally preferred for Monowire, with Rust retained as a fallback. The production implementation choice remains subject to integration, correctness, portability, and maintainability validation.
+
+The experimental specification, build instructions, benchmark harness, and results are documented in [`benchmarks/monowire/`](benchmarks/monowire/).
+
 The official results, historical measurements, methodology, and limitations are documented in [benchmarks/README.md](benchmarks/README.md).
 
 ### Implementation limitations
 
-Eloque currently supports lexical analysis, syntax parsing, structured diagnostics, and recovery-capable AST construction for its initial grammar. It does not yet support name resolution, static type checking, bytecode compilation, or program execution.
+Eloque currently supports lexical analysis, syntax parsing, structured diagnostics, and recovery-capable AST construction for its initial grammar.
+
+It does **not yet** support:
+
+- Lexical name resolution.
+- Mandatory static type checking.
+- Production Monowire bytecode compilation.
+- Monowire VM execution.
+- Running Eloque programs.
+
+The Monowire architecture is selected, but the implementation-language choice remains provisional and the production VM is not yet operational.
 
 The [language specification](docs/LANGUAGE_SPEC.md) describes the intended language rather than a fully implemented feature set. Syntax, release boundaries, and technical details may evolve before version 1.0.
