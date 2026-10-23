@@ -1,0 +1,28 @@
+workload=recursion
+n=10000 reps=100 runs=15
+expected=50005000 checksum=0
+timestamp=2026-10-23T12:31:38.985830+05:30
+git_revision=1e5a137
+system=Linux-6.18.33.2-microsoft-standard-WSL2-x86_64-with-glibc2.43
+machine=x86_64
+python=3.15.0rc2
+go=go version go1.27.2 linux/amd64
+rust=rustc 1.99.1 (58cf8f9c3 2026-10-13)
+zig=0.17.0
+command=uv run --no-project compare.py --n 10000 --reps 100 --runs 15 --workload recursion
+method=external subprocess wall-clock time; includes startup; warm-up once per binary; shuffled order per round
+build=go build; rustc -C opt-level=3; zig -O ReleaseFast -lc
+measurement_unit=ms
+checkpoint=pre-m2 (working experiment label, not a roadmap milestone)
+
+summary:
+Zig labeled  median=  14.033 ms mean=  13.978 ms stdev=  1.011 ms min=  12.722 ms max=  16.748 ms
+Zig switch   median=  14.413 ms mean=  14.602 ms stdev=  1.014 ms min=  13.185 ms max=  16.484 ms
+Rust         median=  23.859 ms mean=  24.192 ms stdev=  1.093 ms min=  22.839 ms max=  26.387 ms
+Go           median=  39.246 ms mean=  39.253 ms stdev=  0.931 ms min=  37.813 ms max=  40.978 ms
+
+raw_samples_ms:
+Go: 38.726033, 37.869949, 37.812539, 39.953470, 38.386189, 40.311664, 39.069656, 39.512445, 38.998826, 38.392015, 39.246274, 40.978481, 39.723705, 39.386173, 40.427345
+Rust: 25.383667, 23.039476, 24.820519, 23.797880, 23.420737, 26.386550, 24.281334, 23.858681, 23.996976, 24.743161, 26.124303, 23.396815, 22.839438, 23.185932, 23.599182
+Zig switch: 14.413430, 13.605060, 16.251983, 13.185143, 15.746520, 14.024436, 14.500439, 13.944623, 14.473023, 13.799493, 14.011648, 14.534066, 16.483642, 15.931119, 14.131983
+Zig labeled: 13.001234, 13.008861, 12.721586, 13.538549, 14.178880, 13.161237, 14.033352, 14.395416, 13.770692, 14.403981, 15.062084, 13.231721, 14.092396, 14.316643, 16.747604

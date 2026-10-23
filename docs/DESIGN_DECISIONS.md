@@ -45,7 +45,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for the implementation structure, [ROADMA
 
 | ID | Status | Decision |
 |---|---|---|
-| D-001 | Decided; frontend implemented (M1) | Implement Eloque in Go. M1 established the lexer, parser, AST, and diagnostics. A mandatory static checker, bytecode compiler, and stack-based VM remain planned. |
+| D-001 | Decided; frontend implemented (M1/H2), execution pending (M2) | Eloque's compiler frontend and semantic-analysis stages are implemented in Go. M1/H2 established lexical analysis, parsing, and arena-backed flat AST construction; pre-M2 work added structured diagnostic recovery. Mandatory name resolution, static type checking, and bytecode compilation remain planned. Execution will use **Monowire**, the selected register-based VM architecture, rather than the previously planned Go stack VM. |
 | D-002 | Decided; CLI provisional | **Eloque** is the language name and `.elq` its official source extension. `eloque` is the planned CLI command, subject to availability and naming-conflict checks. |
 | D-003 | Decided | General-purpose language with concise, structured conversational syntax—not unrestricted English. Prioritize readability, predictable agent tooling, and foundations for safe concurrency. |
 | D-004 | Decided; initial lexer implemented (M1) | Four-space significant indentation, `:` blocks, no tabs, `#` comments, case-sensitive ASCII identifiers, and double-quoted strings. |
@@ -66,7 +66,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for the implementation structure, [ROADMA
 | D-019 | Decided; output syntax implemented (M1) | `say` is the output statement. Interpolation syntax is planned as `"Hello, {name}"`, but M1 parses strings as ordinary literals without interpolation evaluation. Input API remains unspecified. |
 | D-020 | Decided; collections pending | Lists and maps use conversational access and mutation; `remove all` removes all matching list values; `find` returns optional values. |
 | D-021 | Decided; comparisons pending | Word-based comparisons (`is`, `is not`, `is greater than`, etc.) and structural equality where supported. Chained comparisons are excluded from the initial grammar. |
-| D-022 | Decided; VM pending | Implement a stack VM first. Reconsider a register VM only after a functioning baseline and reproducible comparative benchmarks. |
+| D-022 | Decided; Monowire implementation pending (M2) | Adopt **Monowire**, a register-based bytecode virtual machine, as Eloque's production execution architecture. The previously approved stack-first VM plan is superseded. Monowire uses explicit register operands, call frames, and overlapping caller-outgoing/callee-incoming register windows. Its initial implementation belongs to M2 — First Execution. The stack-versus-register architecture decision is closed; remaining runtime representation, instruction encoding, safety, and integration details require implementation validation. |
 | D-023 | Provisional | CPython runtime performance parity is an aspiration, not a guarantee. M1 parsing benchmarks are not evidence of execution-speed parity; benchmark runtime performance after the VM exists. |
 | D-024 | Provisional | Backend extensibility, standard library scope, packaging, and post-1.0 compatibility policy need further specification. |
 | D-025 | Decided; collections pending | Zero-based indexing, negative indices from the end, end-exclusive slices, and typed failures for invalid direct access. Unicode indexing units remain provisional. |
@@ -85,6 +85,9 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for the implementation structure, [ROADMA
 | D-038 | Implemented (M1) | The canonical `Parse(sourceText)` frontend consumes lexer tokens incrementally via `tokenSource`, without a redundant independent token cursor. Buffered parsing remains for regression tests and benchmarks. Future changes must preserve correctness, diagnostic quality, and reproducible performance baselines. |
 | D-039 | Implemented (H2) | Adopt an arena-backed flat AST as the canonical production representation. The parser constructs `FlatNode` and `FlatProgram` structures using arena-managed storage. Retain the original M1 interface-based AST and parser as legacy references for correctness and performance comparisons. This is an internal representation decision, not a language-semantic change. |
 | D-040 | Implemented (H2) | Organize the frontend under `internal/frontend/{ast,lexer,parser}` while retaining shared source-location utilities in `internal/source`. Preserve the canonical `Parse(sourceText)` entry point and direct pull-based token streaming. Future semantic analysis and backend packages should be introduced when their implementations begin rather than creating speculative empty package structures. |
+| D-041 - D-050 | Decided/Provisional | [Jump to October M2 Decisions](#m2-architecture-decisions---october-2026) |
+| D-051 | Provisional; experimental benchmarks completed | **Zig is the preferred implementation language for Monowire**, with Rust retained as the fallback. The October 23, 2026 experiment compared Go, Rust, Zig switch dispatch, and Zig labeled-switch dispatch across call-loop, arithmetic, branching, and recursion workloads. Zig led all four measured workloads. The results include subprocess overhead and implementation differences, so they do not establish production VM performance. Confirm Zig's suitability through Go integration, memory-ownership, portability, error-handling, and build-system validation before finalizing the production toolchain. |
+| D-052 | Provisional; optimization review deferred | Use conventional switch dispatch as the initial Monowire implementation baseline. Retain Zig labeled-switch dispatch as an optimization candidate. The October 2026 prototype results show small median advantages for labeled dispatch, but the evidence is insufficient to establish a reliable production benefit. Reevaluate after a functioning Monowire VM and representative VM-only benchmarks, considering execution time, code size, compiler output, and maintenance complexity. |
 
 ## Superseded syntax and semantics
 
@@ -123,12 +126,12 @@ Eloque grew out of the earlier BakeScript culinary-syntax concept. That transiti
 These are future tasks, **not unfinished M1 requirements**:
 
 - **Lexing and parsing:** Extend token coverage, grammar, source spans, and conformance fixtures for future features; specify comparison/Boolean precedence and associativity. Preserve existing reserved-keyword rules and arithmetic parser behavior.
-- **Diagnostics:** Implement the approved shared diagnostic contract and controlled multi-error recovery before M2 resolution. Preserve M1/H2 behavior as a historical implementation baseline until the migration is validated.
+- **Diagnostics:** Extend the implemented structured diagnostic and recovery infrastructure to M2 name resolution and static type checking. Preserve the validated M1/H2 frontend and pre-M2 recovery behavior as regression baselines.
 - **Types and numbers:** Resolve mixed `Int`/`Float` arithmetic, conversion and overflow edge cases, exceptional floating-point values, type narrowing, generic compatibility, and safe mutation analysis.
 - **Collections and text:** Define iteration and mutation details, including Unicode code-point versus grapheme-cluster indexing.
 - **Language features:** Specify exception taxonomy and cleanup precedence, module resolution, structural-interface diagnostics, and pattern exhaustiveness.
 - **Execution and tooling:** Define CLI behavior, sandbox budgets, and concurrency/ownership semantics as their implementation milestones approach.
-- **VM architecture:** Benchmark a functioning stack VM before reconsidering a register VM. Keep alternative backends and runtime optimization proposals as tracked future decisions rather than assuming they are adopted.
+- **VM architecture and implementation:** Monowire is the selected register-based bytecode VM, superseding the previously planned Go stack VM. Its overlapping caller-outgoing and callee-incoming register-window architecture is an approved design direction, not an open stack-versus-register decision. Zig is provisionally preferred as the runtime implementation language, with Rust retained as a fallback pending integration, portability, correctness, and maintenance validation. Finalize the production bytecode format, register-window invariants, runtime value representation, memory ownership, and compiler/runtime integration during M2. Use conventional switch dispatch as the initial baseline; reconsider labeled-switch dispatch and other optimizations only when representative production benchmarks justify them.
 - **Frontend representation and optimization:** Preserve H2's arena-backed flat AST as the production baseline. Revisit arena capacity and growth policies only when representative profiling demonstrates a meaningful opportunity. Evaluate any proposed optimization against correctness, allocation overhead, retained memory, small-program performance, and implementation complexity. The review is tracked under TB-025 in the technical backlog.
 
 ## M2 architecture decisions — October 2026
@@ -337,7 +340,7 @@ The approved sequence is:
 4. Implement dedicated M2 name resolution.
 5. Implement mandatory static type checking and definite-assignment checks.
 6. Implement bytecode compilation.
-7. Implement the baseline stack-based VM.
+7. Implement the baseline Monowire register-based VM.
 8. Establish execution benchmarks before reconsidering major runtime architecture choices.
 
 No stage should be considered implemented solely because its design is recorded here.
@@ -354,3 +357,85 @@ When changing a language-level decision:
 4. Distinguish agreed design from implemented, tested behavior; record benchmark evidence and reevaluation triggers for performance-sensitive choices.
 
 **A decision's presence in this register does not mean its feature is executable.**
+
+## Monowire architecture decision — October 23, 2026
+
+**Status:** Decided architecture; production implementation pending.
+
+Eloque will use **Monowire**, a register-based bytecode virtual machine, beginning with M2 — First Execution.
+
+This decision supersedes the earlier plan to implement a Go-based stack VM first and reconsider register-based execution only after a working stack interpreter.
+
+### Rationale
+
+The register-based architecture was selected to support explicit operand locations, efficient register-oriented bytecode execution, and a runtime design with well-defined call frames and overlapping register windows.
+
+An independent implementation-language experiment compared Go, Rust, and two Zig dispatch variants across four synthetic bytecode workloads.
+
+Zig recorded the lowest median subprocess wall-clock time in every workload. This supports its provisional selection as Monowire's implementation language, but the experiment was not a complete or fully controlled production-runtime comparison.
+
+The architecture decision does not depend on Zig remaining the implementation language. Monowire's register-based execution model can be retained if implementation constraints eventually favor Rust or another suitable systems language.
+
+### Implementation boundary
+
+The production pipeline is planned as:
+
+```text
+Eloque source (.elq)
+    |
+    v
+Go lexer and parser
+    |
+    v
+Arena-backed flat AST
+    |
+    v
+Go name resolver
+    |
+    v
+Go static type checker
+    |
+    v
+Monowire bytecode compiler
+    |
+    v
+Monowire register-based VM
+    |
+    v
+Program execution
+```
+
+The compiler-to-runtime interface, bytecode representation, runtime value layout, allocation and ownership rules, and error-propagation mechanisms require further specification.
+
+Go–Zig integration remains a validation task rather than an implemented capability.
+
+### Milestone impact
+
+Monowire does not change the functional boundary of M2.
+
+M2 remains responsible for name resolution, mandatory static checking, bytecode generation, runtime execution, and end-to-end validation of Eloque's initial executable subset.
+
+M3 continues to introduce control flow, while M4 introduces functions at the language level. Monowire may implement internal call-frame mechanisms earlier without implying that Eloque function syntax is already supported.
+
+### Superseded decision
+
+**Previous D-022:** Implement a Go stack VM first; reconsider a register VM after obtaining a working baseline and comparative measurements.
+
+**Replacement:** Implement Monowire as the initial production VM, with register-based execution selected from the outset.
+
+The previous decision is retained here for historical traceability, not as an active implementation requirement.
+
+### Remaining validation
+
+Before considering the production runtime architecture operational:
+
+- Validate the Go–Zig integration boundary and error propagation.
+- Specify the bytecode format, register allocation, and call-frame invariants.
+- Establish runtime value representation and memory ownership.
+- Implement instruction-level correctness tests and resource-boundary safeguards.
+- Validate executable Eloque programs through the mandatory checker.
+- Establish representative VM-only and end-to-end performance baselines.
+
+The corresponding unresolved engineering work is tracked in `TECHNICAL_BACKLOG.md`.
+
+**Evidence:** `benchmarks/monowire/README.md`, `benchmarks/monowire/SPEC.md`, and the recorded October 23, 2026 benchmark results.

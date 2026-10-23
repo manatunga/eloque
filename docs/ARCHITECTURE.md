@@ -28,32 +28,34 @@ The [language specification](LANGUAGE_SPEC.md) defines intended syntax and seman
 The intended complete pipeline is:
 
 ```text
-Eloque source
+Eloque source (.elq)
     |
     v
-Lexer
+Go lexer (direct token streaming)       [implemented]
     |
     v
-Parser
+Go parser (Pratt expressions)           [implemented]
     |
     v
-Arena-backed flat AST
+Arena-backed flat AST                   [implemented]
     |
     v
-Name resolution
+Name resolution                         [M2]
     |
     v
-Static type checking
+Static type checking                    [M2]
     |
     v
-Bytecode compilation
+Monowire bytecode compiler              [M2]
     |
     v
-Stack-based virtual machine
+Monowire register-based VM              [M2]
     |
     v
 Program execution
 ```
+
+**Architecture decision:** Monowire is the selected production VM. The former Go-hosted stack-based VM plan has been superseded. Zig is provisionally preferred for Monowire's implementation, with Rust retained as a fallback pending integration and production-readiness validation.
 
 **Implemented:** Lexical analysis, parsing, flat AST construction, source-aware diagnostics, and frontend integration.
 
@@ -402,29 +404,272 @@ Static checking is mandatory for normal compilation.
 
 The frontend's AST representation must not be confused with the semantic information produced by these future stages.
 
-## 10. Bytecode compiler
+## 10. Monowire bytecode compiler
 
-The initial backend will compile statically validated programs into bytecode.
+**Status:** Architecture selected; production implementation pending (M2).
 
-Its intended responsibilities include:
+Eloque's first executable backend will compile statically validated programs into **Monowire register-based bytecode**.
 
-- Instruction generation.
-- Constant-pool management.
-- Local-variable representation.
-- Branch and call support as language features are added.
+Monowire is the selected execution architecture, not an experimental alternative to a production stack VM.
+
+The bytecode compiler consumes the validated flat AST and semantic information produced by name resolution and static type checking.
+
+### Responsibilities
+
+The bytecode compiler is responsible for:
+
+- Translating supported expressions and statements into Monowire instructions.
+- Assigning temporary values and local bindings to virtual registers.
+- Managing constants and references to runtime values.
+- Emitting type-appropriate operations consistent with Eloque's static semantics.
+- Preserving source-location information for runtime diagnostics.
+- Producing valid register operands and instruction sequences.
+- Supporting branch targets and function-call conventions as the language gains those features.
+- Providing metadata needed by the runtime, including register requirements and function descriptors where applicable.
+
+The compiler must not silently bypass name resolution or mandatory type checking.
+
+### Register allocation
+
+Monowire uses explicit register operands rather than an implicit operand stack.
+
+The initial compiler may use a simple allocation strategy suitable for the M2 language subset. Advanced register allocation, register reuse, and instruction scheduling are not prerequisites for first execution.
+
+Symbol identities produced by name resolution are compile-time references. They must not be treated as inherently equivalent to Monowire register indices.
+
+The compiler is responsible for mapping resolved bindings and intermediate expression values to runtime storage.
+
+### Bytecode representation
+
+The production bytecode format remains to be specified.
+
+Design work must establish:
+
+- Instruction encoding and operand widths.
+- Register numbering and validity rules.
+- Constant-pool representation.
+- Function descriptors and register-window requirements.
+- Branch-target encoding.
 - Source-location and debugging metadata.
+- Bytecode validation before execution.
 
-The initial design may compile from the validated AST without a general-purpose intermediate representation.
+The experimental instruction streams in `benchmarks/monowire/` are prototypes, not a finalized production instruction set or serialized bytecode format.
 
-A separate backend-neutral IR should be introduced only when a concrete optimization or additional backend justifies its complexity.
+### Intermediate representation
 
-## 11. Virtual machine and runtime
+M2 may compile directly from the validated flat AST and semantic-analysis results into Monowire bytecode.
 
-The first executable Eloque implementation is planned as a Go-hosted stack-based bytecode VM.
+A separate backend-neutral intermediate representation should be introduced only when optimization requirements or additional backends justify its complexity.
 
-Its initial scope will cover a small statically checked subset, including constants, arithmetic, bindings, and output.
+The compiler must preserve Eloque's specified evaluation order and observable behavior independently of bytecode representation.
 
-Future capabilities include control flow, functions, collections, custom types, exceptions, and concurrency.
+---
+
+## 11. Monowire virtual machine and runtime
+
+**Status:** Register-based architecture selected; experimental prototypes benchmarked; production VM not yet implemented.
+
+Monowire is Eloque's register-based bytecode virtual machine.
+
+It replaces the previously planned Go-hosted stack VM and will be implemented as part of **M2 — First Execution**.
+
+The initial production VM must execute the supported M2 subset, including constants, arithmetic, bindings, and output, after successful static checking.
+
+Later milestones expand execution support to control flow, language-level functions, collections, custom types, exceptions, and concurrency.
+
+### 11.1 Execution model
+
+Monowire operates on bytecode instructions with explicit register operands.
+
+The selected architecture includes:
+
+- Register-based operand storage.
+- Function descriptors defining execution and register requirements.
+- Call frames tracking active execution contexts.
+- Overlapping caller-outgoing and callee-incoming register windows.
+- Explicit call and return behavior.
+- Runtime checks appropriate to supported instructions and value types.
+
+Registers are runtime storage locations, not compiler symbol identities.
+
+The initial M2 VM does not need to expose user-defined functions merely because its internal execution machinery supports call frames.
+
+### 11.2 Register windows and call frames
+
+Monowire's call convention is based on overlapping register windows.
+
+A caller prepares arguments in an outgoing register region. A callee's incoming registers can reference the corresponding underlying storage, avoiding mandatory argument copying at the call boundary.
+
+The exact frame-base calculations, register-window sizing, return-value placement, and frame restoration rules must be formalized before production implementation.
+
+The design must define and test:
+
+- Valid register access within each frame.
+- Caller-to-callee argument mapping.
+- Return-value propagation.
+- Nested call behavior.
+- Frame and register capacity limits.
+- Recovery or failure behavior when runtime limits are exceeded.
+- Prevention of invalid or unintended cross-frame access.
+
+The recursion benchmark demonstrates a prototype of overlapping register-window execution. It does not establish that the production calling convention is fully specified or implemented.
+
+### 11.3 Runtime value model
+
+Eloque's observable value semantics remain independent of Monowire's internal representation.
+
+Planned runtime types include:
+
+- `Int`: checked signed 64-bit integers.
+- `Float`: IEEE 754 binary64.
+- `Bool`: strict Boolean values.
+- `String`: immutable Unicode text.
+- Optional values through `T?`.
+
+Later runtime types include lists, maps, and structured values with logical value independence.
+
+A 64-bit register-slot design is the current Monowire direction, but the production representation requires validation.
+
+The implementation must specify how primitive values, tagged values, and references to heap-allocated objects are represented.
+
+A 64-bit slot does not imply that every runtime value can be stored directly without auxiliary metadata or heap storage.
+
+Value representation must be reviewed before implementing production VM values.
+
+### 11.4 Implementation language and integration
+
+Zig is provisionally preferred as Monowire's implementation language, with Rust retained as a fallback.
+
+The October 23, 2026 experimental comparison evaluated Go, Rust, and two Zig dispatch variants across arithmetic, branching, call-loop, and recursion workloads.
+
+Zig recorded the lowest median wall-clock times in the measured prototypes. However, the implementations differ in allocation strategies, and subprocess timing includes startup overhead.
+
+These results justify continued Zig implementation work but do not establish production runtime superiority.
+
+The production compiler remains Go-based.
+
+The integration boundary between the Go compiler and Monowire must be validated before relying on Zig for production execution.
+
+Required investigation includes:
+
+- A stable calling interface between Go and Zig.
+- Bytecode and constant-data transfer.
+- Runtime value ownership and lifetime management.
+- Error and diagnostic propagation across the boundary.
+- Build and linking requirements.
+- Platform portability.
+- Debugging and testability.
+- Runtime startup and integration overhead.
+
+No Go–Zig integration is currently claimed as implemented.
+
+A future implementation-language change would not reverse the decision to use Monowire's register-based architecture.
+
+### 11.5 Instruction dispatch
+
+The initial Monowire implementation will use conventional switch-based dispatch as its correctness and performance baseline.
+
+Zig labeled-switch dispatch remains an optimization candidate.
+
+The October 2026 prototype comparison found small median advantages for labeled dispatch, but the evidence does not establish a reliable general benefit.
+
+Dispatch optimization should be reconsidered after the production VM can execute representative Eloque programs and VM-only profiling identifies a meaningful opportunity.
+
+Correctness, maintainability, portability, and generated machine-code behavior must be considered alongside elapsed time.
+
+### 11.6 Runtime memory management
+
+The initial runtime must define ownership and lifetime rules for register storage, call frames, constants, and heap-backed values.
+
+A tracing garbage collector is a planned Monowire direction for managing eventual heap-allocated language values.
+
+The precise collector architecture, allocation strategy, root representation, and collection policy remain to be specified.
+
+Production design must account for:
+
+- Registers and active frames as potential garbage-collection roots.
+- Heap object references and object lifetime.
+- Safe interaction with Go-owned data across the integration boundary.
+- Runtime error paths and cleanup.
+- Future concurrent execution contexts.
+
+A complete tracing collector is not required to execute an M2 subset that can operate without general heap-managed objects. Its introduction must be driven by the value types and ownership requirements actually implemented.
+
+### 11.7 Runtime safety
+
+Monowire must preserve Eloque's specified runtime behavior, including checked integer arithmetic and defined failure conditions.
+
+The VM must reject invalid bytecode or invalid execution states safely.
+
+Relevant safeguards include:
+
+- Register bounds validation.
+- Instruction and branch-target validity.
+- Frame and call-depth limits.
+- Arithmetic failure detection.
+- Controlled handling of runtime resource exhaustion.
+- Source-aware runtime errors.
+- Configurable resource limits for sandboxed execution.
+
+The precise mechanisms may differ between debug, validation, and optimized execution paths, but observable language guarantees must not be silently weakened.
+
+### 11.8 M2 execution scope
+
+M2 establishes the first end-to-end executable Eloque subset.
+
+The minimum execution path is:
+
+```text
+Valid Eloque source
+    |
+    v
+Parsing
+    |
+    v
+Name resolution
+    |
+    v
+Static type checking
+    |
+    v
+Monowire bytecode generation
+    |
+    v
+Bytecode validation
+    |
+    v
+Monowire execution
+    |
+    v
+Observable program result
+```
+
+M2 must demonstrate:
+
+1. Correct execution of supported arithmetic expressions.
+2. Correct local binding and reassignment behavior.
+3. Correct `say` output.
+4. Rejection of unresolved names and invalid types before execution.
+5. Checked runtime failures for supported operations.
+6. Correct register and instruction behavior.
+7. End-to-end regression tests and representative runtime benchmarks.
+
+The experimental Monowire benchmark suite is supporting evidence, not a substitute for these production acceptance criteria.
+
+### 11.9 Deferred runtime capabilities
+
+The following remain future implementation work:
+
+- Advanced register allocation and bytecode optimization.
+- Language-level function execution and recursion as specified for M4.
+- General heap objects and tracing garbage collection as required by supported value types.
+- Native concurrency and task scheduling.
+- JIT compilation.
+- AOT/native compilation.
+- WebAssembly deployment.
+- Additional backend optimizations.
+
+Deferred work must be tracked with rationale, reevaluation triggers, and acceptance criteria in `TECHNICAL_BACKLOG.md`.
 
 ### Runtime value model
 
@@ -444,13 +689,21 @@ The runtime representation—Go interfaces, tagged values, pointer-backed object
 
 It must be reviewed before implementing the first VM value type.
 
-### VM architecture review
+### Monowire implementation and optimization review
 
-The stack VM is the baseline, not an irreversible commitment.
+Monowire is Eloque's selected register-based bytecode VM. The previous stack-based VM plan has been superseded, and the stack-versus-register architecture decision is closed.
 
-Once a working VM and reproducible execution benchmarks exist, a register-based design may be evaluated against stack-machine optimizations.
+Monowire uses explicit register operands and overlapping caller-outgoing and callee-incoming register windows. The production implementation belongs to M2 — First Execution.
 
-The decision should consider dispatch cost, instruction count, memory traffic, bytecode size, and implementation complexity.
+Zig is provisionally preferred as the implementation language, with Rust retained as a fallback. The final implementation choice requires validation of Go compiler/runtime integration, portability, memory ownership, correctness, and maintenance complexity.
+
+The initial interpreter will use conventional switch dispatch. Labeled-switch dispatch remains an optimization candidate rather than an established production requirement.
+
+After the first working Monowire VM, establish reproducible correctness and performance baselines. Evaluate optimization proposals using representative workloads and measurements of dispatch overhead, instruction count, register traffic, bytecode size, memory usage, and implementation complexity.
+
+Any proposed optimization must preserve language semantics and demonstrate a measurable benefit without unacceptable regressions in correctness, portability, or maintainability.
+
+**Review status:** VM architecture selected; production implementation and optimization validation pending.
 
 ## 12. Modules, exceptions, and concurrency
 
@@ -470,32 +723,43 @@ Exception matching, propagation, cleanup, and unwinding semantics require implem
 
 ### Concurrency
 
-The initial VM is sequential.
+Monowire's initial M2 execution model is sequential.
 
-Native concurrency is a longer-term language goal.
+Native concurrency remains a long-term Eloque language goal. The architecture should support independent task-local execution contexts without requiring a global VM execution lock.
 
-Go goroutines may provide an implementation mechanism, but Eloque's observable concurrency contract must be designed independently.
+Potential runtime facilities include task-local register storage, call frames, scheduling state, and error propagation.
 
-Task ownership, cancellation, shared mutable state, race safety, and error propagation must be specified before implementation.
+The precise concurrency implementation depends on the selected Monowire host language. Go goroutines are not automatically available inside a Zig-implemented VM, and the compiler's use of Go does not determine the runtime scheduling mechanism.
 
-The VM should avoid unnecessary global mutable state that would obstruct future independent execution contexts.
+Task lifetime, cancellation, ownership, shared mutable state, synchronization, and race-safety guarantees must be specified before native concurrency is introduced.
 
-## 13. Future execution backends
+The initial runtime should avoid unnecessary global mutable execution state that would obstruct future parallelism.
+
+Concurrency is not an M2 acceptance requirement.
+
+## 13. Future execution optimizations and backends
+
+Monowire is the selected register-based execution architecture.
+
+The stack-versus-register decision is closed. A stack VM is no longer the planned initial backend or a prerequisite for performance evaluation.
 
 Possible future improvements include:
 
-- Bytecode specialization.
-- Register-based VM evaluation.
+- Register allocation and bytecode specialization.
+- Instruction-dispatch optimization, including labeled-switch evaluation.
+- Tracing garbage collection and allocation optimization.
 - JIT compilation.
 - AOT/native compilation.
 - WebAssembly.
-- Additional compiler optimizations.
+- Additional compiler optimizations and alternative deployment backends.
 
-These are research or review items, not features of the completed frontend.
+These are research or review items, not features of the completed frontend or initial M2 runtime.
 
-Performance comparisons with CPython must eventually use equivalent, correctness-tested executable programs once Eloque has a working runtime.
+Future backend work must preserve Eloque's specified observable semantics.
 
-Frontend parsing measurements must not be used as evidence of runtime performance parity.
+Performance comparisons with CPython must use equivalent, correctness-tested executable workloads after Monowire is operational.
+
+Frontend parsing benchmarks and synthetic Monowire interpreter benchmarks must not be presented as evidence of complete Eloque runtime parity.
 
 ## 14. Compatibility and evolution
 
@@ -513,15 +777,21 @@ Changes to internal implementation should preserve observable behavior unless a 
 |---|---|
 | Arena capacity and allocation tuning | Representative frontend profiling demonstrates a meaningful opportunity |
 | Additional parser lookahead | A grammar feature requires it or a measured regression justifies it |
-| Runtime value representation | Before first VM value implementation |
 | Numeric edge cases | Arithmetic checker and runtime implementation |
-| Stack versus register VM | After working VM and reproducible execution benchmarks |
+| Decision | Review trigger |
+| Monowire architecture | Resolved — register-based Monowire selected; no stack-VM prerequisite |
+| Monowire implementation language | Before production Go–Zig integration is committed |
+| Go–Zig integration boundary | Before end-to-end M2 bytecode execution |
+| Production bytecode format and register-window invariants | Before implementing the bytecode compiler and VM |
+| Runtime value representation | Before first production VM value implementation |
+| Instruction dispatch optimization | After working Monowire VM and representative VM-only profiling |
+| Runtime memory management and garbage collection | When implemented heap-backed values require managed lifetimes |
+| Native concurrency and ownership | Dedicated concurrency design milestone |
+| JIT, AOT, and WebAssembly | Demonstrated performance or deployment requirement |
 | Backend-neutral IR | Concrete second-backend or optimization requirement |
 | Collection value independence | Before mutable collections |
 | Exception taxonomy and unwinding | Exception implementation milestone |
 | Module resolution and caching | Module implementation milestone |
-| Native concurrency and ownership | Dedicated concurrency design milestone |
-| JIT, AOT, and WebAssembly | Demonstrated performance or deployment requirement |
 | Structured diagnostics and sandbox controls | Tooling and agent-execution milestones |
 
 All deferred engineering decisions must retain a rationale, review trigger, and measurable acceptance criteria in [TECHNICAL_BACKLOG.md](TECHNICAL_BACKLOG.md).
@@ -568,7 +838,7 @@ Mandatory static checker
 Bytecode compiler
        |
        v
-Stack VM
+Monowire register-based VM
 ```
 
 The diagnostic system spans the frontend and semantic stages, but does not eliminate their individual responsibilities.
@@ -1090,11 +1360,19 @@ Trigger: module imports and multi-file compilation, expected around M7.
 
 Criteria: file identity correctness, source ownership, diagnostics across modules, incremental-compilation requirements if justified.
 
-**Stack VM versus register VM**
+**Monowire implementation-language and dispatch validation**
 
-Trigger: a functioning executable stack VM with representative runtime benchmarks.
+Architecture status: Resolved — Monowire selected as Eloque's register-based production VM.
 
-Criteria: execution speed, memory use, bytecode size, compiler complexity, maintainability.
+Implementation-language status: Zig provisionally preferred; Rust retained as fallback.
+
+Trigger: Before production Go–Zig integration, followed by representative profiling after the first executable Monowire VM.
+
+Rationale: The pre-M2 benchmark prototypes favor Zig but do not fully normalize memory-management strategies, startup overhead, or compiler optimization behavior.
+
+Criteria: Correctness, integration reliability, portability, runtime performance, memory use, bytecode size, build complexity, and maintainability.
+
+The previous stack-first implementation requirement is superseded and must not be used as a prerequisite for M2.
 
 **JIT, AOT, WebAssembly and alternative backends**
 
@@ -1128,7 +1406,7 @@ Before considering M2 complete:
 - [ ] Mandatory static checker implemented and tested.
 - [ ] Definite-assignment behavior validated.
 - [ ] Bytecode compiler implemented.
-- [ ] Stack VM executes the supported language subset.
+- [ ] Monowire register-based VM executes the supported language subset.
 - [ ] Blocking diagnostics prevent execution.
 - [ ] Runtime correctness and representative benchmarks recorded.
 
