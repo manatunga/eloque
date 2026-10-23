@@ -1,12 +1,21 @@
 # Eloque Benchmarks
 
-This directory contains reproducible frontend performance benchmarks, historical optimization results, token-delivery architecture experiments, and cross-language comparisons against Go and CPython.
+This directory contains reproducible performance benchmarks, historical optimization results, architecture experiments, and cross-language comparisons for Eloque's compiler frontend and planned execution engine.
 
-**Current production baseline:** H2 direct-streaming parser with an arena-backed flat AST.
+The benchmark suites are divided into two primary categories:
 
-**Historical baseline:** M1 direct-streaming parser with an interface-based AST.
+- **Frontend benchmarks:** Measure lexical analysis, parsing, AST construction, and the overhead of recovery-capable parsing.
+- **Monowire experiments:** Evaluate candidate implementation languages and instruction-dispatch strategies for Eloque's selected register-based bytecode VM.
 
-The benchmarks measure lexical analysis, parsing, and AST construction. They do not measure Eloque program execution, static type checking, bytecode generation, or VM performance.
+**Current production frontend baseline:** H2 direct-streaming parser with an arena-backed flat AST and implemented structured diagnostic recovery.
+
+**Historical frontend baseline:** M1 direct-streaming parser with an interface-based AST.
+
+**Selected execution architecture:** Monowire, a register-based bytecode VM with overlapping caller-outgoing and callee-incoming register windows. Production implementation is planned for M2 — First Execution.
+
+The Monowire experiments use standalone synthetic VM prototypes. They do not measure production Eloque execution, static type checking, or production bytecode generation.
+
+Frontend benchmarks and Monowire experiments have different measurement boundaries and must not be interpreted as directly comparable performance results.
 
 ## Directory structure
 
@@ -15,17 +24,30 @@ benchmarks/
 ├── README.md
 ├── cpython/
 ├── go/
+├── monowire/
+│   ├── README.md
+│   ├── SPEC.md
+│   ├── build.sh
+│   ├── compare.py
+│   └── ...
 └── results/
     ├── current/
     ├── experimental/
     ├── historical/
+    ├── monowire/
     └── official/
 ```
 
-- `results/official/`: Finalized benchmark evidence for the H2 checkpoint.
-- `results/current/`: Previously maintained production baseline measurements.
-- `results/experimental/`: Exploratory optimization, allocation, and architecture measurements.
-- `results/historical/`: Earlier implementation measurements retained for comparison.
+### Benchmark categories
+
+- `monowire/`: Standalone engine-selection experiment, including Go, Rust, and Zig implementations, synthetic workloads, build instructions, and the comparison harness.
+- `results/monowire/`: Recorded Monowire experimental measurements and supporting evidence.
+- `results/official/`: Finalized benchmark evidence for the H2 frontend checkpoint.
+- `results/current/`: Previously maintained frontend production-baseline measurements.
+- `results/experimental/`: Exploratory frontend optimization, allocation, recovery, and architecture measurements.
+- `results/historical/`: Earlier frontend implementation measurements retained for comparison.
+- `go/`: Go cross-language frontend benchmark implementations.
+- `cpython/`: CPython frontend benchmark implementations.
 
 The current Eloque lexer, parser, and AST benchmarks reside under:
 
@@ -35,9 +57,11 @@ internal/frontend/parser/
 internal/frontend/ast/
 ```
 
-Cross-language Go benchmarks reside under `benchmarks/go/`, and CPython benchmarks reside under `benchmarks/cpython/`.
+Frontend benchmark implementations and Monowire runtime experiments are maintained separately because they evaluate different compiler and execution stages.
 
 Historical result files and their original contents should be preserved.
+
+For detailed Monowire experiment methodology and reproduction instructions, see [Monowire Benchmarks](monowire/README.md).
 
 ## Benchmark Result Naming Convention
 
@@ -409,6 +433,99 @@ The retained M1 parser remains a historical reference and a regression-testing i
 
 Future frontend optimization should preserve the official H2 baseline and report correctness, latency, allocation counts, allocated bytes, and memory trade-offs.
 
+## Monowire — Register VM implementation-language experiment
+
+**Checkpoint:** Pre-M2 Monowire engine selection, October 23, 2026.
+
+**Status:** Experiment completed; production VM implementation pending.
+
+Monowire is Eloque's selected register-based bytecode virtual machine. It uses explicit register operands and overlapping caller-outgoing and callee-incoming register windows.
+
+Before production implementation, an experiment compared four candidate runtime configurations:
+
+1. Go.
+2. Rust.
+3. Zig with conventional switch dispatch.
+4. Zig with labeled-switch dispatch.
+
+### Experimental workloads
+
+The experiment evaluated four synthetic workloads:
+
+| Workload | Purpose |
+|---|---|
+| Call loop | Repeated calls and register-window operations |
+| Arithmetic | Integer arithmetic execution |
+| Branch | Conditional branching |
+| Recursion | Recursive calls and frame management |
+
+All four workloads were implemented across the four runtime configurations, producing 16 measured combinations.
+
+### Recorded results
+
+Median subprocess wall-clock latency, in milliseconds:
+
+| Implementation | Call loop | Arithmetic | Branch | Recursion |
+|---|---:|---:|---:|---:|
+| Zig labeled switch | 18.802 | 9.268 | 15.919 | 14.033 |
+| Zig conventional switch | 19.794 | 9.280 | 15.985 | 14.413 |
+| Rust | 33.049 | 11.892 | 21.395 | 23.859 |
+| Go | 53.362 | 18.262 | 29.022 | 39.246 |
+
+Zig recorded the lowest median wall-clock latency in all four measured workloads. Labeled-switch dispatch produced a smaller additional improvement over conventional switch dispatch.
+
+### Methodology
+
+The experiment used:
+
+- A common set of synthetic workloads.
+- Correctness checks against expected outputs.
+- Repeated subprocess execution.
+- Warmup runs and randomized measurement order.
+- Median wall-clock measurements.
+
+The recorded environment included:
+
+- Intel Core Ultra 7 155H.
+- Linux under WSL2.
+- Go 1.27.2.
+- Rust 1.99.1.
+- Zig 0.17.0.
+
+The comparison harness and build instructions are maintained under `benchmarks/monowire/`.
+
+### Interpretation and limitations
+
+The experiment is evidence for selecting a practical runtime implementation language, not a production Eloque performance benchmark.
+
+Important limitations include:
+
+- Subprocess startup overhead is included in measured latency.
+- Memory-allocation strategies differ between implementations.
+- The workloads are synthetic and do not represent complete Eloque applications.
+- Garbage collection, compiler/runtime integration, native concurrency, and production error handling were not evaluated.
+- The experiment does not provide a controlled stack-versus-register VM architecture comparison.
+
+### Architectural outcome
+
+**VM architecture:** Monowire's register-based execution model is selected. The previous stack-VM implementation plan is superseded.
+
+**Implementation language:** Zig is provisionally preferred, with Rust retained as a fallback pending integration, portability, correctness, and maintenance validation.
+
+**Dispatch:** Conventional switch dispatch is the initial production baseline. Labeled-switch dispatch remains an optimization candidate requiring representative production profiling.
+
+**Next evaluation:** M2 must establish reproducible correctness, VM-only performance, and end-to-end execution benchmarks using the actual Monowire implementation.
+
+### Reproduction and evidence
+
+See:
+
+- [Monowire benchmark README](monowire/README.md) — setup, build, execution, and interpretation.
+- [Monowire experiment specification](monowire/SPEC.md) — workload definitions and experimental requirements.
+- [Monowire results](results/monowire/) — recorded measurements and supporting evidence.
+
+These experimental results are separate from the official H2 frontend performance baseline.
+
 ## Measurement Methodology
 
 ### Eloque
@@ -436,7 +553,7 @@ Two operations are measured independently:
 
 The tokenization and parsing timings must not be added together.
 
-## Interpretation and Limitations
+## Frontend Benchmark Interpretation and Limitations
 
 1. **Different language grammars:** Eloque and Python have different syntax, grammar rules, and AST representations. The workloads are comparable in intent, not identical in implementation complexity.
 
@@ -448,9 +565,9 @@ The tokenization and parsing timings must not be added together.
 
 5. **Synthetic workloads:** These measurements do not necessarily represent performance on real-world applications or large, heterogeneous codebases.
 
-6. **No runtime comparison:** These benchmarks do not measure program execution, bytecode compilation, virtual-machine performance, or Eloque's future static type checker.
+6. **No production runtime comparison:** The frontend benchmarks do not measure program execution, bytecode compilation, virtual-machine performance, or static type checking. The separate Monowire experiment measures synthetic VM prototypes, not the production Eloque runtime.
 
-7. **Prerelease CPython:** The comparison uses CPython 3.15.0rc2, not a final stable Python 3.15 release.
+7. **Different CPython versions:** Historical M1 comparisons used CPython 3.15.0rc2, while the official H2 comparison used CPython 3.14.4. The post-recovery experiment also used CPython 3.15.0rc2. Results from different versions and measurement environments must not be combined as a single uniform comparison.
 
 ## Historical Results
 
