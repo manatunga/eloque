@@ -59,43 +59,61 @@ This example illustrates the intended language, including features that will arr
 - [Roadmap](docs/ROADMAP.md) — incremental milestones and provisional releases
 - [Technical backlog](docs/TECHNICAL_BACKLOG.md) — deferred engineering decisions and review triggers
 
-## Implementation architecture
+## Compiler & Runtime Architecture
 
-Eloque uses a **Go compiler frontend** targeting **Monowire**, its register-based bytecode virtual machine.
+Eloque combines a **Go-based compiler frontend** with **Monowire**, its selected register-based bytecode execution architecture.
 
-The production frontend is operational. Semantic analysis, bytecode compilation, and runtime execution are planned for M2 — First Execution.
+The implemented frontend uses pull-based token streaming, Pratt expression parsing, and an arena-backed flat AST. Monowire is designed around explicit register operands and overlapping call-frame register windows.
+
+The frontend is operational, including structured diagnostic recovery. Name resolution, mandatory static checking, bytecode compilation, and runtime execution are planned for **M2 — First Execution**.
 
 ```text
-.elq source
-    |
-    v
-Lexer (direct token streaming)       [implemented]
-    |
-    v
-Parser (Pratt expressions)           [implemented]
-    |
-    v
-Arena-backed flat AST                [implemented]
-    |
-    v
-Name resolution                      [planned — M2]
-    |
-    v
-Static type checker                  [planned — M2]
-    |
-    v
-Monowire bytecode compiler           [planned — M2]
-    |
-    v
-Monowire register-based VM           [planned — M2]
-    |
-    v
-Program execution
+        Eloque source (.elq)
+                │
+                ▼
+┌──────────────────────────────┐
+│ Pull-based streaming lexer   │  ✓ Implemented
+└──────────────┬───────────────┘
+               ▼
+┌──────────────────────────────┐
+│ Pratt expression parser      │  ✓ Implemented
+│ + statement parsing          │
+└──────────────┬───────────────┘
+               ▼
+┌──────────────────────────────┐
+│ Arena-backed flat AST        │  ✓ Implemented
+└──────────────┬───────────────┘
+               ▼
+┌──────────────────────────────┐
+│ Name resolution              │  Planned — M2
+└──────────────┬───────────────┘
+               ▼
+┌──────────────────────────────┐
+│ Mandatory static checker     │  Planned — M2
+└──────────────┬───────────────┘
+               ▼
+┌──────────────────────────────┐
+│ Monowire register            │  Planned — M2
+│ bytecode compiler            │
+└──────────────┬───────────────┘
+               ▼
+┌──────────────────────────────┐
+│ Monowire execution engine    │  Planned — M2
+│ Overlapping register windows │
+└──────────────┬───────────────┘
+               ▼
+        Program execution
 ```
 
 ### Compiler frontend
 
 The frontend packages are organized under `internal/frontend/`, with shared source-location utilities in `internal/source/`.
+
+Three architectural choices define the implemented frontend:
+
+- **Pull-based streaming lexer:** The parser requests tokens on demand, avoiding the need to materialize the entire token stream before parsing.
+- **Pratt expression parser:** Expression parsing is precedence-aware and integrated with Eloque's statement grammar.
+- **Arena-backed flat AST:** Syntax nodes use a compact, index-addressed representation instead of individually allocated interface-backed AST objects.
 
 The production frontend exposes two parsing entry points:
 
@@ -110,9 +128,11 @@ The original M1 parser and interface-based AST remain available internally for r
 
 ### Monowire execution engine
 
-**Monowire** is Eloque's selected register-based bytecode virtual machine.
+**Monowire** is Eloque's selected register-based bytecode virtual machine, designed around explicit register operands and overlapping caller-outgoing/callee-incoming register windows.
 
-Its architecture uses explicit register operands and overlapping caller-outgoing/callee-incoming register windows for function execution.
+Rather than using a conventional operand stack, Monowire instructions operate on registers. Function-call transitions are designed around overlapping register windows, allowing the caller's outgoing argument registers to correspond to the callee's incoming parameter registers.
+
+This architecture aims to reduce unnecessary operand movement and support efficient function execution. Its actual performance characteristics must be validated against the production implementation.
 
 The previous Go-based stack-VM plan has been superseded.
 
@@ -121,27 +141,34 @@ The runtime implementation language is not yet finalized:
 - **Zig:** Provisionally preferred following the pre-M2 implementation-language experiment.
 - **Rust:** Retained as a fallback if integration, portability, ownership, or maintenance constraints make Zig unsuitable.
 
-Conventional switch-based dispatch is the initial baseline. More specialized dispatch strategies remain subject to production profiling.
+The pre-M2 experiment evaluated Go, Rust, Zig conventional-switch dispatch, and Zig labeled-switch dispatch across arithmetic, branching, call-loop, and recursion workloads.
 
-The production Monowire VM has **not yet been implemented**.
+Zig recorded the lowest median wall-clock latency across all four synthetic workloads. These results inform implementation-language selection but do not establish production VM performance.
+
+Conventional switch-based dispatch is the initial implementation baseline. Specialized dispatch strategies remain subject to production profiling.
+
+**Implementation status:** Monowire's architecture has been selected, but its production bytecode compiler, VM, and Go–runtime integration have not yet been implemented.
+
+See [Monowire Benchmarks](benchmarks/monowire/README.md) for methodology and experimental evidence.
 
 ### Next implementation milestone
 
 **M2 — First Execution** will introduce:
 
-- Lexical name resolution.
+- Lexical name resolution and symbol binding.
 - Mandatory basic static type checking and definite-assignment analysis.
+- Monowire bytecode format and register-window execution contracts.
 - Monowire register-based bytecode compilation.
 - Sequential Monowire VM execution.
 - End-to-end correctness tests and initial runtime performance baselines.
 
 The initial executable subset will cover supported literals, arithmetic, `let`, `change`, and `say`.
 
-Control flow, language-level functions, collections, custom types, modules, and native concurrency are planned for later milestones.
+Control flow, language-level functions, collections, custom types, modules, and native concurrency are planned for later milestones. Internal VM call machinery may be implemented before language-level function support.
 
 There are no installation instructions for executing Eloque programs yet because the runtime has not been implemented.
 
-See [Architecture](docs/ARCHITECTURE.md) for implementation details and [Technical Backlog](docs/TECHNICAL_BACKLOG.md) for unresolved engineering decisions.
+See [Architecture](docs/ARCHITECTURE.md) for implementation details, [Design Decisions](docs/DESIGN_DECISIONS.md) for accepted architectural choices, and [Technical Backlog](docs/TECHNICAL_BACKLOG.md) for unresolved engineering decisions.
 
 ## Project status
 
