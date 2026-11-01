@@ -1,0 +1,161 @@
+engine,workload,size,ns,boundary
+Eloque H2 fail-fast,controlled arithmetic,10,6684.0,in-process parser + AST
+Eloque H2 fail-fast,controlled arithmetic,10,6232.0,in-process parser + AST
+Eloque H2 fail-fast,controlled arithmetic,10,6605.0,in-process parser + AST
+Eloque H2 fail-fast,controlled arithmetic,10,6252.0,in-process parser + AST
+Eloque H2 fail-fast,controlled arithmetic,10,6286.0,in-process parser + AST
+Eloque H2 fail-fast,controlled arithmetic,10,7154.0,in-process parser + AST
+Eloque H2 fail-fast,controlled arithmetic,10,7690.0,in-process parser + AST
+Eloque H2 fail-fast,controlled arithmetic,10,7191.0,in-process parser + AST
+Eloque H2 fail-fast,controlled arithmetic,10,7337.0,in-process parser + AST
+Eloque H2 fail-fast,controlled arithmetic,10,7439.0,in-process parser + AST
+Eloque H2 fail-fast,controlled arithmetic,100,65976.0,in-process parser + AST
+Eloque H2 fail-fast,controlled arithmetic,100,65301.0,in-process parser + AST
+Eloque H2 fail-fast,controlled arithmetic,100,64430.0,in-process parser + AST
+Eloque H2 fail-fast,controlled arithmetic,100,62982.0,in-process parser + AST
+Eloque H2 fail-fast,controlled arithmetic,100,63897.0,in-process parser + AST
+Eloque H2 fail-fast,controlled arithmetic,100,64613.0,in-process parser + AST
+Eloque H2 fail-fast,controlled arithmetic,100,64427.0,in-process parser + AST
+Eloque H2 fail-fast,controlled arithmetic,100,64754.0,in-process parser + AST
+Eloque H2 fail-fast,controlled arithmetic,100,63455.0,in-process parser + AST
+Eloque H2 fail-fast,controlled arithmetic,100,64040.0,in-process parser + AST
+Eloque H2 fail-fast,controlled arithmetic,1000,749633.0,in-process parser + AST
+Eloque H2 fail-fast,controlled arithmetic,1000,750359.0,in-process parser + AST
+Eloque H2 fail-fast,controlled arithmetic,1000,749469.0,in-process parser + AST
+Eloque H2 fail-fast,controlled arithmetic,1000,751143.0,in-process parser + AST
+Eloque H2 fail-fast,controlled arithmetic,1000,755756.0,in-process parser + AST
+Eloque H2 fail-fast,controlled arithmetic,1000,760345.0,in-process parser + AST
+Eloque H2 fail-fast,controlled arithmetic,1000,753997.0,in-process parser + AST
+Eloque H2 fail-fast,controlled arithmetic,1000,745872.0,in-process parser + AST
+Eloque H2 fail-fast,controlled arithmetic,1000,697336.0,in-process parser + AST
+Eloque H2 fail-fast,controlled arithmetic,1000,694759.0,in-process parser + AST
+Eloque H2 fail-fast,controlled arithmetic,10000,7221928.0,in-process parser + AST
+Eloque H2 fail-fast,controlled arithmetic,10000,7028834.0,in-process parser + AST
+Eloque H2 fail-fast,controlled arithmetic,10000,7203140.0,in-process parser + AST
+Eloque H2 fail-fast,controlled arithmetic,10000,7119033.0,in-process parser + AST
+Eloque H2 fail-fast,controlled arithmetic,10000,7215297.0,in-process parser + AST
+Eloque H2 fail-fast,controlled arithmetic,10000,7423307.0,in-process parser + AST
+Eloque H2 fail-fast,controlled arithmetic,10000,7463963.0,in-process parser + AST
+Eloque H2 fail-fast,controlled arithmetic,10000,7211483.0,in-process parser + AST
+Eloque H2 fail-fast,controlled arithmetic,10000,7114805.0,in-process parser + AST
+Eloque H2 fail-fast,controlled arithmetic,10000,7063142.0,in-process parser + AST
+Eloque H2 recovering,controlled arithmetic,10,6813.0,in-process parser + AST
+Eloque H2 recovering,controlled arithmetic,10,6843.0,in-process parser + AST
+Eloque H2 recovering,controlled arithmetic,10,6853.0,in-process parser + AST
+Eloque H2 recovering,controlled arithmetic,10,7096.0,in-process parser + AST
+Eloque H2 recovering,controlled arithmetic,10,7228.0,in-process parser + AST
+Eloque H2 recovering,controlled arithmetic,10,6827.0,in-process parser + AST
+Eloque H2 recovering,controlled arithmetic,10,6906.0,in-process parser + AST
+Eloque H2 recovering,controlled arithmetic,10,6860.0,in-process parser + AST
+Eloque H2 recovering,controlled arithmetic,10,7134.0,in-process parser + AST
+Eloque H2 recovering,controlled arithmetic,10,7721.0,in-process parser + AST
+Eloque H2 recovering,controlled arithmetic,100,69757.0,in-process parser + AST
+Eloque H2 recovering,controlled arithmetic,100,69367.0,in-process parser + AST
+Eloque H2 recovering,controlled arithmetic,100,68747.0,in-process parser + AST
+Eloque H2 recovering,controlled arithmetic,100,68809.0,in-process parser + AST
+Eloque H2 recovering,controlled arithmetic,100,64862.0,in-process parser + AST
+Eloque H2 recovering,controlled arithmetic,100,59132.0,in-process parser + AST
+Eloque H2 recovering,controlled arithmetic,100,59366.0,in-process parser + AST
+Eloque H2 recovering,controlled arithmetic,100,60218.0,in-process parser + AST
+Eloque H2 recovering,controlled arithmetic,100,68116.0,in-process parser + AST
+Eloque H2 recovering,controlled arithmetic,100,68253.0,in-process parser + AST
+Eloque H2 recovering,controlled arithmetic,1000,846117.0,in-process parser + AST
+Eloque H2 recovering,controlled arithmetic,1000,811190.0,in-process parser + AST
+Eloque H2 recovering,controlled arithmetic,1000,810426.0,in-process parser + AST
+Eloque H2 recovering,controlled arithmetic,1000,828006.0,in-process parser + AST
+Eloque H2 recovering,controlled arithmetic,1000,818237.0,in-process parser + AST
+Eloque H2 recovering,controlled arithmetic,1000,824299.0,in-process parser + AST
+Eloque H2 recovering,controlled arithmetic,1000,820612.0,in-process parser + AST
+Eloque H2 recovering,controlled arithmetic,1000,835298.0,in-process parser + AST
+Eloque H2 recovering,controlled arithmetic,1000,828943.0,in-process parser + AST
+Eloque H2 recovering,controlled arithmetic,1000,813480.0,in-process parser + AST
+Eloque H2 recovering,controlled arithmetic,10000,8373823.0,in-process parser + AST
+Eloque H2 recovering,controlled arithmetic,10000,8458614.0,in-process parser + AST
+Eloque H2 recovering,controlled arithmetic,10000,8617313.0,in-process parser + AST
+Eloque H2 recovering,controlled arithmetic,10000,8512017.0,in-process parser + AST
+Eloque H2 recovering,controlled arithmetic,10000,8471466.0,in-process parser + AST
+Eloque H2 recovering,controlled arithmetic,10000,8479694.0,in-process parser + AST
+Eloque H2 recovering,controlled arithmetic,10000,8468065.0,in-process parser + AST
+Eloque H2 recovering,controlled arithmetic,10000,8302064.0,in-process parser + AST
+Eloque H2 recovering,controlled arithmetic,10000,8604616.0,in-process parser + AST
+Eloque H2 recovering,controlled arithmetic,10000,7855116.0,in-process parser + AST
+Go compiler parser,controlled arithmetic,10,11576.0,in-process parser + AST
+Go compiler parser,controlled arithmetic,10,11847.0,in-process parser + AST
+Go compiler parser,controlled arithmetic,10,11697.0,in-process parser + AST
+Go compiler parser,controlled arithmetic,10,11715.0,in-process parser + AST
+Go compiler parser,controlled arithmetic,10,11717.0,in-process parser + AST
+Go compiler parser,controlled arithmetic,10,11366.0,in-process parser + AST
+Go compiler parser,controlled arithmetic,10,11778.0,in-process parser + AST
+Go compiler parser,controlled arithmetic,10,11899.0,in-process parser + AST
+Go compiler parser,controlled arithmetic,10,12059.0,in-process parser + AST
+Go compiler parser,controlled arithmetic,10,11939.0,in-process parser + AST
+Go compiler parser,controlled arithmetic,100,100853.0,in-process parser + AST
+Go compiler parser,controlled arithmetic,100,108254.0,in-process parser + AST
+Go compiler parser,controlled arithmetic,100,107868.0,in-process parser + AST
+Go compiler parser,controlled arithmetic,100,110812.0,in-process parser + AST
+Go compiler parser,controlled arithmetic,100,108069.0,in-process parser + AST
+Go compiler parser,controlled arithmetic,100,108550.0,in-process parser + AST
+Go compiler parser,controlled arithmetic,100,108614.0,in-process parser + AST
+Go compiler parser,controlled arithmetic,100,109679.0,in-process parser + AST
+Go compiler parser,controlled arithmetic,100,106727.0,in-process parser + AST
+Go compiler parser,controlled arithmetic,100,110794.0,in-process parser + AST
+Go compiler parser,controlled arithmetic,1000,1225810.0,in-process parser + AST
+Go compiler parser,controlled arithmetic,1000,1248825.0,in-process parser + AST
+Go compiler parser,controlled arithmetic,1000,1263987.0,in-process parser + AST
+Go compiler parser,controlled arithmetic,1000,1250783.0,in-process parser + AST
+Go compiler parser,controlled arithmetic,1000,1230082.0,in-process parser + AST
+Go compiler parser,controlled arithmetic,1000,1208515.0,in-process parser + AST
+Go compiler parser,controlled arithmetic,1000,1253754.0,in-process parser + AST
+Go compiler parser,controlled arithmetic,1000,1252047.0,in-process parser + AST
+Go compiler parser,controlled arithmetic,1000,1276214.0,in-process parser + AST
+Go compiler parser,controlled arithmetic,1000,1277637.0,in-process parser + AST
+Go compiler parser,controlled arithmetic,10000,11655334.0,in-process parser + AST
+Go compiler parser,controlled arithmetic,10000,11457019.0,in-process parser + AST
+Go compiler parser,controlled arithmetic,10000,11550407.0,in-process parser + AST
+Go compiler parser,controlled arithmetic,10000,11406538.0,in-process parser + AST
+Go compiler parser,controlled arithmetic,10000,11505783.0,in-process parser + AST
+Go compiler parser,controlled arithmetic,10000,11466558.0,in-process parser + AST
+Go compiler parser,controlled arithmetic,10000,11431990.0,in-process parser + AST
+Go compiler parser,controlled arithmetic,10000,11473282.0,in-process parser + AST
+Go compiler parser,controlled arithmetic,10000,11146408.0,in-process parser + AST
+Go compiler parser,controlled arithmetic,10000,11188666.0,in-process parser + AST
+CPython ast.parse,controlled arithmetic,10,105553.00150008408,in-process parser + AST
+CPython ast.parse,controlled arithmetic,10,107167.38249902846,in-process parser + AST
+CPython ast.parse,controlled arithmetic,10,98865.53999967873,in-process parser + AST
+CPython ast.parse,controlled arithmetic,10,100321.82649956667,in-process parser + AST
+CPython ast.parse,controlled arithmetic,10,103877.69899898558,in-process parser + AST
+CPython ast.parse,controlled arithmetic,10,104961.45500292187,in-process parser + AST
+CPython ast.parse,controlled arithmetic,10,104313.64099713392,in-process parser + AST
+CPython ast.parse,controlled arithmetic,10,104299.90900229313,in-process parser + AST
+CPython ast.parse,controlled arithmetic,10,103633.08749947464,in-process parser + AST
+CPython ast.parse,controlled arithmetic,10,105657.05850240192,in-process parser + AST
+CPython ast.parse,controlled arithmetic,100,1053905.630033114,in-process parser + AST
+CPython ast.parse,controlled arithmetic,100,1056096.4150135987,in-process parser + AST
+CPython ast.parse,controlled arithmetic,100,1061950.3450288903,in-process parser + AST
+CPython ast.parse,controlled arithmetic,100,1074669.1700114752,in-process parser + AST
+CPython ast.parse,controlled arithmetic,100,1032637.3600037186,in-process parser + AST
+CPython ast.parse,controlled arithmetic,100,1059024.2950274842,in-process parser + AST
+CPython ast.parse,controlled arithmetic,100,1039655.6349951425,in-process parser + AST
+CPython ast.parse,controlled arithmetic,100,1045029.1800225386,in-process parser + AST
+CPython ast.parse,controlled arithmetic,100,1045832.4549836107,in-process parser + AST
+CPython ast.parse,controlled arithmetic,100,1043585.0550129545,in-process parser + AST
+CPython ast.parse,controlled arithmetic,1000,11953873.250240576,in-process parser + AST
+CPython ast.parse,controlled arithmetic,1000,11768434.700206853,in-process parser + AST
+CPython ast.parse,controlled arithmetic,1000,12154669.100345928,in-process parser + AST
+CPython ast.parse,controlled arithmetic,1000,12120843.599768704,in-process parser + AST
+CPython ast.parse,controlled arithmetic,1000,12034694.900285104,in-process parser + AST
+CPython ast.parse,controlled arithmetic,1000,11846566.549866112,in-process parser + AST
+CPython ast.parse,controlled arithmetic,1000,12202851.899928646,in-process parser + AST
+CPython ast.parse,controlled arithmetic,1000,12089557.699800935,in-process parser + AST
+CPython ast.parse,controlled arithmetic,1000,12072676.550087634,in-process parser + AST
+CPython ast.parse,controlled arithmetic,1000,12341732.600179967,in-process parser + AST
+CPython ast.parse,controlled arithmetic,10000,158840561.9986588,in-process parser + AST
+CPython ast.parse,controlled arithmetic,10000,157219838.4965304,in-process parser + AST
+CPython ast.parse,controlled arithmetic,10000,159301197.49828008,in-process parser + AST
+CPython ast.parse,controlled arithmetic,10000,163918769.5000146,in-process parser + AST
+CPython ast.parse,controlled arithmetic,10000,157307509.5002423,in-process parser + AST
+CPython ast.parse,controlled arithmetic,10000,170051443.49968758,in-process parser + AST
+CPython ast.parse,controlled arithmetic,10000,166139697.49960235,in-process parser + AST
+CPython ast.parse,controlled arithmetic,10000,161777808.50193813,in-process parser + AST
+CPython ast.parse,controlled arithmetic,10000,159723613.5021376,in-process parser + AST
+CPython ast.parse,controlled arithmetic,10000,161487025.49980953,in-process parser + AST

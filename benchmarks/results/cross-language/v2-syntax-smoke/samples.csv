@@ -1,0 +1,7 @@
+language,workload,size,repetition,ns,source_bytes,boundary,source_sha256
+cpp,arithmetic,10,1,15218376,779,clang++ syntax-only (parse + semantic validation),ac1e4369553cf9e6aca039907ad3661ce239b23412a3fb79a3b93a95789ce455
+c,arithmetic,10,1,13048860,783,clang syntax-only (parse + semantic validation),52f8381fe98fdd59be07e0153f693c0e533c41a55c1793e6fcf7589bd4ffc335
+cpp,declarations,10,1,14388047,499,clang++ syntax-only (parse + semantic validation),535ccba6aa0e81be54e34accc6db3a48559df2936ec7baa71fd1e8c20cafd6eb
+zig,declarations,10,1,3160634,483,zig AST check (parse only),bd8e3da19298e290c978da7f2d86e58befa7036cf7af1a5e5ca7abcc50bc22a2
+c,declarations,10,1,14537716,503,clang syntax-only (parse + semantic validation),30125bcc8c2a63b62bab5215fb51ef2f11b65f33e03ed74dfdd2050892a2cd41
+zig,arithmetic,10,1,3464446,763,zig AST check (parse only),b18a241a8a8e9ea6ff5eb4415be15e280e54991e531ad020548b373351b18899

@@ -1,0 +1,11 @@
+{
+  "created_utc": "2026-10-31T21:28:48.128847+00:00",
+  "python": "3.14.4 (main, Aug 20 2026, 10:41:58) [GCC 15.2.0]",
+  "repeats": 1,
+  "benchtime": "100ms",
+  "python_duration": 0.01,
+  "scope": "M2 Eloque parse+resolve, CPython AST/symbol table, native compiler subprocesses; separate boundaries",
+  "native_languages": [],
+  "native_warmups": 1,
+  "native_inputs": []
+}

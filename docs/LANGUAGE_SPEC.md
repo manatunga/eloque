@@ -1,6 +1,7 @@
 # Eloque Language Specification
 
-**Status:** Active language design specification, revised October 2026. Milestone 1, the post-M1 H2 frontend optimization, and post-H2 structured diagnostic recovery are implemented. The Go frontend supports the initial syntax subset through direct lexer token streaming and arena-backed flat AST construction. Both fail-fast and recovery-capable parsing are available. Name resolution, static type checking, bytecode compilation, and program execution are not yet implemented. Examples throughout this specification illustrate the target language and are not necessarily supported by the current frontend.
+> **Status:** Active language design specification, reviewed November 2026. Milestone 1, post-M1 H2 frontend optimization, post-H2 structured diagnostic recovery, and M2-P1 lexical name resolution are implemented. The Go frontend supports the initial syntax subset through direct lexer token streaming and arena-backed flat AST construction. Both fail-fast and recovery-capable parsing are available. The dedicated resolver performs lexical name resolution for the supported language subset. Mandatory static type checking, production Monowire bytecode compilation, and program execution are not yet implemented. Examples throughout this specification illustrate the target language and are not necessarily supported by the current compiler.
+
 **Language name:** Eloque
 **Source file extension:** `.elq` (selected)
 **Planned CLI command:** `eloque` (subject to availability checks)
@@ -8,7 +9,7 @@
 
 The lexer, parser, and arena-backed flat AST construction are implemented. The canonical `Parse(sourceText)` entry point returns `(*ast.FlatProgram, error)`. Recovery-capable parsing is also implemented through `ParseRecovering(sourceText, ParseOptions)`.
 
-Name resolution, mandatory static type checking, Monowire bytecode compilation, and production VM execution remain unimplemented. These stages are planned for M2 — First Execution.
+M2-P1 lexical name resolution is implemented for the supported language subset. Mandatory static type checking, Monowire bytecode compilation, and production VM execution remain pending within M2 — First Execution.
 
 **Monowire** is the selected register-based execution architecture. The previous stack-based VM plan has been superseded.
 
@@ -27,7 +28,7 @@ The first executable Eloque release will support a narrower subset than the comp
 
 Eloque is a general-purpose programming language with structured conversational syntax, not unrestricted natural-language parsing. It prioritizes novice readability, unambiguous static semantics and machine-readable diagnostics for AI-assisted development, and a foundation for safe native concurrency. Prefer concise, regular grammar over excessive English verbosity. Execution is deterministic subject to explicit external inputs and eventual concurrency semantics.
 
-## Current implementation coverage (M1 + H2 + post-H2 recovery)
+## Current implementation coverage (M1 + H2 + post-H2 recovery + M2-P1)
 
 The completed M1 frontend supports lexical analysis, parsing,
 and AST construction for the following syntax subset:
@@ -51,8 +52,9 @@ The existing `Parse(sourceText)` entry point continues to provide fail-fast pars
 
 Recovery behavior, diagnostic budgets, and expression-depth safeguards are implementation facilities. They do not introduce new language syntax or alter the static typing rules defined by this specification. Recovery results must not be treated as semantically validated or executable programs.
 
-The implementation does not yet provide name resolution,
-static type checking, bytecode compilation, or execution.
+M2-P1 added a dedicated lexical name-resolution stage after parsing. For the supported language subset, the resolver establishes declaration-symbol bindings, resolves identifier expressions and assignment targets, and reports name-resolution errors such as undefined identifiers and duplicate declarations.
+
+The implementation does not yet provide mandatory static type checking, definite-assignment analysis, production Monowire bytecode compilation, or execution.
 
 Other syntax and semantics described below remain language
 design specifications unless explicitly marked as implemented.
@@ -94,8 +96,7 @@ let frozen names as List[String] be ["Alice", "Bob"]
 let nickname as String? be none
 ```
 
-The M1 frontend parses `let` declarations and `change ... to ...`
-assignments, but does not yet enforce binding types or mutability.
+The M1 frontend parses `let` declarations and `change ... to ...` assignments. M2-P1 subsequently added lexical binding resolution for the supported grammar. Binding types, mutability restrictions, and definite-assignment requirements are not yet enforced by the static checker.
 
 The target language defines `let` as a mutable binding, `fixed` as preventing rebinding without necessarily freezing the referenced value, and `frozen` as enforcing deep immutability. The `fixed` and `frozen` modifiers are not implemented in M1.
 
@@ -107,7 +108,9 @@ Variables must be declared before use. Future function and named-type declaratio
 
 A declaration introduces its binding before its initializer is resolved. Consequently, in `let x be x + 1`, the initializer's `x` refers to the newly declared binding, not an enclosing binding. A subsequent definite-assignment check rejects the uninitialized read.
 
-These resolution semantics are approved but are not yet implemented.
+Lexical name resolution is implemented for the supported grammar through M2-P1. The approved scope and shadowing rules remain authoritative for additional scope-bearing constructs introduced in later milestones.
+
+Initializer self-reference is a name-resolution question: the identifier binds to the newly declared symbol. Rejecting an uninitialized read is a separate definite-assignment responsibility and remains pending.
 
 Lists, maps and structured values use **value semantics**: assignment creates an independent *logical* value. The runtime may optimize with copy-on-write or structural sharing without observable aliasing. Explicit references/shared mutable state are deferred to the concurrency design.
 
@@ -323,9 +326,9 @@ The `.elq` source extension and the documented import forms represent the intend
 
 Normal execution is sequential by default. Assignment evaluates its right-hand side before changing the target. Runtime failures are typed and include source locations. Human-readable diagnostics are the default; structured machine-readable diagnostics (e.g. JSON) are a design requirement for agent tooling. The runtime should support configurable instruction/time/memory limits for sandboxed execution; normal CLI execution has no arbitrary universal instruction cap. Native safe concurrency is a language goal, but syntax, ownership and shared-state rules are **deferred**.
 
-**Implementation status:** Structured frontend diagnostics and recovery-capable parsing are implemented. Name resolution, static type checking, bytecode compilation, Monowire execution, and runtime resource controls remain unimplemented. The Monowire architecture has been selected, but no production runtime functionality is implied by that decision.
+**Implementation status:** Structured frontend diagnostics, recovery-capable parsing, and M2-P1 lexical name resolution are implemented. Mandatory static type checking, production Monowire bytecode compilation, execution, and runtime resource controls remain unimplemented. Monowire is the selected execution architecture, but no production runtime functionality is implied by that decision.
 
-**Lexical diagnostics [Implemented in M1]:** The production lexer uses fail-fast error handling, stopping at the first detected lexical error. Diagnostics identify the source line and column and describe the invalid input.
+**Lexical diagnostics [Implemented]:** The original M1 fail-fast lexer behavior stops at the first detected lexical error. The production frontend also supports controlled lexical recovery through its recovery-capable parsing path. Lexical diagnostics retain source-location information and remain compiler errors rather than runtime exceptions.
 
 **Runtime implementation status:** Eloque does not yet have an executable runtime. Sequential execution, typed runtime failures, assignment evaluation semantics, and configurable execution limits are requirements for future implementation.
 
@@ -339,11 +342,11 @@ Recovery-capable parsing can collect multiple independent diagnostics, preserve 
 
 Recovered or incomplete syntax trees are not eligible for normal bytecode compilation or execution.
 
-The approved architecture extends the structured diagnostic model to name resolution and static type checking during M2. Compiler stages will report stable machine-readable codes, severity, source locations, and relevant contextual information while suppressing misleading cascading errors.
+M2-P1 extended diagnostic handling to lexical name resolution. Mandatory static type checking will introduce additional semantic diagnostics during the remaining M2 work. Compiler stages will report stable machine-readable codes, severity, source locations, and relevant contextual information while suppressing misleading cascading errors.
 
 Warnings are nonfatal by default. Blocking compilation errors prevent executable code generation and execution.
 
-**Implementation boundary:** Lexical and syntactic recovery are implemented. Resolver diagnostics, type-checker diagnostics, compilation-wide diagnostic coordination, and runtime error reporting remain future implementation work.
+**Implementation boundary:** Lexical and syntactic recovery, together with M2-P1 resolver diagnostics, are implemented. Type-checker diagnostics, compilation-wide diagnostic coordination, and runtime error reporting remain future implementation work.
 
 ## 14. Tooling and backend [Decided architecture; implementation in progress]
 
@@ -358,10 +361,12 @@ The Go implementation currently provides:
 - Arena-backed flat AST construction.
 - Source-aware structured diagnostics.
 - Fail-fast and recovery-capable parsing.
+- M2-P1 lexical name resolution and symbol binding for the supported grammar.
+- Resolver diagnostics for supported name-resolution errors.
 
 The canonical frontend entry point is `Parse(sourceText)`. Recovery-capable parsing is available through `ParseRecovering(sourceText, ParseOptions)`.
 
-Name resolution, mandatory static type checking, and bytecode compilation remain planned for M2.
+M2-P1 lexical name resolution is implemented. Mandatory static type checking, definite-assignment analysis, and production Monowire bytecode compilation remain pending within M2.
 
 ### Execution backend
 
@@ -377,13 +382,13 @@ The production Monowire VM is not yet implemented.
 
 ### First executable milestone
 
-M2 — First Execution will introduce:
+M2 — First Execution is in progress. Its implementation stages are:
 
-- Lexical name resolution.
-- Mandatory static type checking, including definite-assignment analysis.
-- Monowire register-based bytecode compilation.
-- Sequential Monowire execution.
-- End-to-end correctness and runtime diagnostics for the supported language subset.
+- Lexical name resolution — completed (M2-P1).
+- Mandatory static type checking, including definite-assignment analysis — pending.
+- Monowire register-based bytecode compilation — pending.
+- Sequential Monowire execution — pending.
+- End-to-end correctness and runtime diagnostics for the supported language subset — pending.
 
 The initial executable subset covers supported literals, arithmetic, `let`, `change`, and `say` statements.
 
@@ -410,7 +415,7 @@ The following areas require further specification or validation during subsequen
 - **Lexical rules:** Formal token and escape-sequence reference tables, alongside rules for future lexical features.
 - **Expressions and grammar:** Precedence and associativity for additional operators, and grammar extensions for control flow,functions, collections, and other planned constructs.
 - **Numeric semantics:** Type conversions, mixed numeric operations, overflow behavior, and floating-point edge cases.
-- **Diagnostics:** Structured diagnostic schemas, error classifications, and potential error-recovery mechanisms.
+- **Diagnostics:** Compiler-wide diagnostic coordination, cross-stage error classification, compilation-wide diagnostic budgets, and public machine-readable diagnostic serialization. Internal structured diagnostics and frontend recovery are already implemented.
 - **Collections and text:** Iteration behavior, mutation rules, indexing, slicing, and Unicode character and grapheme semantics.
 - **Type system:** Type compatibility, inference, narrowing, generics, and related static-analysis rules.
 - **Exceptions:** Exception hierarchy, propagation, handler matching, and cleanup guarantees.

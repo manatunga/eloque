@@ -1,0 +1,132 @@
+{
+  "created_utc": "2026-10-31T19:10:36.622032+00:00",
+  "host": "Linux-6.18.33.2-microsoft-standard-WSL2-x86_64-with-glibc2.43",
+  "python": "3.14.4",
+  "versions": {
+    "c": "Ubuntu clang version 21.1.8 (6ubuntu1)",
+    "cpp": "Ubuntu clang version 21.1.8 (6ubuntu1)",
+    "rust": "rustc 1.99.1 (58cf8f9c3 2026-10-13)",
+    "zig": "0.17.0",
+    "go": "go version go1.27.2 linux/amd64"
+  },
+  "inputs": [
+    {
+      "language": "c",
+      "workload": "declarations",
+      "size": 10,
+      "sha256": "30125bcc8c2a63b62bab5215fb51ef2f11b65f33e03ed74dfdd2050892a2cd41",
+      "bytes": 503,
+      "declarations": 10,
+      "references": 10,
+      "command": [
+        "clang",
+        "-std=c17",
+        "-fsyntax-only",
+        "-Wno-unused-variable",
+        "/tmp/eloque-crosslang-f7fyekuw/case_0.c"
+      ]
+    },
+    {
+      "language": "c",
+      "workload": "arithmetic",
+      "size": 10,
+      "sha256": "52f8381fe98fdd59be07e0153f693c0e533c41a55c1793e6fcf7589bd4ffc335",
+      "bytes": 783,
+      "declarations": 10,
+      "references": 10,
+      "command": [
+        "clang",
+        "-std=c17",
+        "-fsyntax-only",
+        "-Wno-unused-variable",
+        "/tmp/eloque-crosslang-f7fyekuw/case_1.c"
+      ]
+    },
+    {
+      "language": "cpp",
+      "workload": "declarations",
+      "size": 10,
+      "sha256": "535ccba6aa0e81be54e34accc6db3a48559df2936ec7baa71fd1e8c20cafd6eb",
+      "bytes": 499,
+      "declarations": 10,
+      "references": 10,
+      "command": [
+        "clang++",
+        "-std=c++20",
+        "-fsyntax-only",
+        "-Wno-unused-variable",
+        "/tmp/eloque-crosslang-f7fyekuw/case_2.cpp"
+      ]
+    },
+    {
+      "language": "cpp",
+      "workload": "arithmetic",
+      "size": 10,
+      "sha256": "ac1e4369553cf9e6aca039907ad3661ce239b23412a3fb79a3b93a95789ce455",
+      "bytes": 779,
+      "declarations": 10,
+      "references": 10,
+      "command": [
+        "clang++",
+        "-std=c++20",
+        "-fsyntax-only",
+        "-Wno-unused-variable",
+        "/tmp/eloque-crosslang-f7fyekuw/case_3.cpp"
+      ]
+    },
+    {
+      "language": "zig",
+      "workload": "declarations",
+      "size": 10,
+      "sha256": "bd8e3da19298e290c978da7f2d86e58befa7036cf7af1a5e5ca7abcc50bc22a2",
+      "bytes": 483,
+      "declarations": 10,
+      "references": 10,
+      "command": [
+        "zig",
+        "ast-check",
+        "/tmp/eloque-crosslang-f7fyekuw/case_4.zig"
+      ]
+    },
+    {
+      "language": "zig",
+      "workload": "arithmetic",
+      "size": 10,
+      "sha256": "b18a241a8a8e9ea6ff5eb4415be15e280e54991e531ad020548b373351b18899",
+      "bytes": 763,
+      "declarations": 10,
+      "references": 10,
+      "command": [
+        "zig",
+        "ast-check",
+        "/tmp/eloque-crosslang-f7fyekuw/case_5.zig"
+      ]
+    }
+  ],
+  "configuration": {
+    "mode": "syntax",
+    "languages": [
+      "c",
+      "cpp",
+      "zig"
+    ],
+    "workloads": [
+      "declarations",
+      "arithmetic"
+    ],
+    "sizes": [
+      10
+    ],
+    "repeats": 1,
+    "warmups": 0,
+    "seed": 42
+  },
+  "phase_boundaries": {
+    "c": "clang syntax-only (parse + semantic validation)",
+    "cpp": "clang++ syntax-only (parse + semantic validation)",
+    "rust": "rustc metadata emission (includes semantic analysis)",
+    "zig": "zig object emission (includes code generation)",
+    "go": "go tool compile object emission (includes code generation)"
+  },
+  "limitations": "Subprocess wall time, including startup; non-equivalent compiler phases; not comparable directly to Eloque in-process parser benchmarks."
+}

@@ -1,0 +1,26 @@
+goos: linux
+goarch: amd64
+pkg: github.com/manatunga/eloque/internal/semantic/resolver
+cpu: Intel(R) Core(TM) Ultra 7 155H
+BenchmarkResolve/sparse-undefined/10-22         	 1433010	       464.0 ns/op	     592 B/op	       8 allocs/op
+BenchmarkResolve/sparse-undefined/10-22         	 1457494	       404.2 ns/op	     592 B/op	       8 allocs/op
+BenchmarkResolve/sparse-undefined/10-22         	 1426143	       451.5 ns/op	     592 B/op	       8 allocs/op
+BenchmarkResolve/sparse-undefined/10-22         	 1187446	       488.4 ns/op	     592 B/op	       8 allocs/op
+BenchmarkResolve/sparse-undefined/10-22         	 1447520	       406.0 ns/op	     592 B/op	       8 allocs/op
+BenchmarkResolve/sparse-undefined/100-22        	  348307	      1711 ns/op	    1392 B/op	       8 allocs/op
+BenchmarkResolve/sparse-undefined/100-22        	  319531	      1717 ns/op	    1392 B/op	       8 allocs/op
+BenchmarkResolve/sparse-undefined/100-22        	  349580	      1728 ns/op	    1392 B/op	       8 allocs/op
+BenchmarkResolve/sparse-undefined/100-22        	  318914	      1686 ns/op	    1392 B/op	       8 allocs/op
+BenchmarkResolve/sparse-undefined/100-22        	  351744	      1642 ns/op	    1392 B/op	       8 allocs/op
+BenchmarkResolve/sparse-undefined/1000-22       	   38936	     16615 ns/op	   12721 B/op	      21 allocs/op
+BenchmarkResolve/sparse-undefined/1000-22       	   35976	     18219 ns/op	   12720 B/op	      21 allocs/op
+BenchmarkResolve/sparse-undefined/1000-22       	   34902	     17163 ns/op	   12720 B/op	      21 allocs/op
+BenchmarkResolve/sparse-undefined/1000-22       	   35336	     16346 ns/op	   12721 B/op	      21 allocs/op
+BenchmarkResolve/sparse-undefined/1000-22       	   33903	     16905 ns/op	   12721 B/op	      21 allocs/op
+BenchmarkResolve/sparse-undefined/3000-22       	   12222	     47150 ns/op	   33843 B/op	      42 allocs/op
+BenchmarkResolve/sparse-undefined/3000-22       	   12296	     49105 ns/op	   33842 B/op	      42 allocs/op
+BenchmarkResolve/sparse-undefined/3000-22       	   12421	     48420 ns/op	   33842 B/op	      42 allocs/op
+BenchmarkResolve/sparse-undefined/3000-22       	   12008	     49733 ns/op	   33842 B/op	      42 allocs/op
+BenchmarkResolve/sparse-undefined/3000-22       	   12106	     50782 ns/op	   33843 B/op	      42 allocs/op
+PASS
+ok  	github.com/manatunga/eloque/internal/semantic/resolver	17.968s

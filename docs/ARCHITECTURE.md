@@ -1,6 +1,6 @@
 # Eloque Architecture
 
-Status: Milestone 1 and H2 frontend optimization completed. Structured diagnostics and recovery-capable parsing implemented. Semantic analysis, bytecode compilation, and VM execution remain unimplemented.
+> **Status:** M1 frontend foundations, H2 optimization, structured diagnostics and recovery-capable parsing, and M2-P1 lexical name resolution are implemented. M2 — First Execution is in progress. Mandatory static type checking, production Monowire bytecode compilation, and VM execution remain pending.
 
 Eloque is a proposed general-purpose programming language with structured, conversational-English-inspired syntax, strict static typing, and an eventual native concurrency model.
 
@@ -40,7 +40,7 @@ Go parser (Pratt expressions)           [implemented]
 Arena-backed flat AST                   [implemented]
     |
     v
-Name resolution                         [M2]
+Name resolution                         [implemented]
     |
     v
 Static type checking                    [M2]
@@ -57,9 +57,9 @@ Program execution
 
 **Architecture decision:** Monowire is the selected production VM. The former Go-hosted stack-based VM plan has been superseded. Zig is provisionally preferred for Monowire's implementation, with Rust retained as a fallback pending integration and production-readiness validation.
 
-**Implemented:** Lexical analysis, parsing, flat AST construction, source-aware diagnostics, and frontend integration.
+**Implemented:** Lexical analysis, parsing, flat AST construction, source-aware diagnostics, frontend recovery, lexical name resolution, symbol binding, and resolver diagnostics for the supported language subset.
 
-**Not implemented:** Name resolution, static type checking, bytecode generation, virtual-machine execution, and runtime values.
+**Not implemented:** Mandatory static type checking, definite-assignment checking, production bytecode generation, virtual-machine execution, and runtime values.
 
 The current implementation accepts only a subset of the proposed language. Unsupported constructs must be rejected rather than assigned speculative semantics.
 
@@ -100,9 +100,9 @@ Contains shared source-position and line-mapping functionality. It remains outsi
 
 ### Planned package boundaries
 
-Semantic analysis, bytecode compilation, VM execution, and runtime support will be organized when their implementations begin.
+Lexical name resolution is implemented as a separate compiler stage following parsing. The resolver operates on the production flat AST and produces symbol-binding information and diagnostics without turning the AST into executable code.
 
-Potential package boundaries include semantic resolution and checking, bytecode generation, runtime values, and the VM.
+Static type checking, bytecode compilation, VM execution, and runtime support remain future implementation stages. Their concrete package boundaries should be documented as their implementations are introduced.
 
 These are architectural directions rather than declarations of existing packages. Empty package trees should not be created solely to represent future plans.
 
@@ -124,7 +124,7 @@ It returns a production flat-program representation and an error:
 
 The frontend processes source text through lexical scanning, parsing, and AST construction.
 
-Its responsibility ends at syntactic validation and AST production. It does not resolve identifiers, check types, or execute statements.
+The parsing API is responsible for syntactic validation and AST production. Lexical name resolution is implemented as a separate downstream compiler stage. Parsing alone does not resolve identifiers, check types, or execute statements.
 
 ### 4.2 Direct pull-based token streaming
 
@@ -226,7 +226,7 @@ The default error budget is 20 error-severity diagnostics. Positive `MaxErrors` 
 
 Diagnostics are accumulated in encounter order. The diagnostic collection is allocated lazily.
 
-Recovery-capable parsing may preserve successfully completed statements in a partial arena-backed AST. A partial AST must not be treated as a validated program. In particular, recovery does not perform name resolution, static type checking, or execution.
+Recovery-capable parsing may preserve successfully completed statements in a partial arena-backed AST. A partial AST must not be treated as a validated program. Parser recovery itself does not perform name resolution, static type checking, or execution. The implemented M2-P1 resolver is a separate stage; recovery-capable parse-and-resolve benchmarking does not make partial or erroneous programs eligible for execution.
 
 The frontend also includes safeguards against excessive expression nesting and recovery paths that fail to make progress. These safeguards are intended to keep malformed or adversarial input from causing uncontrolled recursive parsing or indefinite recovery.
 
@@ -378,31 +378,53 @@ The review trigger and supporting evidence belong in [TECHNICAL_BACKLOG.md](TECH
 
 ## 9. Semantic analysis
 
-The next compiler phase will introduce name resolution and static type checking.
+Semantic analysis follows parsing and is separate from AST construction.
 
-### Name resolution
+**Current status:** M2-P1 lexical name resolution is implemented. Mandatory static type checking and definite-assignment analysis remain pending.
 
-The resolver will bind identifier uses to declarations and enforce the language's scope rules.
+### 9.1 Lexical name resolution
 
-It must reject undeclared identifiers and prohibited shadowing.
+The implemented resolver establishes relationships between identifier uses and declarations in the supported language subset.
 
-### Static type checking
+Its responsibilities include:
 
-The checker will validate the implemented language's type rules before execution.
+- Creating and tracking symbol identities.
+- Resolving identifier expressions.
+- Resolving assignment targets.
+- Detecting undefined names.
+- Detecting duplicate declarations.
+- Preserving binding information for later compiler stages.
+- Producing deterministic, source-aware resolution diagnostics.
+- Keeping name resolution separate from parsing, type checking, and runtime storage allocation.
+
+The resolver operates on the production flat AST. Resolved symbol identities are compile-time information, not Monowire register indices.
+
+The M2-P1 implementation is accompanied by resolver tests and dedicated benchmarks, including fail-fast and recovery-capable parse-and-resolve measurements.
+
+Lexical scope behavior for future nested blocks, functions, and modules remains subject to their respective implementation milestones.
+
+### 9.2 Static type checking
+
+**Status:** Pending — M2.
+
+The checker will validate the implemented language's type rules before bytecode compilation.
 
 Planned responsibilities include:
 
 - Type inference for eligible local bindings.
 - Assignment compatibility.
 - Arithmetic operand validation.
+- Definite-assignment analysis.
 - Explicit function signatures when functions are implemented.
 - Return-path checking.
 - Optional-value handling.
 - Source-aware type diagnostics.
 
-Static checking is mandatory for normal compilation.
+Static checking is mandatory for normal executable compilation.
 
-The frontend's AST representation must not be confused with the semantic information produced by these future stages.
+Successful name resolution does not establish type correctness. A resolved identifier may still be used incorrectly or read before initialization.
+
+The flat AST, resolution information, and future type-checking results remain conceptually separate compiler artifacts.
 
 ## 10. Monowire bytecode compiler
 
@@ -671,24 +693,6 @@ The following remain future implementation work:
 
 Deferred work must be tracked with rationale, reevaluation triggers, and acceptance criteria in `TECHNICAL_BACKLOG.md`.
 
-### Runtime value model
-
-The language's intended observable value semantics are independent of the internal Go representation.
-
-Planned primitive types include:
-
-- `Int`: checked signed 64-bit integers.
-- `Float`: IEEE 754 binary64.
-- `Bool`: strict Boolean values.
-- `String`: immutable Unicode text.
-- Optional values represented through `T?`.
-
-Lists, maps, and structured values are intended to preserve logical value independence under assignment.
-
-The runtime representation—Go interfaces, tagged values, pointer-backed objects, or another approach—remains undecided.
-
-It must be reviewed before implementing the first VM value type.
-
 ### Monowire implementation and optimization review
 
 Monowire is Eloque's selected register-based bytecode VM. The previous stack-based VM plan has been superseded, and the stack-versus-register architecture decision is closed.
@@ -778,7 +782,6 @@ Changes to internal implementation should preserve observable behavior unless a 
 | Arena capacity and allocation tuning | Representative frontend profiling demonstrates a meaningful opportunity |
 | Additional parser lookahead | A grammar feature requires it or a measured regression justifies it |
 | Numeric edge cases | Arithmetic checker and runtime implementation |
-| Decision | Review trigger |
 | Monowire architecture | Resolved — register-based Monowire selected; no stack-VM prerequisite |
 | Monowire implementation language | Before production Go–Zig integration is committed |
 | Go–Zig integration boundary | Before end-to-end M2 bytecode execution |
@@ -798,15 +801,17 @@ All deferred engineering decisions must retain a rationale, review trigger, and 
 
 ---
 
-**Current architectural baseline:** H2 direct-streaming frontend with arena-backed flat AST, retained M1 reference implementation, and verified frontend correctness.
+**Current architectural baseline:** H2 direct-streaming frontend with arena-backed flat AST, structured diagnostic recovery, and completed M2-P1 lexical name resolution. The original M1 parser remains available for regression comparisons.
 
-**Next development direction:** A small statically checked executable subset, progressing through semantic analysis, bytecode compilation, and VM execution.
+**Current development direction:** Complete M2 — First Execution by adding mandatory static type checking, Monowire bytecode compilation, sequential VM execution, and end-to-end correctness validation.
 
 ---
 
 ## M2 implementation blueprint: diagnostics and name resolution
 
-**Status:** Approved architecture — implementation pending.
+**Status:** Historical M2-P1 design blueprint. Frontend diagnostic recovery and lexical name resolution have since been implemented. The sections below preserve the original design requirements and acceptance criteria; statements written in the future tense describe their status at the time of planning, not necessarily their current implementation status.
+
+**Implementation note:** The current resolver and frontend implementations take precedence over provisional Go type declarations, package layouts, and algorithm sketches in this blueprint. Unimplemented future-scope behavior remains subject to later milestones.
 
 **Last reviewed:** October 2026.
 
@@ -987,15 +992,11 @@ A common diagnostic model does not require a universal stage-result struct.
 
 ### D. Frontend recovery migration
 
-The current implementation is first-error terminating.
+**Implementation status:** Frontend recovery migration is complete.
 
-The lexer returns `(Token, error)`.
+The production frontend supports both fail-fast and recovery-capable parsing. The original fail-fast behavior remains available through `parser.Parse(sourceText)`, while `parser.ParseRecovering(sourceText, options)` supports structured diagnostics, controlled recovery, and potentially partial AST results.
 
-The streaming token source caches the first lexical error and substitutes `TokenInvalid`, preventing further scanning.
-
-The parser's `expect()` returns a diagnostic without consuming the unexpected token.
-
-These behaviors are suitable for the original fail-fast implementation but require deliberate changes for recovery.
+The requirements below record the recovery design and its acceptance criteria. They should not be interpreted as evidence that recovery remains unimplemented.
 
 #### Lexer recovery requirements
 
@@ -1386,28 +1387,36 @@ Trigger: working runtime with comparable language workloads.
 
 Frontend parsing benchmarks must not be presented as evidence of runtime parity.
 
-### P. Implementation readiness checklist
+### P. Implementation readiness and completion checklist
 
-Before beginning resolver implementation:
+The following checklist distinguishes completed M2-P1 work from remaining M2 execution requirements.
 
-- [ ] Shared diagnostic contract recorded.
-- [ ] Frontend recovery strategy implemented.
-- [ ] Streaming token source supports safe diagnostic continuation.
-- [ ] Parser recovery guarantees forward progress.
-- [ ] Stage outcomes and compilation eligibility enforced.
-- [ ] Diagnostic regression tests pass.
-- [ ] Existing frontend correctness tests pass.
-- [ ] H2 performance impact measured.
-- [ ] Resolver data structures and APIs reviewed against actual current AST files.
+#### Completed foundations
 
-Before considering M2 complete:
+- [x] Shared diagnostic architecture established.
+- [x] Frontend recovery strategy implemented.
+- [x] Streaming frontend supports recovery-capable parsing.
+- [x] Parser recovery includes forward-progress safeguards.
+- [x] Structured frontend diagnostic regression tests established.
+- [x] Existing frontend correctness tests validated.
+- [x] H2 frontend performance impact measured.
+- [x] M2-P1 lexical name resolution implemented.
+- [x] Symbol binding and unresolved-identifier diagnostics implemented.
+- [x] Resolver benchmarking infrastructure established.
+- [x] M2 v2 cross-language benchmark results recorded.
 
-- [ ] Name resolution implemented and tested.
-- [ ] Mandatory static checker implemented and tested.
+#### Remaining M2 requirements
+
+- [ ] Mandatory static type checker implemented and tested.
 - [ ] Definite-assignment behavior validated.
-- [ ] Bytecode compiler implemented.
+- [ ] Production Monowire bytecode format finalized.
+- [ ] Register-window and instruction-validation contracts established.
+- [ ] Monowire bytecode compiler implemented.
 - [ ] Monowire register-based VM executes the supported language subset.
-- [ ] Blocking diagnostics prevent execution.
-- [ ] Runtime correctness and representative benchmarks recorded.
+- [ ] Blocking diagnostics prevent executable compilation.
+- [ ] End-to-end program correctness tests pass.
+- [ ] Representative production runtime benchmarks recorded.
 
-This blueprint is an approved design reference. It does not imply any listed implementation is complete.
+Completion of M2-P1 does not imply completion of M2 — First Execution.
+
+The historical resolver blueprint remains a design reference. Its detailed behavioral requirements must be checked against implementation tests before individual requirements are declared fully satisfied.

@@ -6,11 +6,11 @@
 
 **Eloque** is a proposed general-purpose programming language with structured, conversational-English-inspired syntax and precise, statically checked semantics. It is intended to be approachable for beginners while providing predictable diagnostics and tooling for AI-assisted development.
 
-> **Status:** Early development — M1, the post-M1 H2 frontend optimization, and pre-M2 structured diagnostic recovery are implemented. Eloque has a working Go lexer and parser using direct pull-based token streaming and an arena-backed flat AST. Both fail-fast and recovery-capable parsing are supported, with structured, source-aware diagnostics.
+> **Status:** Active development — M1 frontend foundations, post-M1 H2 optimization, structured diagnostic recovery, and M2-P1 lexical name resolution are implemented. The Go frontend supports pull-based token streaming, arena-backed flat AST construction, fail-fast and recovery-capable parsing, and lexical symbol binding.
 >
-> **Next milestone:** M2 — First Execution. Eloque will use **Monowire**, its selected register-based bytecode VM, with Zig provisionally preferred as the runtime implementation language. Name resolution, mandatory static type checking, production bytecode compilation, and VM execution are not yet implemented.
+> **Current milestone:** M2 — First Execution (in progress). Lexical name resolution is complete. The next implementation phase is mandatory static type checking, followed by Monowire bytecode compilation and sequential VM execution.
 >
-> The examples below are **illustrative, not executable**.
+> **Execution availability:** The examples below are illustrative, not executable. Eloque cannot yet compile and run programs through Monowire.
 
 ## A glimpse of Eloque
 
@@ -65,7 +65,8 @@ Eloque combines a **Go-based compiler frontend** with **Monowire**, its selected
 
 The implemented frontend uses pull-based token streaming, Pratt expression parsing, and an arena-backed flat AST. Monowire is designed around explicit register operands and overlapping call-frame register windows.
 
-The frontend is operational, including structured diagnostic recovery. Name resolution, mandatory static checking, bytecode compilation, and runtime execution are planned for **M2 — First Execution**.
+The frontend is operational, including structured diagnostic recovery and M2-P1 lexical name resolution. Mandatory static type checking, Monowire bytecode compilation, and runtime execution remain to be implemented during **M2 — First Execution**.
+
 
 ```text
         Eloque source (.elq)
@@ -85,7 +86,7 @@ The frontend is operational, including structured diagnostic recovery. Name reso
 └──────────────┬───────────────┘
                ▼
 ┌──────────────────────────────┐
-│ Name resolution              │  Planned — M2
+│ Name resolution              │  ✓ Implemented
 └──────────────┬───────────────┘
                ▼
 ┌──────────────────────────────┐
@@ -120,9 +121,13 @@ The production frontend exposes two parsing entry points:
 - `parser.Parse(sourceText)` returns `(*ast.FlatProgram, error)` and provides fail-fast parsing.
 - `parser.ParseRecovering(sourceText, options)` returns a `ParseResult` containing structured diagnostics, a termination status, and a potentially partial AST.
 
+Lexical name resolution is implemented as a subsequent compiler stage. It establishes symbol bindings and diagnoses unresolved identifiers in the supported language subset. The M2 benchmark infrastructure exercises parse-and-resolve pipelines in both fail-fast and recovery-capable configurations.
+
+Name resolution does not perform complete static type checking, bytecode generation, or execution.
+
 Recovery-capable parsing supports configurable error budgets and preserves successfully completed statements where possible. Its termination statuses are `ParseComplete`, `ParseRecovered`, and `ParseAborted`.
 
-A recovered or partial AST is not semantically validated or executable.
+A recovered or partial AST is not automatically semantically validated or executable. Lexical name resolution is available as a separate M2-P1 compiler stage, but successful resolution does not imply that a program has passed mandatory static type checking or can be executed.
 
 The original M1 parser and interface-based AST remain available internally for regression testing and performance comparisons.
 
@@ -151,29 +156,29 @@ Conventional switch-based dispatch is the initial implementation baseline. Speci
 
 See [Monowire Benchmarks](benchmarks/monowire/README.md) for methodology and experimental evidence.
 
-### Next implementation milestone
+### Remaining M2 implementation work
 
-**M2 — First Execution** will introduce:
+**M2 — First Execution** is the current milestone.
 
-- Lexical name resolution and symbol binding.
-- Mandatory basic static type checking and definite-assignment analysis.
-- Monowire bytecode format and register-window execution contracts.
-- Monowire register-based bytecode compilation.
-- Sequential Monowire VM execution.
-- End-to-end correctness tests and initial runtime performance baselines.
+M2-P1 lexical name resolution and symbol binding have been implemented. The remaining work includes:
 
-The initial executable subset will cover supported literals, arithmetic, `let`, `change`, and `say`.
+1. Mandatory basic static type checking and definite-assignment analysis.
+2. Monowire bytecode format and register-window execution contracts.
+3. Monowire register-based bytecode compilation.
+4. Sequential Monowire VM execution.
+5. End-to-end correctness tests and initial runtime performance baselines.
 
-Control flow, language-level functions, collections, custom types, modules, and native concurrency are planned for later milestones. Internal VM call machinery may be implemented before language-level function support.
+The initial executable subset targets supported literals, arithmetic, `let`, `change`, and `say`.
 
-There are no installation instructions for executing Eloque programs yet because the runtime has not been implemented.
+Control flow, language-level functions, collections, custom types, modules, and native concurrency remain later-milestone features. Internal VM call machinery may be implemented before language-level function support.
+
+There are no installation instructions for executing Eloque programs yet because the production runtime is not implemented.
 
 See [Architecture](docs/ARCHITECTURE.md) for implementation details, [Design Decisions](docs/DESIGN_DECISIONS.md) for accepted architectural choices, and [Technical Backlog](docs/TECHNICAL_BACKLOG.md) for unresolved engineering decisions.
 
 ## Project status
 
-Eloque has completed **Milestone 1 — Frontend foundations**
-and is preparing for the next implementation milestone.
+Eloque has completed **Milestone 1 — Frontend foundations** and entered **Milestone 2 — First Execution**. The first M2 phase, lexical name resolution, is implemented. Static type checking and executable bytecode remain in development.
 
 The following checkpoints are complete:
 
@@ -190,12 +195,14 @@ The following checkpoints are complete:
 - **Frontend package migration:** Reorganized the lexer, parser, and AST packages under `internal/frontend/`, retaining shared source-location utilities in `internal/source/`.
 - **Pre-M2 structured diagnostics and recovery:** Introduced shared diagnostic infrastructure, lexer and parser recovery, configurable error budgets, statement-level AST preservation, expression-depth safeguards, and dedicated regression and stress tests. Retained the existing fail-fast parsing API.
 - **Pre-M2 Monowire experiment:** Implemented equivalent synthetic register-VM workloads in Go, Rust, Zig with conventional switch dispatch, and Zig with labeled-switch dispatch. Benchmarked arithmetic, branching, repeated calls, and recursion. Selected Monowire as the production register-based VM architecture and provisionally preferred Zig as its implementation language, subject to integration validation.
+- **M2-P1 — Lexical name resolution:** Implemented lexical symbol binding and unresolved-identifier diagnostics for the supported frontend subset. Added fail-fast and recovery-capable parse-and-resolve benchmarking, resolver tests, and cross-language measurement infrastructure.
+- **M2-P1 cross-language benchmark validation:** Completed the M2 v2 benchmark suite covering declarations, references, mixed workloads, sparse undefined references, and undefined references at multiple workload sizes. Recorded in-process Eloque and CPython measurements alongside native compiler subprocess measurements, with methodology limitations documented separately.
 
 The production frontend processes source text through `Parse(sourceText)`, incrementally requesting lexer tokens and constructing an arena-backed `FlatProgram`. The original M1 parser and buffered token-delivery implementation remain available as reference implementations.
 
-**Current status:** M1, H2, structured diagnostic recovery, and the pre-M2 Monowire implementation-language experiment are complete. Monowire's register-based architecture is selected, but its production implementation has not begun.
+**Current status:** M1, H2, structured diagnostic recovery, the pre-M2 Monowire experiment, and M2-P1 lexical name resolution are complete. M2 — First Execution remains in progress.
 
-**Next milestone:** M2 — First Execution, beginning with lexical name resolution and mandatory static type checking, followed by Monowire bytecode compilation and VM execution.
+**Next implementation phase:** Mandatory static type checking, followed by Monowire bytecode compilation, sequential VM execution, and end-to-end executable-program validation.
 
 ### Performance benchmarks
 
@@ -252,17 +259,30 @@ The experimental specification, build instructions, benchmark harness, and resul
 
 The official results, historical measurements, methodology, and limitations are documented in [benchmarks/README.md](benchmarks/README.md).
 
+### M2 name-resolution benchmarks
+
+The M2 benchmark suite evaluates the implemented lexical resolver and the combined parse-and-resolve pipeline.
+
+The finalized v2 cross-language experiment includes five workload categories: declarations, references, mixed declarations and references, sparse undefined references, and undefined references. Each workload was evaluated at multiple source sizes.
+
+For the 3,000-unit mixed workload, the recorded median Eloque parse-and-resolve latency was approximately **2.06 ms** in recovery-capable mode and **1.99 ms** in fail-fast mode.
+
+These are in-process frontend measurements, not full compiler or runtime measurements. Native compiler comparisons include subprocess startup and additional compiler work; CPython's symbol-table analysis follows different name-resolution semantics. Consequently, the results do not establish an equivalent seven-language compiler-speed ranking.
+
+See [M2 v2 benchmark report](benchmarks/results/cross-language/m2-v2-final/REPORT.md) for the recorded results and [cross-language benchmark documentation](benchmarks/cross-language/README.md) for methodology.
+
 ### Implementation limitations
 
-Eloque currently supports lexical analysis, syntax parsing, structured diagnostics, and recovery-capable AST construction for its initial grammar.
+Eloque currently supports lexical analysis, syntax parsing, structured diagnostics, recovery-capable AST construction, and M2-P1 lexical name resolution for its implemented language subset.
 
 It does **not yet** support:
 
-- Lexical name resolution.
 - Mandatory static type checking.
 - Production Monowire bytecode compilation.
 - Monowire VM execution.
 - Running Eloque programs.
+
+The completed resolver establishes lexical symbol bindings but does not make source programs executable.
 
 The Monowire architecture is selected, but the implementation-language choice remains provisional and the production VM is not yet operational.
 

@@ -1,0 +1,42 @@
+{
+  "created_utc": "2026-10-31T18:55:09.907102+00:00",
+  "host": "Linux-6.18.33.2-microsoft-standard-WSL2-x86_64-with-glibc2.43",
+  "python": "3.14.4",
+  "versions": {
+    "c": "Ubuntu clang version 21.1.8 (6ubuntu1)",
+    "cpp": "Ubuntu clang version 21.1.8 (6ubuntu1)",
+    "rust": "rustc 1.99.1 (58cf8f9c3 2026-10-13)",
+    "zig": "0.17.0",
+    "go": "go version go1.27.2 linux/amd64"
+  },
+  "configuration": {
+    "languages": [
+      "c",
+      "cpp",
+      "rust",
+      "zig",
+      "go"
+    ],
+    "workloads": [
+      "declarations",
+      "arithmetic"
+    ],
+    "sizes": [
+      10,
+      100,
+      1000,
+      10000
+    ],
+    "repeats": 5,
+    "warmups": 2,
+    "seed": 42
+  },
+  "phase_boundaries": {
+    "c": "clang syntax-only (parse + semantic validation)",
+    "cpp": "clang++ syntax-only (parse + semantic validation)",
+    "rust": "rustc metadata emission (includes semantic analysis)",
+    "zig": "zig object emission (includes code generation)",
+    "go": "go tool compile object emission (includes code generation)"
+  },
+  "limitations": "Subprocess wall time, including startup; non-equivalent compiler phases; not comparable directly to Eloque in-process parser benchmarks."
+}

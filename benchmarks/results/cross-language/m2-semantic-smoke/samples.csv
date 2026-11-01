@@ -1,0 +1,161 @@
+engine,workload,size,repetition,ns_per_op,bytes_per_op,allocs_per_op,boundary,source_bytes
+Eloque resolver,declarations,10,1,623.8,968,8,in-process resolver only (prebuilt AST),
+Eloque resolver,declarations,100,1,4736.0,7961,8,in-process resolver only (prebuilt AST),
+Eloque resolver,declarations,1000,1,46043.0,95692,10,in-process resolver only (prebuilt AST),
+Eloque resolver,declarations,3000,1,130247.0,232241,14,in-process resolver only (prebuilt AST),
+Eloque resolver,references,10,1,325.4,448,6,in-process resolver only (prebuilt AST),
+Eloque resolver,references,100,1,1578.0,1248,6,in-process resolver only (prebuilt AST),
+Eloque resolver,references,1000,1,14121.0,8544,6,in-process resolver only (prebuilt AST),
+Eloque resolver,references,3000,1,41638.0,24930,6,in-process resolver only (prebuilt AST),
+Eloque resolver,mixed,10,1,1366.0,1336,8,in-process resolver only (prebuilt AST),
+Eloque resolver,mixed,100,1,12894.0,11161,8,in-process resolver only (prebuilt AST),
+Eloque resolver,mixed,1000,1,108098.0,128467,10,in-process resolver only (prebuilt AST),
+Eloque resolver,mixed,3000,1,340579.0,330552,14,in-process resolver only (prebuilt AST),
+Eloque resolver,undefined,10,1,1184.0,3536,15,in-process resolver only (prebuilt AST),
+Eloque resolver,undefined,100,1,13139.0,35908,108,in-process resolver only (prebuilt AST),
+Eloque resolver,undefined,1000,1,100391.0,276839,1011,in-process resolver only (prebuilt AST),
+Eloque resolver,undefined,3000,1,438136.0,1045407,3013,in-process resolver only (prebuilt AST),
+Eloque resolver,sparse-undefined,10,1,682.0,1504,8,in-process resolver only (prebuilt AST),
+Eloque resolver,sparse-undefined,100,1,2023.0,2304,8,in-process resolver only (prebuilt AST),
+Eloque resolver,sparse-undefined,1000,1,17435.0,11936,18,in-process resolver only (prebuilt AST),
+Eloque resolver,sparse-undefined,3000,1,48992.0,33058,39,in-process resolver only (prebuilt AST),
+CPython ast.parse,declarations,10,1,20327.3310546875,,,in-process parse + AST,176
+CPython symtable,declarations,10,1,21702.443359375,,,in-process symbol table (internally reparses source),176
+CPython ast.parse,declarations,100,1,152449.84375,,,in-process parse + AST,1796
+CPython symtable,declarations,100,1,117756.9296875,,,in-process symbol table (internally reparses source),1796
+CPython ast.parse,declarations,1000,1,1816467.75,,,in-process parse + AST,19796
+CPython symtable,declarations,1000,1,1573177.875,,,in-process symbol table (internally reparses source),19796
+CPython ast.parse,declarations,3000,1,6743134.0,,,in-process parse + AST,63796
+CPython symtable,declarations,3000,1,4727453.75,,,in-process symbol table (internally reparses source),63796
+CPython ast.parse,references,10,1,18923.3232421875,,,in-process parse + AST,119
+CPython symtable,references,10,1,16488.533203125,,,in-process symbol table (internally reparses source),119
+CPython ast.parse,references,100,1,119576.9609375,,,in-process parse + AST,929
+CPython symtable,references,100,1,97423.34375,,,in-process symbol table (internally reparses source),929
+CPython ast.parse,references,1000,1,2051014.5,,,in-process parse + AST,9029
+CPython symtable,references,1000,1,1434869.375,,,in-process symbol table (internally reparses source),9029
+CPython ast.parse,references,3000,1,4889067.5,,,in-process parse + AST,27029
+CPython symtable,references,3000,1,3767749.75,,,in-process symbol table (internally reparses source),27029
+CPython ast.parse,mixed,10,1,31254.294921875,,,in-process parse + AST,296
+CPython symtable,mixed,10,1,24720.904296875,,,in-process symbol table (internally reparses source),296
+CPython ast.parse,mixed,100,1,300491.296875,,,in-process parse + AST,3086
+CPython symtable,mixed,100,1,220957.109375,,,in-process symbol table (internally reparses source),3086
+CPython ast.parse,mixed,1000,1,4210699.5,,,in-process parse + AST,33686
+CPython symtable,mixed,1000,1,3237420.0,,,in-process symbol table (internally reparses source),33686
+CPython ast.parse,mixed,3000,1,12797661.0,,,in-process parse + AST,107686
+CPython symtable,mixed,3000,1,11327744.5,,,in-process symbol table (internally reparses source),107686
+CPython ast.parse,sparse-undefined,10,1,17534.9521484375,,,in-process parse + AST,124
+CPython symtable,sparse-undefined,10,1,16756.6552734375,,,in-process symbol table (internally reparses source),124
+CPython ast.parse,sparse-undefined,100,1,119702.9765625,,,in-process parse + AST,934
+CPython symtable,sparse-undefined,100,1,105872.171875,,,in-process symbol table (internally reparses source),934
+CPython ast.parse,sparse-undefined,1000,1,1683814.875,,,in-process parse + AST,9097
+CPython symtable,sparse-undefined,1000,1,1258913.0,,,in-process symbol table (internally reparses source),9097
+CPython ast.parse,sparse-undefined,3000,1,4337059.5,,,in-process parse + AST,27257
+CPython symtable,sparse-undefined,3000,1,3645268.75,,,in-process symbol table (internally reparses source),27257
+CPython ast.parse,undefined,10,1,14822.2060546875,,,in-process parse + AST,156
+CPython symtable,undefined,10,1,14963.1064453125,,,in-process symbol table (internally reparses source),156
+CPython ast.parse,undefined,100,1,128272.0,,,in-process parse + AST,1506
+CPython symtable,undefined,100,1,102929.65625,,,in-process symbol table (internally reparses source),1506
+CPython ast.parse,undefined,1000,1,1867434.375,,,in-process parse + AST,15906
+CPython symtable,undefined,1000,1,1376485.875,,,in-process symbol table (internally reparses source),15906
+CPython ast.parse,undefined,3000,1,5969443.5,,,in-process parse + AST,49906
+CPython symtable,undefined,3000,1,4417483.5,,,in-process symbol table (internally reparses source),49906
+c compiler,declarations,10,1,11303529,,,compiler subprocess: Clang parse + semantic validation (syntax-only),503
+c compiler,declarations,100,1,13493854,,,compiler subprocess: Clang parse + semantic validation (syntax-only),5003
+c compiler,declarations,1000,1,16815085,,,compiler subprocess: Clang parse + semantic validation (syntax-only),52703
+c compiler,declarations,3000,1,22162796,,,compiler subprocess: Clang parse + semantic validation (syntax-only),164703
+c compiler,references,10,1,13551448,,,compiler subprocess: Clang parse + semantic validation (syntax-only),227
+c compiler,references,100,1,13041263,,,compiler subprocess: Clang parse + semantic validation (syntax-only),1757
+c compiler,references,1000,1,12878881,,,compiler subprocess: Clang parse + semantic validation (syntax-only),17057
+c compiler,references,3000,1,19882166,,,compiler subprocess: Clang parse + semantic validation (syntax-only),51057
+c compiler,mixed,10,1,17030109,,,compiler subprocess: Clang parse + semantic validation (syntax-only),503
+c compiler,mixed,100,1,12718197,,,compiler subprocess: Clang parse + semantic validation (syntax-only),5003
+c compiler,mixed,1000,1,16300186,,,compiler subprocess: Clang parse + semantic validation (syntax-only),52703
+c compiler,mixed,3000,1,24971960,,,compiler subprocess: Clang parse + semantic validation (syntax-only),164703
+c compiler,sparse-undefined,10,1,11211832,,,compiler subprocess: Clang parse + semantic validation (syntax-only),232
+c compiler,sparse-undefined,100,1,12325966,,,compiler subprocess: Clang parse + semantic validation (syntax-only),1762
+c compiler,sparse-undefined,1000,1,14314515,,,compiler subprocess: Clang parse + semantic validation (syntax-only),17125
+c compiler,sparse-undefined,3000,1,16691723,,,compiler subprocess: Clang parse + semantic validation (syntax-only),51285
+c compiler,undefined,10,1,11875347,,,compiler subprocess: Clang parse + semantic validation (syntax-only),253
+c compiler,undefined,100,1,12909735,,,compiler subprocess: Clang parse + semantic validation (syntax-only),2323
+c compiler,undefined,1000,1,12262680,,,compiler subprocess: Clang parse + semantic validation (syntax-only),23923
+c compiler,undefined,3000,1,13992322,,,compiler subprocess: Clang parse + semantic validation (syntax-only),73923
+cpp compiler,declarations,10,1,12938765,,,compiler subprocess: Clang++ parse + semantic validation (syntax-only),499
+cpp compiler,declarations,100,1,13151206,,,compiler subprocess: Clang++ parse + semantic validation (syntax-only),4999
+cpp compiler,declarations,1000,1,20626465,,,compiler subprocess: Clang++ parse + semantic validation (syntax-only),52699
+cpp compiler,declarations,3000,1,28428703,,,compiler subprocess: Clang++ parse + semantic validation (syntax-only),164699
+cpp compiler,references,10,1,11966498,,,compiler subprocess: Clang++ parse + semantic validation (syntax-only),223
+cpp compiler,references,100,1,12940240,,,compiler subprocess: Clang++ parse + semantic validation (syntax-only),1753
+cpp compiler,references,1000,1,15154428,,,compiler subprocess: Clang++ parse + semantic validation (syntax-only),17053
+cpp compiler,references,3000,1,17460153,,,compiler subprocess: Clang++ parse + semantic validation (syntax-only),51053
+cpp compiler,mixed,10,1,11617935,,,compiler subprocess: Clang++ parse + semantic validation (syntax-only),499
+cpp compiler,mixed,100,1,13507364,,,compiler subprocess: Clang++ parse + semantic validation (syntax-only),4999
+cpp compiler,mixed,1000,1,19029063,,,compiler subprocess: Clang++ parse + semantic validation (syntax-only),52699
+cpp compiler,mixed,3000,1,30678111,,,compiler subprocess: Clang++ parse + semantic validation (syntax-only),164699
+cpp compiler,sparse-undefined,10,1,12614325,,,compiler subprocess: Clang++ parse + semantic validation (syntax-only),228
+cpp compiler,sparse-undefined,100,1,12815933,,,compiler subprocess: Clang++ parse + semantic validation (syntax-only),1758
+cpp compiler,sparse-undefined,1000,1,14287532,,,compiler subprocess: Clang++ parse + semantic validation (syntax-only),17121
+cpp compiler,sparse-undefined,3000,1,18269382,,,compiler subprocess: Clang++ parse + semantic validation (syntax-only),51281
+cpp compiler,undefined,10,1,12920588,,,compiler subprocess: Clang++ parse + semantic validation (syntax-only),249
+cpp compiler,undefined,100,1,14051103,,,compiler subprocess: Clang++ parse + semantic validation (syntax-only),2319
+cpp compiler,undefined,1000,1,25076308,,,compiler subprocess: Clang++ parse + semantic validation (syntax-only),23919
+cpp compiler,undefined,3000,1,21866970,,,compiler subprocess: Clang++ parse + semantic validation (syntax-only),73919
+rust compiler,declarations,10,1,14824885,,,compiler subprocess: rustc metadata compilation (not resolver-only),494
+rust compiler,declarations,100,1,16124206,,,compiler subprocess: rustc metadata compilation (not resolver-only),5084
+rust compiler,declarations,1000,1,27906753,,,compiler subprocess: rustc metadata compilation (not resolver-only),53684
+rust compiler,declarations,3000,1,61173357,,,compiler subprocess: rustc metadata compilation (not resolver-only),167684
+rust compiler,references,10,1,14502774,,,compiler subprocess: rustc metadata compilation (not resolver-only),227
+rust compiler,references,100,1,21275092,,,compiler subprocess: rustc metadata compilation (not resolver-only),1937
+rust compiler,references,1000,1,23141070,,,compiler subprocess: rustc metadata compilation (not resolver-only),19037
+rust compiler,references,3000,1,50315218,,,compiler subprocess: rustc metadata compilation (not resolver-only),57037
+rust compiler,mixed,10,1,15351422,,,compiler subprocess: rustc metadata compilation (not resolver-only),494
+rust compiler,mixed,100,1,15577456,,,compiler subprocess: rustc metadata compilation (not resolver-only),5084
+rust compiler,mixed,1000,1,30369688,,,compiler subprocess: rustc metadata compilation (not resolver-only),53684
+rust compiler,mixed,3000,1,56863700,,,compiler subprocess: rustc metadata compilation (not resolver-only),167684
+rust compiler,sparse-undefined,10,1,21232289,,,compiler subprocess: rustc metadata compilation (not resolver-only),232
+rust compiler,sparse-undefined,100,1,24154453,,,compiler subprocess: rustc metadata compilation (not resolver-only),1942
+rust compiler,sparse-undefined,1000,1,28511415,,,compiler subprocess: rustc metadata compilation (not resolver-only),19105
+rust compiler,sparse-undefined,3000,1,43933986,,,compiler subprocess: rustc metadata compilation (not resolver-only),57265
+rust compiler,undefined,10,1,29843391,,,compiler subprocess: rustc metadata compilation (not resolver-only),254
+rust compiler,undefined,100,1,68838252,,,compiler subprocess: rustc metadata compilation (not resolver-only),2504
+rust compiler,undefined,1000,1,522968818,,,compiler subprocess: rustc metadata compilation (not resolver-only),25904
+rust compiler,undefined,3000,1,1615657947,,,compiler subprocess: rustc metadata compilation (not resolver-only),79904
+zig compiler,declarations,10,1,2408950,,,compiler subprocess: Zig AST check (not resolver-only),483
+zig compiler,declarations,100,1,2763701,,,compiler subprocess: Zig AST check (not resolver-only),4893
+zig compiler,declarations,1000,1,4785038,,,compiler subprocess: Zig AST check (not resolver-only),51693
+zig compiler,declarations,3000,1,20552404,,,compiler subprocess: Zig AST check (not resolver-only),161693
+zig compiler,references,10,1,3105087,,,compiler subprocess: Zig AST check (not resolver-only),198
+zig compiler,references,100,1,3745176,,,compiler subprocess: Zig AST check (not resolver-only),1548
+zig compiler,references,1000,1,3090695,,,compiler subprocess: Zig AST check (not resolver-only),15048
+zig compiler,references,3000,1,3511538,,,compiler subprocess: Zig AST check (not resolver-only),45048
+zig compiler,mixed,10,1,3056080,,,compiler subprocess: Zig AST check (not resolver-only),483
+zig compiler,mixed,100,1,2938895,,,compiler subprocess: Zig AST check (not resolver-only),4893
+zig compiler,mixed,1000,1,4492179,,,compiler subprocess: Zig AST check (not resolver-only),51693
+zig compiler,mixed,3000,1,13559878,,,compiler subprocess: Zig AST check (not resolver-only),161693
+zig compiler,sparse-undefined,10,1,2738524,,,compiler subprocess: Zig AST check (not resolver-only),203
+zig compiler,sparse-undefined,100,1,2496206,,,compiler subprocess: Zig AST check (not resolver-only),1553
+zig compiler,sparse-undefined,1000,1,2523422,,,compiler subprocess: Zig AST check (not resolver-only),15116
+zig compiler,sparse-undefined,3000,1,3098855,,,compiler subprocess: Zig AST check (not resolver-only),45276
+zig compiler,undefined,10,1,3277327,,,compiler subprocess: Zig AST check (not resolver-only),223
+zig compiler,undefined,100,1,2922943,,,compiler subprocess: Zig AST check (not resolver-only),2113
+zig compiler,undefined,1000,1,3148917,,,compiler subprocess: Zig AST check (not resolver-only),21913
+zig compiler,undefined,3000,1,2793056,,,compiler subprocess: Zig AST check (not resolver-only),67913
+go compiler,declarations,10,1,82056619,,,compiler subprocess: Go object compilation (not resolver-only),369
+go compiler,declarations,100,1,89241109,,,compiler subprocess: Go object compilation (not resolver-only),3699
+go compiler,declarations,1000,1,90472561,,,compiler subprocess: Go object compilation (not resolver-only),39699
+go compiler,declarations,3000,1,105161945,,,compiler subprocess: Go object compilation (not resolver-only),125699
+go compiler,references,10,1,67021022,,,compiler subprocess: Go object compilation (not resolver-only),183
+go compiler,references,100,1,93165097,,,compiler subprocess: Go object compilation (not resolver-only),1443
+go compiler,references,1000,1,56186810,,,compiler subprocess: Go object compilation (not resolver-only),14043
+go compiler,references,3000,1,60135619,,,compiler subprocess: Go object compilation (not resolver-only),42043
+go compiler,mixed,10,1,45948915,,,compiler subprocess: Go object compilation (not resolver-only),369
+go compiler,mixed,100,1,50362365,,,compiler subprocess: Go object compilation (not resolver-only),3699
+go compiler,mixed,1000,1,65795227,,,compiler subprocess: Go object compilation (not resolver-only),39699
+go compiler,mixed,3000,1,103264661,,,compiler subprocess: Go object compilation (not resolver-only),125699
+go compiler,sparse-undefined,10,1,47946658,,,compiler subprocess: Go object compilation (not resolver-only),188
+go compiler,sparse-undefined,100,1,59177370,,,compiler subprocess: Go object compilation (not resolver-only),1448
+go compiler,sparse-undefined,1000,1,47627061,,,compiler subprocess: Go object compilation (not resolver-only),14111
+go compiler,sparse-undefined,3000,1,57640903,,,compiler subprocess: Go object compilation (not resolver-only),42271
+go compiler,undefined,10,1,62214619,,,compiler subprocess: Go object compilation (not resolver-only),219
+go compiler,undefined,100,1,50441480,,,compiler subprocess: Go object compilation (not resolver-only),2019
+go compiler,undefined,1000,1,48737443,,,compiler subprocess: Go object compilation (not resolver-only),20919
+go compiler,undefined,3000,1,78197456,,,compiler subprocess: Go object compilation (not resolver-only),64919

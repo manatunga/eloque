@@ -1,0 +1,11 @@
+language,workload,size,repetition,ns,source_bytes,boundary,source_sha256
+zig,arithmetic,10,1,288368767,763,zig object emission (includes code generation),b18a241a8a8e9ea6ff5eb4415be15e280e54991e531ad020548b373351b18899
+cpp,arithmetic,10,1,15721031,779,clang++ syntax-only (parse + semantic validation),ac1e4369553cf9e6aca039907ad3661ce239b23412a3fb79a3b93a95789ce455
+cpp,declarations,10,1,12522685,499,clang++ syntax-only (parse + semantic validation),535ccba6aa0e81be54e34accc6db3a48559df2936ec7baa71fd1e8c20cafd6eb
+go,declarations,10,1,26553379,369,go tool compile object emission (includes code generation),59a9d8ce67b6ad197041b5570a57e7c9d0a2e4214dafdd4babda4b10050fe4e8
+rust,arithmetic,10,1,16593490,774,rustc metadata emission (includes semantic analysis),d9d97fc6045462b8b01df3636a3cb8449920fe7336017a57a3ae20e0dd770880
+zig,declarations,10,1,268247436,483,zig object emission (includes code generation),bd8e3da19298e290c978da7f2d86e58befa7036cf7af1a5e5ca7abcc50bc22a2
+go,arithmetic,10,1,23432905,649,go tool compile object emission (includes code generation),166c55a9ec83a6a2a29c3f8e78130c3488cc9e41f380a1ded717955bb7dffb6e
+rust,declarations,10,1,17050395,494,rustc metadata emission (includes semantic analysis),bdcb02313aa04bfc91f04438c807d949d1b825acf59a23815414249958ff8d09
+c,declarations,10,1,13246626,503,clang syntax-only (parse + semantic validation),30125bcc8c2a63b62bab5215fb51ef2f11b65f33e03ed74dfdd2050892a2cd41
+c,arithmetic,10,1,13523801,783,clang syntax-only (parse + semantic validation),52f8381fe98fdd59be07e0153f693c0e533c41a55c1793e6fcf7589bd4ffc335

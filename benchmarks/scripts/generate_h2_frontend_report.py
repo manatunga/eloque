@@ -72,7 +72,7 @@ def main():
     ap.add_argument(
         "--out",
         type=Path,
-        default=Path("benchmarks/results/experimental/h2-post-recovery-report"),
+        default=Path("benchmarks/results/experimental/h2/h2-post-recovery-report"),
     )
     args = ap.parse_args()
     raw = (

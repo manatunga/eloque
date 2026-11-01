@@ -1,11 +1,14 @@
 # Eloque Design Decisions
 
-**Status:** Active design decision register, updated October 2026.
+>**Status:** Active design decision register, reviewed November 2026. Includes completed M1/H2 frontend work, post-H2 structured recovery, and M2-P1 lexical name resolution.
+
 **Normative language specification:** [LANGUAGE_SPEC.md](LANGUAGE_SPEC.md).
 
 This register records accepted design choices, provisional directions, deferred work, and selected implementation decisions. **Decided** means agreed, not necessarily implemented. **Provisional** requires further specification or validation. **Deferred** is deliberately postponed. **Implemented (M1)** identifies behavior or architecture established during Milestone 1. **Implemented (H2)** identifies the post-M1 frontend optimization and architectural migration. Neither status implies that Eloque programs can execute. **Implemented (post-H2)** identifies frontend functionality added after the H2 optimization, including structured diagnostic recovery. It does not imply that semantic analysis or execution is available.
 
-## Current implementation baseline — M1 and H2
+**Implemented (M2-P1)** identifies the completed lexical name-resolution stage, including symbol binding and resolver diagnostics for the supported language subset. It does not imply that static type checking, bytecode compilation, or execution is available.
+
+## Current implementation baseline — M1, H2, and M2-P1
 
 Milestone 1 established Eloque's Go lexer, parser, AST construction, structured fail-fast lexical and syntax diagnostics, and canonical `Parse(sourceText)` entry point.
 
@@ -25,11 +28,23 @@ The supported syntax subset includes literals, identifiers, arithmetic expressio
 
 The post-M1 H2 optimization introduced an arena-backed flat AST and a new production parser implementation while preserving direct pull-based token streaming.
 
-The canonical `Parse(sourceText)` entry point now returns `(*ast.FlatProgram, error)`.
+The production frontend exposes `Parse(sourceText) (*ast.FlatProgram, *diagnostic.Diagnostic)` for fail-fast parsing and `ParseRecovering(sourceText, ParseOptions) ParseResult` for structured recovery. Recovery-enabled parsing is the approved default for user-facing compilation and tooling; integration into the compiler driver remains pending.
 
 The original M1 interface-based AST and parser remain available internally as legacy reference implementations for regression and performance comparisons.
 
 The frontend packages are organized under `internal/frontend/{ast,lexer,parser}`, while shared source-location utilities remain in `internal/source`.
+
+### M2-P1 lexical name resolution
+
+M2-P1 introduced a dedicated lexical name-resolution stage following parsing.
+
+The resolver associates identifier references and assignment targets with declaration symbols, detects undefined names and duplicate declarations, and preserves binding information for subsequent compiler stages.
+
+The implemented resolver is separate from parsing and does not perform static type checking, definite-assignment analysis, bytecode generation, or execution.
+
+Resolver correctness tests and dedicated benchmarks have been established. The M2 cross-language v2 comparison includes fail-fast and recovery-capable parse-and-resolve workloads.
+
+M2 — First Execution remains in progress.
 
 H2 was validated through correctness and differential testing, arena-invariant tests, and representative performance benchmarks.
 
@@ -45,7 +60,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for the implementation structure, [ROADMA
 
 | ID | Status | Decision |
 |---|---|---|
-| D-001 | Decided; frontend implemented (M1/H2), execution pending (M2) | Eloque's compiler frontend and semantic-analysis stages are implemented in Go. M1/H2 established lexical analysis, parsing, and arena-backed flat AST construction; pre-M2 work added structured diagnostic recovery. Mandatory name resolution, static type checking, and bytecode compilation remain planned. Execution will use **Monowire**, the selected register-based VM architecture, rather than the previously planned Go stack VM. |
+| D-001 | Decided; frontend implemented (M1/H2/post-H2), name resolution implemented (M2-P1), execution pending (M2) | Eloque's compiler frontend and semantic-analysis stages are implemented in Go. M1/H2 established lexical analysis, parsing, and arena-backed flat AST construction; post-H2 work added structured diagnostic recovery; M2-P1 implemented lexical name resolution and symbol binding. Mandatory static type checking and bytecode compilation remain pending. Execution will use **Monowire**, the selected register-based VM architecture, rather than the previously planned Go stack VM. |
 | D-002 | Decided; CLI provisional | **Eloque** is the language name and `.elq` its official source extension. `eloque` is the planned CLI command, subject to availability and naming-conflict checks. |
 | D-003 | Decided | General-purpose language with concise, structured conversational syntax—not unrestricted English. Prioritize readability, predictable agent tooling, and foundations for safe concurrency. |
 | D-004 | Decided; initial lexer implemented (M1) | Four-space significant indentation, `:` blocks, no tabs, `#` comments, case-sensitive ASCII identifiers, and double-quoted strings. |
@@ -78,11 +93,11 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for the implementation structure, [ROADMA
 | D-031 | Decided; execution pending | Top-level statements execute in source order; `main` is not invoked automatically. |
 | D-032 | Decided; diagnostics implemented in part (M1) | Normal execution is sequential; runtime exceptions include source locations; tooling requires structured diagnostics. M1 provides structured frontend diagnostics, not runtime exceptions. |
 | D-033 | Decided; runtime pending | Support configurable sandbox limits; do not impose an arbitrary universal instruction limit on ordinary CLI execution. |
-| D-034 | Decided; lexer implemented (M1) | Decimal integer literals prohibit leading zeros except `0`. A digit sequence immediately followed by an ASCII letter or underscore is a lexical error; invalid-suffix diagnostics take precedence over leading-zero diagnostics. The existing lexer fails fast; controlled multi-error recovery is approved for the pre-M2 frontend migration. |
+| D-034 | Decided; lexer implemented (M1), recovery implemented (post-H2) | Decimal integer literals prohibit leading zeros except `0`. A digit sequence immediately followed by an ASCII letter or underscore is a lexical error; invalid-suffix diagnostics take precedence over leading-zero diagnostics. The original fail-fast lexical behavior remains available, while the production frontend also supports controlled multi-error recovery. |
 | D-035 | Implemented (M1) | Go lexer token kinds use a `uint8`-backed enumeration with zero reserved for `TokenInvalid`; `String()` supplies readable names. Incremental token emission and reused indentation-stack/pending-queue storage reduce allocations. This is an implementation choice, not a language semantic rule. |
 | D-036 | Decided; lexer implemented (M1) | `change`, `to`, `with`, and `giving` are reserved keywords with dedicated token kinds, not ordinary identifiers. One token kind may serve multiple grammatical contexts. |
-| D-037 | Active implementation; M1 fail-fast baseline retained | M1 implemented deterministic fail-fast lexical and syntax diagnostics. The post-M1 structured-diagnostics checkpoint is transitioning the frontend to multi-error recovery. The shared diagnostic model and native lexer/parser diagnostic migration are complete; diagnostic accumulation, lexer recovery, parser synchronization, error budgets, and parse outcomes remain in progress. Recovery must preserve direct pull-based token streaming, deterministic diagnostic reporting, safe termination, and successful-path performance. The M1 fail-fast behavior remains the regression baseline until the recovery implementation passes correctness and performance validation. |
-| D-038 | Implemented (M1) | The canonical `Parse(sourceText)` frontend consumes lexer tokens incrementally via `tokenSource`, without a redundant independent token cursor. Buffered parsing remains for regression tests and benchmarks. Future changes must preserve correctness, diagnostic quality, and reproducible performance baselines. |
+| D-037 | Decided; recovery implemented (post-H2); default integration pending | Recovery-enabled parsing is the default for Eloque's user-facing compilation and development tooling. `ParseRecovering(sourceText, ParseOptions)` provides structured multi-error recovery, configurable error budgets, and explicit parse outcomes. The original fail-fast `Parse(sourceText)` remains available for internal operations and performance comparisons. Recovery preserves direct pull-based token streaming, deterministic diagnostics, safe termination, and the arena-backed AST. |
+| D-038 | Implemented (M1/H2); default parser selection updated (M2 decision) | Preserve direct pull-based token streaming without a redundant independent token cursor. Both fail-fast and recovery-enabled parsing use the production arena-backed frontend. `Parse(sourceText)` remains the explicit fail-fast entry point; `ParseRecovering(sourceText, ParseOptions)` is the selected default for user-facing compilation. Buffered parsing remains available for regression and benchmark comparisons. |
 | D-039 | Implemented (H2) | Adopt an arena-backed flat AST as the canonical production representation. The parser constructs `FlatNode` and `FlatProgram` structures using arena-managed storage. Retain the original M1 interface-based AST and parser as legacy references for correctness and performance comparisons. This is an internal representation decision, not a language-semantic change. |
 | D-040 | Implemented (H2) | Organize the frontend under `internal/frontend/{ast,lexer,parser}` while retaining shared source-location utilities in `internal/source`. Preserve the canonical `Parse(sourceText)` entry point and direct pull-based token streaming. Future semantic analysis and backend packages should be introduced when their implementations begin rather than creating speculative empty package structures. |
 | D-041 - D-050 | Decided/Provisional | [Jump to October M2 Decisions](#m2-architecture-decisions---october-2026) |
@@ -126,7 +141,7 @@ Eloque grew out of the earlier BakeScript culinary-syntax concept. That transiti
 These are future tasks, **not unfinished M1 requirements**:
 
 - **Lexing and parsing:** Extend token coverage, grammar, source spans, and conformance fixtures for future features; specify comparison/Boolean precedence and associativity. Preserve existing reserved-keyword rules and arithmetic parser behavior.
-- **Diagnostics:** Extend the implemented structured diagnostic and recovery infrastructure to M2 name resolution and static type checking. Preserve the validated M1/H2 frontend and pre-M2 recovery behavior as regression baselines.
+- **Diagnostics and frontend performance:** Frontend recovery and M2-P1 lexical name resolution are implemented. Complete integration of recovery-enabled parsing as the default user-facing compiler path when the compiler driver is introduced. Preserve fail-fast parsing and resolution as a separate correctness and performance baseline. Maintain malformed-source recovery benchmarks independently. The M2 cross-language v2 comparison has been completed; future comparisons must continue to distinguish in-process Eloque processing, CPython frontend APIs, and native compiler subprocess execution.
 - **Types and numbers:** Resolve mixed `Int`/`Float` arithmetic, conversion and overflow edge cases, exceptional floating-point values, type narrowing, generic compatibility, and safe mutation analysis.
 - **Collections and text:** Define iteration and mutation details, including Unicode code-point versus grapheme-cluster indexing.
 - **Language features:** Specify exception taxonomy and cleanup precedence, module resolution, structural-interface diagnostics, and pattern exhaustiveness.
@@ -136,13 +151,13 @@ These are future tasks, **not unfinished M1 requirements**:
 
 ## M2 architecture decisions — October 2026
 
-**Status:** Approved design, not yet implemented.
+**Status:** Approved architectural decisions. Frontend recovery and M2-P1 lexical name resolution have been implemented; mandatory static type checking, bytecode compilation, and Monowire execution remain pending.
 
-The decisions below establish the architectural contract for Eloque's diagnostic migration and M2 name-resolution stage. They supersede earlier design choices where explicitly identified. Implementation details may be refined through testing, but changes to agreed semantics must be documented.
+The decisions below establish the architectural contract for Eloque's diagnostic migration and M2 name-resolution stage. They also preserve the original design rationale and implementation requirements. Some stages have since been implemented, while other requirements remain pending or require verification against the current source and tests. Changes to agreed language semantics must be documented explicitly.
 
 ### D-041 — Dedicated name-resolution stage
 
-**Status:** Decided; implementation pending.
+**Status:** Implemented (M2-P1) for the supported language subset.
 
 Name resolution is a dedicated semantic-analysis pass performed after syntactic validation and before mandatory static type checking.
 
@@ -154,7 +169,7 @@ The precise interaction between forward declarations, module imports, and visibi
 
 ### D-042 — Lexical scopes and shadowing
 
-**Status:** Decided; implementation pending.
+**Status:** Implemented (M2-P1) for supported scope behavior; future nested-language constructs remain pending.
 
 Scopes are lexically nested and parent-linked.
 
@@ -171,7 +186,7 @@ This decision supersedes the no-shadowing restriction previously recorded in D-0
 
 ### D-043 — Declaration and initializer resolution
 
-**Status:** Decided; implementation pending.
+**Status:** Name-resolution behavior implemented (M2-P1); definite-assignment checking pending.
 
 Variable declarations are registered before their initializer expressions are resolved.
 
@@ -191,7 +206,7 @@ Name resolution and definite-assignment checking remain separate responsibilitie
 
 ### D-044 — Symbol representation and ownership
 
-**Status:** Decided implementation direction; performance subject to validation.
+**Status:** Implemented (M2-P1); performance and representation refinements remain subject to validation.
 
 Symbols are stored in a contiguous, append-only arena represented conceptually by `[]Symbol`.
 
@@ -212,7 +227,7 @@ Global string interning is deferred until representative benchmarks justify it.
 
 ### D-045 — Reference binding representation
 
-**Status:** Decided initial implementation; representation remains private.
+**Status:** Implemented (M2-P1); internal representation remains subject to benchmark-driven review.
 
 Reference bindings initially use a dense `[]SymbolID` indexed by AST `NodeID`.
 
@@ -238,7 +253,7 @@ Dense versus sparse binding storage remains an explicitly tracked benchmark deci
 
 ### D-046 — Shared diagnostic representation
 
-**Status:** Decided; implementation pending.
+**Status:** Approved diagnostic contract; implementation details require verification against the current compiler stages.
 
 Compiler diagnostics use a common structured representation containing:
 
@@ -263,7 +278,7 @@ Diagnostic messages may evolve without changing the meaning of established codes
 
 ### D-047 — Diagnostic collection and ordering
 
-**Status:** Decided; implementation pending.
+**Status:** Approved compiler-wide policy; complete cross-stage driver integration remains pending.
 
 Each compiler stage owns its diagnostic collection.
 
@@ -283,7 +298,9 @@ Successful compiler paths should avoid unnecessary diagnostic allocations. Optio
 
 ### D-048 — Recovery and compilation eligibility
 
-**Status:** Decided; implementation pending.
+**Status:** Frontend recovery implemented (post-H2); end-to-end compilation eligibility enforcement remains pending.
+
+**Default frontend policy (approved October 2026):** User-facing compilation, source checking, and editor tooling use recovery-enabled parsing by default. Fail-fast parsing remains available as an explicit alternative. A `ParseComplete` result permits progression to semantic validation but does not itself establish semantic correctness. `ParseRecovered` and `ParseAborted` results are ineligible for normal bytecode generation or execution. Semantic errors also block executable compilation.
 
 Diagnostic collection and error recovery are separate concerns.
 
@@ -305,7 +322,7 @@ Fatal structural failures may terminate an affected region or stage when continu
 
 ### D-049 — Frontend migration prerequisite
 
-**Status:** Approved implementation prerequisite.
+**Status:** Completed (post-H2); retained as the historical prerequisite for M2-P1.
 
 Before M2 name resolution begins, the existing H2 lexer, streaming token source, and arena-backed parser must be adapted to controlled multi-error reporting.
 
@@ -343,9 +360,43 @@ The approved sequence is:
 7. Implement the baseline Monowire register-based VM.
 8. Establish execution benchmarks before reconsidering major runtime architecture choices.
 
+**Progress as of November 2026:**
+
+- Steps 1–3: Frontend diagnostic architecture, controlled recovery, and regression/performance validation completed.
+- Step 4: Dedicated M2-P1 lexical name resolution implemented and benchmarked.
+- Step 5: Mandatory static type checking and definite-assignment analysis pending.
+- Step 6: Production Monowire bytecode compilation pending.
+- Step 7: Production Monowire VM execution pending.
+- Step 8: Executable runtime benchmarking pending. Historical frontend and synthetic VM benchmarks remain separate evidence.
+
 No stage should be considered implemented solely because its design is recorded here.
 
 See `ARCHITECTURE.md` for the resolver algorithm, test matrix, and acceptance criteria, and `TECHNICAL_BACKLOG.md` for deferred reevaluation triggers.
+
+## M2-P1 implementation and benchmark record — October 2026
+
+**Status:** Lexical name resolution implemented; benchmark comparison completed.
+
+M2-P1 established the first dedicated semantic-analysis stage after parsing.
+
+The implementation resolves identifier references and assignment targets, records declaration-symbol bindings, and reports name-resolution errors for the supported grammar.
+
+The M2 cross-language v2 benchmark suite evaluates declarations, references, mixed programs, sparse undefined references, and undefined-reference workloads at multiple sizes.
+
+For the 3,000-unit mixed workload, recorded median latencies include:
+
+| Implementation or operation | Median latency |
+|---|---:|
+| Eloque recovery-capable parse + resolve | 2.059516 ms |
+| Eloque fail-fast parse + resolve | 1.993480 ms |
+| CPython `symtable` | 17.534834 ms |
+| CPython `ast.parse` | 25.515754 ms |
+
+These measurements represent different operations and implementation boundaries. They do not establish equivalent compiler functionality or runtime performance superiority.
+
+The benchmark results are historical measurements, not language-semantic decisions. They should remain reproducible through the corresponding benchmark scripts and recorded result files.
+
+**Next implementation phase:** Mandatory static type checking and definite-assignment analysis.
 
 ## Change process
 

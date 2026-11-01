@@ -1,0 +1,1818 @@
+{
+  "created_utc": "2026-10-31T21:35:41.694962+00:00",
+  "python": "3.14.4 (main, Aug 20 2026, 10:41:58) [GCC 15.2.0]",
+  "repeats": 5,
+  "benchtime": "200ms",
+  "python_duration": 0.05,
+  "scope": "M2 Eloque parse+resolve, CPython AST/symbol table, native compiler subprocesses; separate boundaries",
+  "native_languages": [
+    "c",
+    "cpp",
+    "rust",
+    "zig",
+    "go"
+  ],
+  "native_warmups": 1,
+  "native_inputs": [
+    {
+      "language": "c",
+      "workload": "declarations",
+      "size": 10,
+      "source_bytes": 503,
+      "sha256": "30125bcc8c2a63b62bab5215fb51ef2f11b65f33e03ed74dfdd2050892a2cd41",
+      "declarations": 10,
+      "references": 10,
+      "expected_success": true,
+      "command": [
+        "clang",
+        "-std=c17",
+        "-fsyntax-only",
+        "-Wno-unused-variable",
+        "-ferror-limit=1",
+        "<temporary-dir>/c_declarations_10.c"
+      ]
+    },
+    {
+      "language": "c",
+      "workload": "declarations",
+      "size": 100,
+      "source_bytes": 5003,
+      "sha256": "8caef53005ce65cb3a8926f4b86bdb494fcf946f33c665706541ccceeee8658c",
+      "declarations": 100,
+      "references": 100,
+      "expected_success": true,
+      "command": [
+        "clang",
+        "-std=c17",
+        "-fsyntax-only",
+        "-Wno-unused-variable",
+        "-ferror-limit=1",
+        "<temporary-dir>/c_declarations_100.c"
+      ]
+    },
+    {
+      "language": "c",
+      "workload": "declarations",
+      "size": 1000,
+      "source_bytes": 52703,
+      "sha256": "506eb9223fadb46bc0deb9b707cd1543bb35e95eeefe7874b82dc1721d4be06e",
+      "declarations": 1000,
+      "references": 1000,
+      "expected_success": true,
+      "command": [
+        "clang",
+        "-std=c17",
+        "-fsyntax-only",
+        "-Wno-unused-variable",
+        "-ferror-limit=1",
+        "<temporary-dir>/c_declarations_1000.c"
+      ]
+    },
+    {
+      "language": "c",
+      "workload": "declarations",
+      "size": 3000,
+      "source_bytes": 164703,
+      "sha256": "2c9bc59649419f89c4d8a62ac74e2024c0179e9ec50563d77667d7ca6e6c06df",
+      "declarations": 3000,
+      "references": 3000,
+      "expected_success": true,
+      "command": [
+        "clang",
+        "-std=c17",
+        "-fsyntax-only",
+        "-Wno-unused-variable",
+        "-ferror-limit=1",
+        "<temporary-dir>/c_declarations_3000.c"
+      ]
+    },
+    {
+      "language": "c",
+      "workload": "references",
+      "size": 10,
+      "source_bytes": 227,
+      "sha256": "00412441c6d00a90e75583805a8c417bc9d186551f43f7c1ca0fea3404816573",
+      "declarations": 1,
+      "references": 10,
+      "expected_success": true,
+      "command": [
+        "clang",
+        "-std=c17",
+        "-fsyntax-only",
+        "-Wno-unused-variable",
+        "-ferror-limit=1",
+        "<temporary-dir>/c_references_10.c"
+      ]
+    },
+    {
+      "language": "c",
+      "workload": "references",
+      "size": 100,
+      "source_bytes": 1757,
+      "sha256": "b03644d75ab0456f307e978a746b09eaef6ee27a428eeb9d4649cb033e960818",
+      "declarations": 1,
+      "references": 100,
+      "expected_success": true,
+      "command": [
+        "clang",
+        "-std=c17",
+        "-fsyntax-only",
+        "-Wno-unused-variable",
+        "-ferror-limit=1",
+        "<temporary-dir>/c_references_100.c"
+      ]
+    },
+    {
+      "language": "c",
+      "workload": "references",
+      "size": 1000,
+      "source_bytes": 17057,
+      "sha256": "440c5d6574cb65fafa930efac45ca494632ece9eed1ae51e39e51f68086de157",
+      "declarations": 1,
+      "references": 1000,
+      "expected_success": true,
+      "command": [
+        "clang",
+        "-std=c17",
+        "-fsyntax-only",
+        "-Wno-unused-variable",
+        "-ferror-limit=1",
+        "<temporary-dir>/c_references_1000.c"
+      ]
+    },
+    {
+      "language": "c",
+      "workload": "references",
+      "size": 3000,
+      "source_bytes": 51057,
+      "sha256": "6f7e2d064d92da382a9b710d33176c0cced2858acd14bea6c6bd58255e5451c4",
+      "declarations": 1,
+      "references": 3000,
+      "expected_success": true,
+      "command": [
+        "clang",
+        "-std=c17",
+        "-fsyntax-only",
+        "-Wno-unused-variable",
+        "-ferror-limit=1",
+        "<temporary-dir>/c_references_3000.c"
+      ]
+    },
+    {
+      "language": "c",
+      "workload": "mixed",
+      "size": 10,
+      "source_bytes": 503,
+      "sha256": "7f771780a9408c847602f5fd07f31e9ee86dba0ac8e9c500ad11a99fc3bf6dbb",
+      "declarations": 10,
+      "references": 10,
+      "expected_success": true,
+      "command": [
+        "clang",
+        "-std=c17",
+        "-fsyntax-only",
+        "-Wno-unused-variable",
+        "-ferror-limit=1",
+        "<temporary-dir>/c_mixed_10.c"
+      ]
+    },
+    {
+      "language": "c",
+      "workload": "mixed",
+      "size": 100,
+      "source_bytes": 5003,
+      "sha256": "6aa237a495c4f18f4a5c567e6d73d66e58a31c3e82dd98e328254307029701cf",
+      "declarations": 100,
+      "references": 100,
+      "expected_success": true,
+      "command": [
+        "clang",
+        "-std=c17",
+        "-fsyntax-only",
+        "-Wno-unused-variable",
+        "-ferror-limit=1",
+        "<temporary-dir>/c_mixed_100.c"
+      ]
+    },
+    {
+      "language": "c",
+      "workload": "mixed",
+      "size": 1000,
+      "source_bytes": 52703,
+      "sha256": "4bd52b0af388c859632bef08d8388b2bbf4c9493ab381723e1ab9c9c66e684ad",
+      "declarations": 1000,
+      "references": 1000,
+      "expected_success": true,
+      "command": [
+        "clang",
+        "-std=c17",
+        "-fsyntax-only",
+        "-Wno-unused-variable",
+        "-ferror-limit=1",
+        "<temporary-dir>/c_mixed_1000.c"
+      ]
+    },
+    {
+      "language": "c",
+      "workload": "mixed",
+      "size": 3000,
+      "source_bytes": 164703,
+      "sha256": "de69e9e8de7791d4f93a5152b9ae60887338be6d12fb0ff66d833dc1404883ed",
+      "declarations": 3000,
+      "references": 3000,
+      "expected_success": true,
+      "command": [
+        "clang",
+        "-std=c17",
+        "-fsyntax-only",
+        "-Wno-unused-variable",
+        "-ferror-limit=1",
+        "<temporary-dir>/c_mixed_3000.c"
+      ]
+    },
+    {
+      "language": "c",
+      "workload": "sparse-undefined",
+      "size": 10,
+      "source_bytes": 227,
+      "sha256": "00412441c6d00a90e75583805a8c417bc9d186551f43f7c1ca0fea3404816573",
+      "declarations": 1,
+      "references": 10,
+      "expected_success": true,
+      "command": [
+        "clang",
+        "-std=c17",
+        "-fsyntax-only",
+        "-Wno-unused-variable",
+        "-ferror-limit=1",
+        "<temporary-dir>/c_sparse-undefined_10.c"
+      ]
+    },
+    {
+      "language": "c",
+      "workload": "sparse-undefined",
+      "size": 100,
+      "source_bytes": 1757,
+      "sha256": "b03644d75ab0456f307e978a746b09eaef6ee27a428eeb9d4649cb033e960818",
+      "declarations": 1,
+      "references": 100,
+      "expected_success": true,
+      "command": [
+        "clang",
+        "-std=c17",
+        "-fsyntax-only",
+        "-Wno-unused-variable",
+        "-ferror-limit=1",
+        "<temporary-dir>/c_sparse-undefined_100.c"
+      ]
+    },
+    {
+      "language": "c",
+      "workload": "sparse-undefined",
+      "size": 1000,
+      "source_bytes": 17120,
+      "sha256": "1899e7cb830a3bcf6a204fc638d8d5767b093b574c710093d5e3a896f8992339",
+      "declarations": 1,
+      "references": 1000,
+      "expected_success": false,
+      "command": [
+        "clang",
+        "-std=c17",
+        "-fsyntax-only",
+        "-Wno-unused-variable",
+        "-ferror-limit=1",
+        "<temporary-dir>/c_sparse-undefined_1000.c"
+      ]
+    },
+    {
+      "language": "c",
+      "workload": "sparse-undefined",
+      "size": 3000,
+      "source_bytes": 51280,
+      "sha256": "781b6e04331938cbcedaca64b154929b3b976305ddd36fa347291e7bb8428d72",
+      "declarations": 1,
+      "references": 3000,
+      "expected_success": false,
+      "command": [
+        "clang",
+        "-std=c17",
+        "-fsyntax-only",
+        "-Wno-unused-variable",
+        "-ferror-limit=1",
+        "<temporary-dir>/c_sparse-undefined_3000.c"
+      ]
+    },
+    {
+      "language": "c",
+      "workload": "undefined",
+      "size": 10,
+      "source_bytes": 253,
+      "sha256": "0e1008eef0058e91751822f6884722ae6c9d9eb81b3425924fcaa174ba6721e8",
+      "declarations": 0,
+      "references": 10,
+      "expected_success": false,
+      "command": [
+        "clang",
+        "-std=c17",
+        "-fsyntax-only",
+        "-Wno-unused-variable",
+        "-ferror-limit=1",
+        "<temporary-dir>/c_undefined_10.c"
+      ]
+    },
+    {
+      "language": "c",
+      "workload": "undefined",
+      "size": 100,
+      "source_bytes": 2323,
+      "sha256": "feb3fb44bc1ebd1ca2cae5cefcec8a34cd856dd9ec729e54580fdcb54220825b",
+      "declarations": 0,
+      "references": 100,
+      "expected_success": false,
+      "command": [
+        "clang",
+        "-std=c17",
+        "-fsyntax-only",
+        "-Wno-unused-variable",
+        "-ferror-limit=1",
+        "<temporary-dir>/c_undefined_100.c"
+      ]
+    },
+    {
+      "language": "c",
+      "workload": "undefined",
+      "size": 1000,
+      "source_bytes": 23923,
+      "sha256": "1524e93d005cbe24d2f23f92a5f5205172839e89f3a9a0e69b30f8e9893655d1",
+      "declarations": 0,
+      "references": 1000,
+      "expected_success": false,
+      "command": [
+        "clang",
+        "-std=c17",
+        "-fsyntax-only",
+        "-Wno-unused-variable",
+        "-ferror-limit=1",
+        "<temporary-dir>/c_undefined_1000.c"
+      ]
+    },
+    {
+      "language": "c",
+      "workload": "undefined",
+      "size": 3000,
+      "source_bytes": 73923,
+      "sha256": "4f5a7ccf55c297ed89baed9d66533759cc8f035c516e5d173edd1c2ad4eec505",
+      "declarations": 0,
+      "references": 3000,
+      "expected_success": false,
+      "command": [
+        "clang",
+        "-std=c17",
+        "-fsyntax-only",
+        "-Wno-unused-variable",
+        "-ferror-limit=1",
+        "<temporary-dir>/c_undefined_3000.c"
+      ]
+    },
+    {
+      "language": "cpp",
+      "workload": "declarations",
+      "size": 10,
+      "source_bytes": 499,
+      "sha256": "535ccba6aa0e81be54e34accc6db3a48559df2936ec7baa71fd1e8c20cafd6eb",
+      "declarations": 10,
+      "references": 10,
+      "expected_success": true,
+      "command": [
+        "clang++",
+        "-std=c++20",
+        "-fsyntax-only",
+        "-Wno-unused-variable",
+        "-ferror-limit=1",
+        "<temporary-dir>/cpp_declarations_10.cpp"
+      ]
+    },
+    {
+      "language": "cpp",
+      "workload": "declarations",
+      "size": 100,
+      "source_bytes": 4999,
+      "sha256": "e5d7f8bd6125312ece8cd99ee95b45fba8b9aa39d9e4b1981319ce0643efc82d",
+      "declarations": 100,
+      "references": 100,
+      "expected_success": true,
+      "command": [
+        "clang++",
+        "-std=c++20",
+        "-fsyntax-only",
+        "-Wno-unused-variable",
+        "-ferror-limit=1",
+        "<temporary-dir>/cpp_declarations_100.cpp"
+      ]
+    },
+    {
+      "language": "cpp",
+      "workload": "declarations",
+      "size": 1000,
+      "source_bytes": 52699,
+      "sha256": "1c965f7bfb92953f66be0c27d9fb7e34cfe2154e57f70be73403847e18af62f9",
+      "declarations": 1000,
+      "references": 1000,
+      "expected_success": true,
+      "command": [
+        "clang++",
+        "-std=c++20",
+        "-fsyntax-only",
+        "-Wno-unused-variable",
+        "-ferror-limit=1",
+        "<temporary-dir>/cpp_declarations_1000.cpp"
+      ]
+    },
+    {
+      "language": "cpp",
+      "workload": "declarations",
+      "size": 3000,
+      "source_bytes": 164699,
+      "sha256": "973ad9f50114bf84e328d4d7a261cd5bb69005231e4265944849cea01d3ca1df",
+      "declarations": 3000,
+      "references": 3000,
+      "expected_success": true,
+      "command": [
+        "clang++",
+        "-std=c++20",
+        "-fsyntax-only",
+        "-Wno-unused-variable",
+        "-ferror-limit=1",
+        "<temporary-dir>/cpp_declarations_3000.cpp"
+      ]
+    },
+    {
+      "language": "cpp",
+      "workload": "references",
+      "size": 10,
+      "source_bytes": 223,
+      "sha256": "fd373517c305857aff0f16d76770c631f78ef6b9775806eb9f76328a211cb256",
+      "declarations": 1,
+      "references": 10,
+      "expected_success": true,
+      "command": [
+        "clang++",
+        "-std=c++20",
+        "-fsyntax-only",
+        "-Wno-unused-variable",
+        "-ferror-limit=1",
+        "<temporary-dir>/cpp_references_10.cpp"
+      ]
+    },
+    {
+      "language": "cpp",
+      "workload": "references",
+      "size": 100,
+      "source_bytes": 1753,
+      "sha256": "300f9587361b31a4f26673b777fee9988313afa2170002d964a202191b72f30b",
+      "declarations": 1,
+      "references": 100,
+      "expected_success": true,
+      "command": [
+        "clang++",
+        "-std=c++20",
+        "-fsyntax-only",
+        "-Wno-unused-variable",
+        "-ferror-limit=1",
+        "<temporary-dir>/cpp_references_100.cpp"
+      ]
+    },
+    {
+      "language": "cpp",
+      "workload": "references",
+      "size": 1000,
+      "source_bytes": 17053,
+      "sha256": "a3cf5698bacc59d6cbd6fd61e7357803cc1a8be686f3e2d9adc2a6cb28a843ca",
+      "declarations": 1,
+      "references": 1000,
+      "expected_success": true,
+      "command": [
+        "clang++",
+        "-std=c++20",
+        "-fsyntax-only",
+        "-Wno-unused-variable",
+        "-ferror-limit=1",
+        "<temporary-dir>/cpp_references_1000.cpp"
+      ]
+    },
+    {
+      "language": "cpp",
+      "workload": "references",
+      "size": 3000,
+      "source_bytes": 51053,
+      "sha256": "9a963255b954dc4977ffb96922cff4ba6bbacb9834e25ecefec317bf31d22562",
+      "declarations": 1,
+      "references": 3000,
+      "expected_success": true,
+      "command": [
+        "clang++",
+        "-std=c++20",
+        "-fsyntax-only",
+        "-Wno-unused-variable",
+        "-ferror-limit=1",
+        "<temporary-dir>/cpp_references_3000.cpp"
+      ]
+    },
+    {
+      "language": "cpp",
+      "workload": "mixed",
+      "size": 10,
+      "source_bytes": 499,
+      "sha256": "c8e824cab61f6763841a1b82ebfa907bf7f3d37a634d9916f8f5a243e33029b3",
+      "declarations": 10,
+      "references": 10,
+      "expected_success": true,
+      "command": [
+        "clang++",
+        "-std=c++20",
+        "-fsyntax-only",
+        "-Wno-unused-variable",
+        "-ferror-limit=1",
+        "<temporary-dir>/cpp_mixed_10.cpp"
+      ]
+    },
+    {
+      "language": "cpp",
+      "workload": "mixed",
+      "size": 100,
+      "source_bytes": 4999,
+      "sha256": "683b77fbdaed85ad5c4838757082cac5e04f0b7b8575a6650e6723540eb8cad7",
+      "declarations": 100,
+      "references": 100,
+      "expected_success": true,
+      "command": [
+        "clang++",
+        "-std=c++20",
+        "-fsyntax-only",
+        "-Wno-unused-variable",
+        "-ferror-limit=1",
+        "<temporary-dir>/cpp_mixed_100.cpp"
+      ]
+    },
+    {
+      "language": "cpp",
+      "workload": "mixed",
+      "size": 1000,
+      "source_bytes": 52699,
+      "sha256": "d9ba7442c2c4a422114c83fba41c1e18c1cdbe5523aac74e37783e18530a44ab",
+      "declarations": 1000,
+      "references": 1000,
+      "expected_success": true,
+      "command": [
+        "clang++",
+        "-std=c++20",
+        "-fsyntax-only",
+        "-Wno-unused-variable",
+        "-ferror-limit=1",
+        "<temporary-dir>/cpp_mixed_1000.cpp"
+      ]
+    },
+    {
+      "language": "cpp",
+      "workload": "mixed",
+      "size": 3000,
+      "source_bytes": 164699,
+      "sha256": "045a668947fce0d367481155668364eb02a2bff71ddbaaddc97883e14dd71781",
+      "declarations": 3000,
+      "references": 3000,
+      "expected_success": true,
+      "command": [
+        "clang++",
+        "-std=c++20",
+        "-fsyntax-only",
+        "-Wno-unused-variable",
+        "-ferror-limit=1",
+        "<temporary-dir>/cpp_mixed_3000.cpp"
+      ]
+    },
+    {
+      "language": "cpp",
+      "workload": "sparse-undefined",
+      "size": 10,
+      "source_bytes": 223,
+      "sha256": "fd373517c305857aff0f16d76770c631f78ef6b9775806eb9f76328a211cb256",
+      "declarations": 1,
+      "references": 10,
+      "expected_success": true,
+      "command": [
+        "clang++",
+        "-std=c++20",
+        "-fsyntax-only",
+        "-Wno-unused-variable",
+        "-ferror-limit=1",
+        "<temporary-dir>/cpp_sparse-undefined_10.cpp"
+      ]
+    },
+    {
+      "language": "cpp",
+      "workload": "sparse-undefined",
+      "size": 100,
+      "source_bytes": 1753,
+      "sha256": "300f9587361b31a4f26673b777fee9988313afa2170002d964a202191b72f30b",
+      "declarations": 1,
+      "references": 100,
+      "expected_success": true,
+      "command": [
+        "clang++",
+        "-std=c++20",
+        "-fsyntax-only",
+        "-Wno-unused-variable",
+        "-ferror-limit=1",
+        "<temporary-dir>/cpp_sparse-undefined_100.cpp"
+      ]
+    },
+    {
+      "language": "cpp",
+      "workload": "sparse-undefined",
+      "size": 1000,
+      "source_bytes": 17116,
+      "sha256": "0bac8e4bfb220dad99daf844085c6faeeffe5f98e6e0fd933eb7a8dd574770b1",
+      "declarations": 1,
+      "references": 1000,
+      "expected_success": false,
+      "command": [
+        "clang++",
+        "-std=c++20",
+        "-fsyntax-only",
+        "-Wno-unused-variable",
+        "-ferror-limit=1",
+        "<temporary-dir>/cpp_sparse-undefined_1000.cpp"
+      ]
+    },
+    {
+      "language": "cpp",
+      "workload": "sparse-undefined",
+      "size": 3000,
+      "source_bytes": 51276,
+      "sha256": "3ca91db36aadca98c30db72eafd5691570a179dadde2b855b51b93ec5288c1c8",
+      "declarations": 1,
+      "references": 3000,
+      "expected_success": false,
+      "command": [
+        "clang++",
+        "-std=c++20",
+        "-fsyntax-only",
+        "-Wno-unused-variable",
+        "-ferror-limit=1",
+        "<temporary-dir>/cpp_sparse-undefined_3000.cpp"
+      ]
+    },
+    {
+      "language": "cpp",
+      "workload": "undefined",
+      "size": 10,
+      "source_bytes": 249,
+      "sha256": "b1fc73ce38538b5ae2172901bbb1fbd780befacf7761ef14334e4c1a32a15908",
+      "declarations": 0,
+      "references": 10,
+      "expected_success": false,
+      "command": [
+        "clang++",
+        "-std=c++20",
+        "-fsyntax-only",
+        "-Wno-unused-variable",
+        "-ferror-limit=1",
+        "<temporary-dir>/cpp_undefined_10.cpp"
+      ]
+    },
+    {
+      "language": "cpp",
+      "workload": "undefined",
+      "size": 100,
+      "source_bytes": 2319,
+      "sha256": "c626a05e1d137dd3f57bf07f993060879578f885dad83b7eee0da171ae1173be",
+      "declarations": 0,
+      "references": 100,
+      "expected_success": false,
+      "command": [
+        "clang++",
+        "-std=c++20",
+        "-fsyntax-only",
+        "-Wno-unused-variable",
+        "-ferror-limit=1",
+        "<temporary-dir>/cpp_undefined_100.cpp"
+      ]
+    },
+    {
+      "language": "cpp",
+      "workload": "undefined",
+      "size": 1000,
+      "source_bytes": 23919,
+      "sha256": "bf8b23248a29b3df97dcd5bf8e1425e444c6c36be0dc0b5e5e1b8178efc6781e",
+      "declarations": 0,
+      "references": 1000,
+      "expected_success": false,
+      "command": [
+        "clang++",
+        "-std=c++20",
+        "-fsyntax-only",
+        "-Wno-unused-variable",
+        "-ferror-limit=1",
+        "<temporary-dir>/cpp_undefined_1000.cpp"
+      ]
+    },
+    {
+      "language": "cpp",
+      "workload": "undefined",
+      "size": 3000,
+      "source_bytes": 73919,
+      "sha256": "bd853be1e9f987b9febf5690d63f751ccab615a87c32185dfccdab0672a27a82",
+      "declarations": 0,
+      "references": 3000,
+      "expected_success": false,
+      "command": [
+        "clang++",
+        "-std=c++20",
+        "-fsyntax-only",
+        "-Wno-unused-variable",
+        "-ferror-limit=1",
+        "<temporary-dir>/cpp_undefined_3000.cpp"
+      ]
+    },
+    {
+      "language": "rust",
+      "workload": "declarations",
+      "size": 10,
+      "source_bytes": 494,
+      "sha256": "bdcb02313aa04bfc91f04438c807d949d1b825acf59a23815414249958ff8d09",
+      "declarations": 10,
+      "references": 10,
+      "expected_success": true,
+      "command": [
+        "rustc",
+        "--edition=2024",
+        "--emit=metadata",
+        "-C",
+        "opt-level=0",
+        "-o",
+        "<temporary-dir>/rust_declarations_10.out",
+        "<temporary-dir>/rust_declarations_10.rs"
+      ]
+    },
+    {
+      "language": "rust",
+      "workload": "declarations",
+      "size": 100,
+      "source_bytes": 5084,
+      "sha256": "4b2c45c4b87678e7968cbb727c52f335ab34dd27c985b19375e51b6b4bd02cb6",
+      "declarations": 100,
+      "references": 100,
+      "expected_success": true,
+      "command": [
+        "rustc",
+        "--edition=2024",
+        "--emit=metadata",
+        "-C",
+        "opt-level=0",
+        "-o",
+        "<temporary-dir>/rust_declarations_100.out",
+        "<temporary-dir>/rust_declarations_100.rs"
+      ]
+    },
+    {
+      "language": "rust",
+      "workload": "declarations",
+      "size": 1000,
+      "source_bytes": 53684,
+      "sha256": "5d0bb29e53362ec73170adbfe24445c5f0a06273a7d0a49de34ae598c281242f",
+      "declarations": 1000,
+      "references": 1000,
+      "expected_success": true,
+      "command": [
+        "rustc",
+        "--edition=2024",
+        "--emit=metadata",
+        "-C",
+        "opt-level=0",
+        "-o",
+        "<temporary-dir>/rust_declarations_1000.out",
+        "<temporary-dir>/rust_declarations_1000.rs"
+      ]
+    },
+    {
+      "language": "rust",
+      "workload": "declarations",
+      "size": 3000,
+      "source_bytes": 167684,
+      "sha256": "c916acb12532d0973549815c173ae7216f770e9db642ee73dc3918b06a83f82c",
+      "declarations": 3000,
+      "references": 3000,
+      "expected_success": true,
+      "command": [
+        "rustc",
+        "--edition=2024",
+        "--emit=metadata",
+        "-C",
+        "opt-level=0",
+        "-o",
+        "<temporary-dir>/rust_declarations_3000.out",
+        "<temporary-dir>/rust_declarations_3000.rs"
+      ]
+    },
+    {
+      "language": "rust",
+      "workload": "references",
+      "size": 10,
+      "source_bytes": 227,
+      "sha256": "b8fb7e68306aa67fe9a5e47be178b2f19a555124f7f299b925da4937b5330ccc",
+      "declarations": 1,
+      "references": 10,
+      "expected_success": true,
+      "command": [
+        "rustc",
+        "--edition=2024",
+        "--emit=metadata",
+        "-C",
+        "opt-level=0",
+        "-o",
+        "<temporary-dir>/rust_references_10.out",
+        "<temporary-dir>/rust_references_10.rs"
+      ]
+    },
+    {
+      "language": "rust",
+      "workload": "references",
+      "size": 100,
+      "source_bytes": 1937,
+      "sha256": "de1502beef2e836a7706bc2a9a87ea9d41f7bb1faeb7145ac7da2c63ecebb537",
+      "declarations": 1,
+      "references": 100,
+      "expected_success": true,
+      "command": [
+        "rustc",
+        "--edition=2024",
+        "--emit=metadata",
+        "-C",
+        "opt-level=0",
+        "-o",
+        "<temporary-dir>/rust_references_100.out",
+        "<temporary-dir>/rust_references_100.rs"
+      ]
+    },
+    {
+      "language": "rust",
+      "workload": "references",
+      "size": 1000,
+      "source_bytes": 19037,
+      "sha256": "37444c578580df3bfce9726d80e95c9339ef5bec330186740c8a8e5460d969a5",
+      "declarations": 1,
+      "references": 1000,
+      "expected_success": true,
+      "command": [
+        "rustc",
+        "--edition=2024",
+        "--emit=metadata",
+        "-C",
+        "opt-level=0",
+        "-o",
+        "<temporary-dir>/rust_references_1000.out",
+        "<temporary-dir>/rust_references_1000.rs"
+      ]
+    },
+    {
+      "language": "rust",
+      "workload": "references",
+      "size": 3000,
+      "source_bytes": 57037,
+      "sha256": "11e15ed9510635e004691d888a3f194db0c414a3406e4ccef9bb41781f4868fe",
+      "declarations": 1,
+      "references": 3000,
+      "expected_success": true,
+      "command": [
+        "rustc",
+        "--edition=2024",
+        "--emit=metadata",
+        "-C",
+        "opt-level=0",
+        "-o",
+        "<temporary-dir>/rust_references_3000.out",
+        "<temporary-dir>/rust_references_3000.rs"
+      ]
+    },
+    {
+      "language": "rust",
+      "workload": "mixed",
+      "size": 10,
+      "source_bytes": 494,
+      "sha256": "8126733f3a180b8aa5c4dd1af10fcd4ec9bc6f370908aea2ac1c985cedfbbc48",
+      "declarations": 10,
+      "references": 10,
+      "expected_success": true,
+      "command": [
+        "rustc",
+        "--edition=2024",
+        "--emit=metadata",
+        "-C",
+        "opt-level=0",
+        "-o",
+        "<temporary-dir>/rust_mixed_10.out",
+        "<temporary-dir>/rust_mixed_10.rs"
+      ]
+    },
+    {
+      "language": "rust",
+      "workload": "mixed",
+      "size": 100,
+      "source_bytes": 5084,
+      "sha256": "d1798e644f60c4b13ac78584b088a34074c68b4257d792c984e2fd1b1b55a575",
+      "declarations": 100,
+      "references": 100,
+      "expected_success": true,
+      "command": [
+        "rustc",
+        "--edition=2024",
+        "--emit=metadata",
+        "-C",
+        "opt-level=0",
+        "-o",
+        "<temporary-dir>/rust_mixed_100.out",
+        "<temporary-dir>/rust_mixed_100.rs"
+      ]
+    },
+    {
+      "language": "rust",
+      "workload": "mixed",
+      "size": 1000,
+      "source_bytes": 53684,
+      "sha256": "dd4a35989e8f1e7d513209d737507f99df670229ed07b1f6a942877d3ae18f91",
+      "declarations": 1000,
+      "references": 1000,
+      "expected_success": true,
+      "command": [
+        "rustc",
+        "--edition=2024",
+        "--emit=metadata",
+        "-C",
+        "opt-level=0",
+        "-o",
+        "<temporary-dir>/rust_mixed_1000.out",
+        "<temporary-dir>/rust_mixed_1000.rs"
+      ]
+    },
+    {
+      "language": "rust",
+      "workload": "mixed",
+      "size": 3000,
+      "source_bytes": 167684,
+      "sha256": "34bfa475564f62ed2503d6ec7b385fe64fcfcc353bf85c33d8ba722b3ad66f7f",
+      "declarations": 3000,
+      "references": 3000,
+      "expected_success": true,
+      "command": [
+        "rustc",
+        "--edition=2024",
+        "--emit=metadata",
+        "-C",
+        "opt-level=0",
+        "-o",
+        "<temporary-dir>/rust_mixed_3000.out",
+        "<temporary-dir>/rust_mixed_3000.rs"
+      ]
+    },
+    {
+      "language": "rust",
+      "workload": "sparse-undefined",
+      "size": 10,
+      "source_bytes": 227,
+      "sha256": "b8fb7e68306aa67fe9a5e47be178b2f19a555124f7f299b925da4937b5330ccc",
+      "declarations": 1,
+      "references": 10,
+      "expected_success": true,
+      "command": [
+        "rustc",
+        "--edition=2024",
+        "--emit=metadata",
+        "-C",
+        "opt-level=0",
+        "-o",
+        "<temporary-dir>/rust_sparse-undefined_10.out",
+        "<temporary-dir>/rust_sparse-undefined_10.rs"
+      ]
+    },
+    {
+      "language": "rust",
+      "workload": "sparse-undefined",
+      "size": 100,
+      "source_bytes": 1937,
+      "sha256": "de1502beef2e836a7706bc2a9a87ea9d41f7bb1faeb7145ac7da2c63ecebb537",
+      "declarations": 1,
+      "references": 100,
+      "expected_success": true,
+      "command": [
+        "rustc",
+        "--edition=2024",
+        "--emit=metadata",
+        "-C",
+        "opt-level=0",
+        "-o",
+        "<temporary-dir>/rust_sparse-undefined_100.out",
+        "<temporary-dir>/rust_sparse-undefined_100.rs"
+      ]
+    },
+    {
+      "language": "rust",
+      "workload": "sparse-undefined",
+      "size": 1000,
+      "source_bytes": 19100,
+      "sha256": "e01abea8bab0a2d765c40aa14458fbd537af3c04b68bd8721d21b0ed68a73df5",
+      "declarations": 1,
+      "references": 1000,
+      "expected_success": false,
+      "command": [
+        "rustc",
+        "--edition=2024",
+        "--emit=metadata",
+        "-C",
+        "opt-level=0",
+        "-o",
+        "<temporary-dir>/rust_sparse-undefined_1000.out",
+        "<temporary-dir>/rust_sparse-undefined_1000.rs"
+      ]
+    },
+    {
+      "language": "rust",
+      "workload": "sparse-undefined",
+      "size": 3000,
+      "source_bytes": 57260,
+      "sha256": "32367f7a573279a0252c34054c6323ea2c31d6f0cc51b94918f6f49b5b2a05f0",
+      "declarations": 1,
+      "references": 3000,
+      "expected_success": false,
+      "command": [
+        "rustc",
+        "--edition=2024",
+        "--emit=metadata",
+        "-C",
+        "opt-level=0",
+        "-o",
+        "<temporary-dir>/rust_sparse-undefined_3000.out",
+        "<temporary-dir>/rust_sparse-undefined_3000.rs"
+      ]
+    },
+    {
+      "language": "rust",
+      "workload": "undefined",
+      "size": 10,
+      "source_bytes": 254,
+      "sha256": "661ee6fdcd4d0261fc8b96e75767614c50bdb2438fdfb76fea063666caba40c6",
+      "declarations": 0,
+      "references": 10,
+      "expected_success": false,
+      "command": [
+        "rustc",
+        "--edition=2024",
+        "--emit=metadata",
+        "-C",
+        "opt-level=0",
+        "-o",
+        "<temporary-dir>/rust_undefined_10.out",
+        "<temporary-dir>/rust_undefined_10.rs"
+      ]
+    },
+    {
+      "language": "rust",
+      "workload": "undefined",
+      "size": 100,
+      "source_bytes": 2504,
+      "sha256": "d2bf09c02b7f08d729e6525fc144d60b1fc3086a00c1d2a8d1ab7856688a37be",
+      "declarations": 0,
+      "references": 100,
+      "expected_success": false,
+      "command": [
+        "rustc",
+        "--edition=2024",
+        "--emit=metadata",
+        "-C",
+        "opt-level=0",
+        "-o",
+        "<temporary-dir>/rust_undefined_100.out",
+        "<temporary-dir>/rust_undefined_100.rs"
+      ]
+    },
+    {
+      "language": "rust",
+      "workload": "undefined",
+      "size": 1000,
+      "source_bytes": 25904,
+      "sha256": "d886b3c8408d45b28f019ef5b6698a5d8c6ab1f3496aeb7f2b45df3c6cfeb21e",
+      "declarations": 0,
+      "references": 1000,
+      "expected_success": false,
+      "command": [
+        "rustc",
+        "--edition=2024",
+        "--emit=metadata",
+        "-C",
+        "opt-level=0",
+        "-o",
+        "<temporary-dir>/rust_undefined_1000.out",
+        "<temporary-dir>/rust_undefined_1000.rs"
+      ]
+    },
+    {
+      "language": "rust",
+      "workload": "undefined",
+      "size": 3000,
+      "source_bytes": 79904,
+      "sha256": "0d22b128c6b72b1f27f751ed597a5b1594d1feee34a39110cdc5f549fdfa0529",
+      "declarations": 0,
+      "references": 3000,
+      "expected_success": false,
+      "command": [
+        "rustc",
+        "--edition=2024",
+        "--emit=metadata",
+        "-C",
+        "opt-level=0",
+        "-o",
+        "<temporary-dir>/rust_undefined_3000.out",
+        "<temporary-dir>/rust_undefined_3000.rs"
+      ]
+    },
+    {
+      "language": "zig",
+      "workload": "declarations",
+      "size": 10,
+      "source_bytes": 483,
+      "sha256": "bd8e3da19298e290c978da7f2d86e58befa7036cf7af1a5e5ca7abcc50bc22a2",
+      "declarations": 10,
+      "references": 10,
+      "expected_success": true,
+      "command": [
+        "zig",
+        "build-obj",
+        "<temporary-dir>/zig_declarations_10.zig",
+        "-fno-emit-bin"
+      ]
+    },
+    {
+      "language": "zig",
+      "workload": "declarations",
+      "size": 100,
+      "source_bytes": 4893,
+      "sha256": "5d09bb9078a1fdec32f0b0910d37873c404ed98ef07645a7ad85a7a2d853ec9f",
+      "declarations": 100,
+      "references": 100,
+      "expected_success": true,
+      "command": [
+        "zig",
+        "build-obj",
+        "<temporary-dir>/zig_declarations_100.zig",
+        "-fno-emit-bin"
+      ]
+    },
+    {
+      "language": "zig",
+      "workload": "declarations",
+      "size": 1000,
+      "source_bytes": 51693,
+      "sha256": "cf1e2c50043dc760eaa73f16dab2ecb806bb78f8be62e93c1e30b8c10e06009b",
+      "declarations": 1000,
+      "references": 1000,
+      "expected_success": true,
+      "command": [
+        "zig",
+        "build-obj",
+        "<temporary-dir>/zig_declarations_1000.zig",
+        "-fno-emit-bin"
+      ]
+    },
+    {
+      "language": "zig",
+      "workload": "declarations",
+      "size": 3000,
+      "source_bytes": 161693,
+      "sha256": "51dacfb4c9564d046a16d15e075cce6037808378493d20a4ae9f11999beb6733",
+      "declarations": 3000,
+      "references": 3000,
+      "expected_success": true,
+      "command": [
+        "zig",
+        "build-obj",
+        "<temporary-dir>/zig_declarations_3000.zig",
+        "-fno-emit-bin"
+      ]
+    },
+    {
+      "language": "zig",
+      "workload": "references",
+      "size": 10,
+      "source_bytes": 198,
+      "sha256": "4710772beef8375aa66bfd0202529061b255e2a5c22d3081111b405ca0427476",
+      "declarations": 1,
+      "references": 10,
+      "expected_success": true,
+      "command": [
+        "zig",
+        "build-obj",
+        "<temporary-dir>/zig_references_10.zig",
+        "-fno-emit-bin"
+      ]
+    },
+    {
+      "language": "zig",
+      "workload": "references",
+      "size": 100,
+      "source_bytes": 1548,
+      "sha256": "96bbbeabafe3ec44c6f248f3dc052eabca53510542383ccd12ba9274d4a4ec99",
+      "declarations": 1,
+      "references": 100,
+      "expected_success": true,
+      "command": [
+        "zig",
+        "build-obj",
+        "<temporary-dir>/zig_references_100.zig",
+        "-fno-emit-bin"
+      ]
+    },
+    {
+      "language": "zig",
+      "workload": "references",
+      "size": 1000,
+      "source_bytes": 15048,
+      "sha256": "ebf816b95fb815921cb4dfe935ca2d13ee98f4917adfb9aef8d69537ebd08cbc",
+      "declarations": 1,
+      "references": 1000,
+      "expected_success": true,
+      "command": [
+        "zig",
+        "build-obj",
+        "<temporary-dir>/zig_references_1000.zig",
+        "-fno-emit-bin"
+      ]
+    },
+    {
+      "language": "zig",
+      "workload": "references",
+      "size": 3000,
+      "source_bytes": 45048,
+      "sha256": "f84f244b951f38b25251a37e259a2d4cf0a91aa41f51475eb9d90c1ca98614d1",
+      "declarations": 1,
+      "references": 3000,
+      "expected_success": true,
+      "command": [
+        "zig",
+        "build-obj",
+        "<temporary-dir>/zig_references_3000.zig",
+        "-fno-emit-bin"
+      ]
+    },
+    {
+      "language": "zig",
+      "workload": "mixed",
+      "size": 10,
+      "source_bytes": 483,
+      "sha256": "2ed85bfcffdc1275363c3c146e46769a0614481f5f36e3564852261f3486134b",
+      "declarations": 10,
+      "references": 10,
+      "expected_success": true,
+      "command": [
+        "zig",
+        "build-obj",
+        "<temporary-dir>/zig_mixed_10.zig",
+        "-fno-emit-bin"
+      ]
+    },
+    {
+      "language": "zig",
+      "workload": "mixed",
+      "size": 100,
+      "source_bytes": 4893,
+      "sha256": "d8fd01875047aab215a19094c0b1c6b822125e0d8f5c7921bea329d19a535d5b",
+      "declarations": 100,
+      "references": 100,
+      "expected_success": true,
+      "command": [
+        "zig",
+        "build-obj",
+        "<temporary-dir>/zig_mixed_100.zig",
+        "-fno-emit-bin"
+      ]
+    },
+    {
+      "language": "zig",
+      "workload": "mixed",
+      "size": 1000,
+      "source_bytes": 51693,
+      "sha256": "8f5a5b19b179234afbb41cc705c69b73fa78ef2c0edd48497526aa3fc3da3b74",
+      "declarations": 1000,
+      "references": 1000,
+      "expected_success": true,
+      "command": [
+        "zig",
+        "build-obj",
+        "<temporary-dir>/zig_mixed_1000.zig",
+        "-fno-emit-bin"
+      ]
+    },
+    {
+      "language": "zig",
+      "workload": "mixed",
+      "size": 3000,
+      "source_bytes": 161693,
+      "sha256": "c2e0750c5f41f505ccd8b6989eb5f6583d8c12db33d13a9bca6642638b571361",
+      "declarations": 3000,
+      "references": 3000,
+      "expected_success": true,
+      "command": [
+        "zig",
+        "build-obj",
+        "<temporary-dir>/zig_mixed_3000.zig",
+        "-fno-emit-bin"
+      ]
+    },
+    {
+      "language": "zig",
+      "workload": "sparse-undefined",
+      "size": 10,
+      "source_bytes": 198,
+      "sha256": "4710772beef8375aa66bfd0202529061b255e2a5c22d3081111b405ca0427476",
+      "declarations": 1,
+      "references": 10,
+      "expected_success": true,
+      "command": [
+        "zig",
+        "build-obj",
+        "<temporary-dir>/zig_sparse-undefined_10.zig",
+        "-fno-emit-bin"
+      ]
+    },
+    {
+      "language": "zig",
+      "workload": "sparse-undefined",
+      "size": 100,
+      "source_bytes": 1548,
+      "sha256": "96bbbeabafe3ec44c6f248f3dc052eabca53510542383ccd12ba9274d4a4ec99",
+      "declarations": 1,
+      "references": 100,
+      "expected_success": true,
+      "command": [
+        "zig",
+        "build-obj",
+        "<temporary-dir>/zig_sparse-undefined_100.zig",
+        "-fno-emit-bin"
+      ]
+    },
+    {
+      "language": "zig",
+      "workload": "sparse-undefined",
+      "size": 1000,
+      "source_bytes": 15111,
+      "sha256": "8a165be2c7652396808f7594ae04ef774af9b1b03e5f2bc0df7622eb06a94cf9",
+      "declarations": 1,
+      "references": 1000,
+      "expected_success": false,
+      "command": [
+        "zig",
+        "build-obj",
+        "<temporary-dir>/zig_sparse-undefined_1000.zig",
+        "-fno-emit-bin"
+      ]
+    },
+    {
+      "language": "zig",
+      "workload": "sparse-undefined",
+      "size": 3000,
+      "source_bytes": 45271,
+      "sha256": "566578c5388816431630e29a18cfcd8171de4f837eea2a3f61102f65da8e461e",
+      "declarations": 1,
+      "references": 3000,
+      "expected_success": false,
+      "command": [
+        "zig",
+        "build-obj",
+        "<temporary-dir>/zig_sparse-undefined_3000.zig",
+        "-fno-emit-bin"
+      ]
+    },
+    {
+      "language": "zig",
+      "workload": "undefined",
+      "size": 10,
+      "source_bytes": 223,
+      "sha256": "ac3035f58f51576730df904d60d5d147ca6c8a9c65c26104df47032e58506b70",
+      "declarations": 0,
+      "references": 10,
+      "expected_success": false,
+      "command": [
+        "zig",
+        "build-obj",
+        "<temporary-dir>/zig_undefined_10.zig",
+        "-fno-emit-bin"
+      ]
+    },
+    {
+      "language": "zig",
+      "workload": "undefined",
+      "size": 100,
+      "source_bytes": 2113,
+      "sha256": "8ff19851c62ad757dc71f39d35092d370a5634eabb5d74ebeb505bc81a841903",
+      "declarations": 0,
+      "references": 100,
+      "expected_success": false,
+      "command": [
+        "zig",
+        "build-obj",
+        "<temporary-dir>/zig_undefined_100.zig",
+        "-fno-emit-bin"
+      ]
+    },
+    {
+      "language": "zig",
+      "workload": "undefined",
+      "size": 1000,
+      "source_bytes": 21913,
+      "sha256": "0188cbc0ef7d973fbb24dc001e667cb081bb6960c445d52071b4ae09201bb791",
+      "declarations": 0,
+      "references": 1000,
+      "expected_success": false,
+      "command": [
+        "zig",
+        "build-obj",
+        "<temporary-dir>/zig_undefined_1000.zig",
+        "-fno-emit-bin"
+      ]
+    },
+    {
+      "language": "zig",
+      "workload": "undefined",
+      "size": 3000,
+      "source_bytes": 67913,
+      "sha256": "dec937741b38e1fff2bf0b8f7308fd4c6d00769e1489ab1bba8f77de38ce1db2",
+      "declarations": 0,
+      "references": 3000,
+      "expected_success": false,
+      "command": [
+        "zig",
+        "build-obj",
+        "<temporary-dir>/zig_undefined_3000.zig",
+        "-fno-emit-bin"
+      ]
+    },
+    {
+      "language": "go",
+      "workload": "declarations",
+      "size": 10,
+      "source_bytes": 369,
+      "sha256": "59a9d8ce67b6ad197041b5570a57e7c9d0a2e4214dafdd4babda4b10050fe4e8",
+      "declarations": 10,
+      "references": 10,
+      "expected_success": true,
+      "command": [
+        "go",
+        "tool",
+        "compile",
+        "-o",
+        "<temporary-dir>/go_declarations_10.out",
+        "<temporary-dir>/go_declarations_10.go"
+      ]
+    },
+    {
+      "language": "go",
+      "workload": "declarations",
+      "size": 100,
+      "source_bytes": 3699,
+      "sha256": "cbf8a4e9fab70d5f761b5439f0d6ccb0f0c9d0c94e6350977bd6c4e636edb1bb",
+      "declarations": 100,
+      "references": 100,
+      "expected_success": true,
+      "command": [
+        "go",
+        "tool",
+        "compile",
+        "-o",
+        "<temporary-dir>/go_declarations_100.out",
+        "<temporary-dir>/go_declarations_100.go"
+      ]
+    },
+    {
+      "language": "go",
+      "workload": "declarations",
+      "size": 1000,
+      "source_bytes": 39699,
+      "sha256": "e0286d0063d36ae2b73c7667bf2b020f36b702b7e0abfab5630597b948829cd3",
+      "declarations": 1000,
+      "references": 1000,
+      "expected_success": true,
+      "command": [
+        "go",
+        "tool",
+        "compile",
+        "-o",
+        "<temporary-dir>/go_declarations_1000.out",
+        "<temporary-dir>/go_declarations_1000.go"
+      ]
+    },
+    {
+      "language": "go",
+      "workload": "declarations",
+      "size": 3000,
+      "source_bytes": 125699,
+      "sha256": "a0da37a4ccdef5c62f116f4eaef7acd4d207e0c63b9e598cc9b87dace26b003e",
+      "declarations": 3000,
+      "references": 3000,
+      "expected_success": true,
+      "command": [
+        "go",
+        "tool",
+        "compile",
+        "-o",
+        "<temporary-dir>/go_declarations_3000.out",
+        "<temporary-dir>/go_declarations_3000.go"
+      ]
+    },
+    {
+      "language": "go",
+      "workload": "references",
+      "size": 10,
+      "source_bytes": 183,
+      "sha256": "da011f7b9beccca51cdacff1fa6cda120c307b45272c3acd698dbc38ac6f0325",
+      "declarations": 1,
+      "references": 10,
+      "expected_success": true,
+      "command": [
+        "go",
+        "tool",
+        "compile",
+        "-o",
+        "<temporary-dir>/go_references_10.out",
+        "<temporary-dir>/go_references_10.go"
+      ]
+    },
+    {
+      "language": "go",
+      "workload": "references",
+      "size": 100,
+      "source_bytes": 1443,
+      "sha256": "3a04692563cd573cca360883a89616dd2bf72854bfa6dcc6d7a316fb52d614b6",
+      "declarations": 1,
+      "references": 100,
+      "expected_success": true,
+      "command": [
+        "go",
+        "tool",
+        "compile",
+        "-o",
+        "<temporary-dir>/go_references_100.out",
+        "<temporary-dir>/go_references_100.go"
+      ]
+    },
+    {
+      "language": "go",
+      "workload": "references",
+      "size": 1000,
+      "source_bytes": 14043,
+      "sha256": "822350fbf7ea8b2127d2a01efb3025bd3c9defc2be446eb95ed155cf527b5028",
+      "declarations": 1,
+      "references": 1000,
+      "expected_success": true,
+      "command": [
+        "go",
+        "tool",
+        "compile",
+        "-o",
+        "<temporary-dir>/go_references_1000.out",
+        "<temporary-dir>/go_references_1000.go"
+      ]
+    },
+    {
+      "language": "go",
+      "workload": "references",
+      "size": 3000,
+      "source_bytes": 42043,
+      "sha256": "fe77a1c685c916fd02848fbc9bbac628d155a3b16989adb6d9c37c6849e67f8c",
+      "declarations": 1,
+      "references": 3000,
+      "expected_success": true,
+      "command": [
+        "go",
+        "tool",
+        "compile",
+        "-o",
+        "<temporary-dir>/go_references_3000.out",
+        "<temporary-dir>/go_references_3000.go"
+      ]
+    },
+    {
+      "language": "go",
+      "workload": "mixed",
+      "size": 10,
+      "source_bytes": 369,
+      "sha256": "bef1a92674f1a87d3a458d078ef4c5d4115b76bc6c2925954bbcc637aa3894bd",
+      "declarations": 10,
+      "references": 10,
+      "expected_success": true,
+      "command": [
+        "go",
+        "tool",
+        "compile",
+        "-o",
+        "<temporary-dir>/go_mixed_10.out",
+        "<temporary-dir>/go_mixed_10.go"
+      ]
+    },
+    {
+      "language": "go",
+      "workload": "mixed",
+      "size": 100,
+      "source_bytes": 3699,
+      "sha256": "151cf8b71a25e8a073bddd8554311c03a59bd3d03d8845d09469797c624c8178",
+      "declarations": 100,
+      "references": 100,
+      "expected_success": true,
+      "command": [
+        "go",
+        "tool",
+        "compile",
+        "-o",
+        "<temporary-dir>/go_mixed_100.out",
+        "<temporary-dir>/go_mixed_100.go"
+      ]
+    },
+    {
+      "language": "go",
+      "workload": "mixed",
+      "size": 1000,
+      "source_bytes": 39699,
+      "sha256": "27bb002f13b902063d2e7ca63662590704902340ff83832f3bba5e823ebe01c0",
+      "declarations": 1000,
+      "references": 1000,
+      "expected_success": true,
+      "command": [
+        "go",
+        "tool",
+        "compile",
+        "-o",
+        "<temporary-dir>/go_mixed_1000.out",
+        "<temporary-dir>/go_mixed_1000.go"
+      ]
+    },
+    {
+      "language": "go",
+      "workload": "mixed",
+      "size": 3000,
+      "source_bytes": 125699,
+      "sha256": "15c587c25fdd5886d5854decc81f6b058eaacfc3f7f2130a77b33a4baec40db2",
+      "declarations": 3000,
+      "references": 3000,
+      "expected_success": true,
+      "command": [
+        "go",
+        "tool",
+        "compile",
+        "-o",
+        "<temporary-dir>/go_mixed_3000.out",
+        "<temporary-dir>/go_mixed_3000.go"
+      ]
+    },
+    {
+      "language": "go",
+      "workload": "sparse-undefined",
+      "size": 10,
+      "source_bytes": 183,
+      "sha256": "da011f7b9beccca51cdacff1fa6cda120c307b45272c3acd698dbc38ac6f0325",
+      "declarations": 1,
+      "references": 10,
+      "expected_success": true,
+      "command": [
+        "go",
+        "tool",
+        "compile",
+        "-o",
+        "<temporary-dir>/go_sparse-undefined_10.out",
+        "<temporary-dir>/go_sparse-undefined_10.go"
+      ]
+    },
+    {
+      "language": "go",
+      "workload": "sparse-undefined",
+      "size": 100,
+      "source_bytes": 1443,
+      "sha256": "3a04692563cd573cca360883a89616dd2bf72854bfa6dcc6d7a316fb52d614b6",
+      "declarations": 1,
+      "references": 100,
+      "expected_success": true,
+      "command": [
+        "go",
+        "tool",
+        "compile",
+        "-o",
+        "<temporary-dir>/go_sparse-undefined_100.out",
+        "<temporary-dir>/go_sparse-undefined_100.go"
+      ]
+    },
+    {
+      "language": "go",
+      "workload": "sparse-undefined",
+      "size": 1000,
+      "source_bytes": 14106,
+      "sha256": "03548d821e4f546eaa163d44ca220ff2227de9b9019164304f71e916ce38bada",
+      "declarations": 1,
+      "references": 1000,
+      "expected_success": false,
+      "command": [
+        "go",
+        "tool",
+        "compile",
+        "-o",
+        "<temporary-dir>/go_sparse-undefined_1000.out",
+        "<temporary-dir>/go_sparse-undefined_1000.go"
+      ]
+    },
+    {
+      "language": "go",
+      "workload": "sparse-undefined",
+      "size": 3000,
+      "source_bytes": 42266,
+      "sha256": "ccba808d485b849c2eb99fcc6631ab0edd00ed9efa455e1cfa5c54be5cd3a2f5",
+      "declarations": 1,
+      "references": 3000,
+      "expected_success": false,
+      "command": [
+        "go",
+        "tool",
+        "compile",
+        "-o",
+        "<temporary-dir>/go_sparse-undefined_3000.out",
+        "<temporary-dir>/go_sparse-undefined_3000.go"
+      ]
+    },
+    {
+      "language": "go",
+      "workload": "undefined",
+      "size": 10,
+      "source_bytes": 219,
+      "sha256": "807aae9a537656f6f35897590c97475b1b64332e69837b18d45ca41f07d0a03d",
+      "declarations": 0,
+      "references": 10,
+      "expected_success": false,
+      "command": [
+        "go",
+        "tool",
+        "compile",
+        "-o",
+        "<temporary-dir>/go_undefined_10.out",
+        "<temporary-dir>/go_undefined_10.go"
+      ]
+    },
+    {
+      "language": "go",
+      "workload": "undefined",
+      "size": 100,
+      "source_bytes": 2019,
+      "sha256": "c8e7f12d0aac19add2ac95fc844d8af1c3248d3bf1c9325e19cc3948a3f53a4b",
+      "declarations": 0,
+      "references": 100,
+      "expected_success": false,
+      "command": [
+        "go",
+        "tool",
+        "compile",
+        "-o",
+        "<temporary-dir>/go_undefined_100.out",
+        "<temporary-dir>/go_undefined_100.go"
+      ]
+    },
+    {
+      "language": "go",
+      "workload": "undefined",
+      "size": 1000,
+      "source_bytes": 20919,
+      "sha256": "bca7a012d56b1eeaf35995a4fac2a80bd16f1f48acef3409bed5cff0cebad722",
+      "declarations": 0,
+      "references": 1000,
+      "expected_success": false,
+      "command": [
+        "go",
+        "tool",
+        "compile",
+        "-o",
+        "<temporary-dir>/go_undefined_1000.out",
+        "<temporary-dir>/go_undefined_1000.go"
+      ]
+    },
+    {
+      "language": "go",
+      "workload": "undefined",
+      "size": 3000,
+      "source_bytes": 64919,
+      "sha256": "4278a29e995d414c9c8215383095ca9ec902935ee0f0291438931d6fbf862881",
+      "declarations": 0,
+      "references": 3000,
+      "expected_success": false,
+      "command": [
+        "go",
+        "tool",
+        "compile",
+        "-o",
+        "<temporary-dir>/go_undefined_3000.out",
+        "<temporary-dir>/go_undefined_3000.go"
+      ]
+    }
+  ]
+}

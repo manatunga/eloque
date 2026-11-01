@@ -1,6 +1,6 @@
 # Eloque Technical Backlog
 
-**Status:** Living engineering decision register. M1, post-M1 H2 frontend optimization, and pre-M2 structured diagnostic recovery are implemented. Monowire has been selected as Eloque's register-based production VM, superseding the previous Go stack-VM plan. The pre-M2 Monowire implementation-language experiment is complete; Zig is provisionally preferred, subject to integration validation. M2 — First Execution remains the next implementation milestone.
+> **Status:** Living engineering decision register. M1, post-M1 H2 frontend optimization, pre-M2 structured diagnostic recovery, and M2-P1 lexical name resolution are implemented. Monowire is the selected register-based production VM, superseding the previous Go stack-VM plan. The pre-M2 implementation-language experiment is complete; Zig is provisionally preferred, subject to integration validation. M2 — First Execution is in progress, with mandatory static type checking, production bytecode compilation, and VM execution pending.
 
 A review commitment is not automatically a commitment to implement an exploratory technology. Resolved architectural decisions must not be reopened merely because their implementation is pending.
 
@@ -80,11 +80,11 @@ At each milestone, inspect items whose triggers have arrived. Record the decisio
 ### TB-007 — CPython comparative performance
 
 - **Status:** Committed measurement program; parity is an aspiration, not a guarantee.
-- **Baseline:** Frontend-only comparisons have been completed during M1-P5 and H2. No Eloque runtime execution comparisons are possible yet.
+- **Baseline:** M1-P5 and H2 frontend comparisons are complete. M2-P1 added parse-and-resolve benchmarks and cross-language v2 comparisons. No production Eloque runtime execution comparisons are possible yet.
 - **Trigger:** First working production Monowire VM in M2, followed by major runtime milestones.
 - **Method:** Pin versions, hardware, warmup and inputs. Compare equivalent, correctness-tested arithmetic, loops, calls, strings, collections and object workloads as implemented.
 - **Criterion:** Reproducible findings that guide optimization, not marketing claims based on isolated microbenchmarks.
-- **Evidence:** M1-P5 compared the streaming frontend with Go and CPython 3.15.0rc2. H2's official controlled arithmetic comparison recorded median frontend latencies at 10,000 units of 7.16 ms for Eloque H2, 14.12 ms for the Go compiler syntax parser, 23.92 ms for Go go/parser, and 147.86 ms for CPython 3.14.4 ast.parse. These results concern different language grammars and AST representations and do not establish execution-performance parity.
+- **Evidence:** M1-P5 compared the streaming frontend with Go and CPython 3.15.0rc2. H2's official controlled arithmetic comparison recorded median frontend latencies at 10,000 units of 7.16 ms for Eloque H2, 14.12 ms for the Go compiler syntax parser, 23.92 ms for Go go/parser, and 147.86 ms for CPython 3.14.4 ast.parse. These results concern different language grammars and AST representations and do not establish execution-performance parity. M2-P1 subsequently added dedicated resolver benchmarks and a cross-language v2 comparison covering declarations, references, mixed programs, sparse undefined references, and undefined-reference workloads. At 3,000 mixed workload units, the recorded median latencies were 2.059516 ms for Eloque recovery-capable parse-and-resolve, 1.993480 ms for Eloque fail-fast parse-and-resolve, 17.534834 ms for CPython `symtable`, and 25.515754 ms for CPython `ast.parse`. These measurements involve different operations and measurement boundaries, including in-process processing versus native compiler subprocess execution elsewhere in the suite. They do not establish runtime performance parity.
 - **Next action:** Preserve the frontend and pre-M2 Monowire prototype measurements as separate historical evidence. Begin correctness-equivalent execution comparisons against CPython after Eloque can execute programs through its production compiler and Monowire runtime. Distinguish VM-only execution time from end-to-end process latency.
 
 ### TB-008 — Monowire runtime value representation
@@ -189,15 +189,15 @@ At each milestone, inspect items whose triggers have arrived. Record the decisio
 
 ### TB-011 — Scope, capture and immutability
 
-- **Status:** Lexical scope and shadowing semantics resolved; M2 resolver implementation pending. Capture and deep-immutability implementation details require later review.
+- **Status:** Lexical scope and shadowing semantics resolved; M2-P1 name resolution implemented for the supported language subset. Capture and deep-immutability implementation details require later review.
 - **Baseline:** Lexical block scopes with nearest-declaration lookup. Shadowing an enclosing declaration in a nested scope is permitted but produces a nonfatal warning identifying the shadowed declaration. Redeclaration within the same scope is an error. `fixed` prevents rebinding; `frozen` enforces deep immutability.
 - **Decision:** A declaration introduces its binding before its initializer is resolved. Consequently, `let x be x + 1` refers to the newly declared `x`, and definite-assignment analysis must reject the uninitialized read.
-- **Trigger:** Implement the approved lexical binding rules during M2 name resolution. Revisit capture mechanics before closures and aliasing/ownership details before mutable collections.
+- **Trigger:** M2-P1 lexical name resolution completed for the supported grammar. Revisit additional lexical-scope behavior as nested language constructs are introduced, capture mechanics before closures, and aliasing/ownership details before mutable collections.
 - **Method:** Validate declaration-before-use, nearest-visible-name lookup, duplicate declarations, nested shadowing warnings, assignment-target resolution, initializer self-reference, and definite assignment. Later validate closure capture, frozen values, and aliasing when those features become available.
 - **Criterion:** Resolver behavior matches the approved R01–R28 behavioral matrix in `ARCHITECTURE.md`. Diagnostics distinguish fatal duplicate-declaration errors from nonfatal shadowing warnings. Future immutability implementations preserve the specified mutation guarantees.
-- **Evidence:** Approved language semantics in `LANGUAGE_SPEC.md`, the M2 resolver blueprint in `ARCHITECTURE.md`, and the corresponding entries in `DESIGN_DECISIONS.md`.
-- **Next action:** Implement and test the approved M2 resolver behavior without reopening the shadowing decision.
-- **Next review trigger:** M2 resolver implementation for lexical binding; M5 for mutable collection ownership and deep immutability; a future closure implementation milestone for capture semantics.
+- **Evidence:** Approved semantics in `LANGUAGE_SPEC.md`, the M2 resolver blueprint in `ARCHITECTURE.md`, and the corresponding decisions in `DESIGN_DECISIONS.md`. M2-P1 added resolver correctness tests, symbol binding, resolution diagnostics, and dedicated benchmarks.
+- **Next action:** Preserve the implemented resolver behavior and validate additional scope cases as their grammar becomes available. Implement definite-assignment analysis during M2 static type checking without changing the established initializer self-reference binding rule.
+- **Next review trigger:** M2 static type checking for definite assignment; future nested-scope grammar milestones for additional lexical behavior; M5 for mutable collection ownership and deep immutability; a future closure implementation milestone for capture semantics.
 
 ### TB-012 — Static type inference and checking
 
@@ -319,7 +319,7 @@ meaningful regression attributable to token delivery.
 
 ### TB-026 — Post-recovery frontend performance validation
 
-- **Status:** Review required; further optimization deferred.
+- **Status:** Recovery implementation and initial performance validation completed; additional optimization review deferred pending representative profiling or regression evidence.
 - **Baseline:** The October 22–23 experimental post-recovery measurements, alongside the unchanged October 20 official H2 baseline.
 - **Trigger:** Representative mixed-program workloads, significant parser changes, or a measured frontend performance regression.
 - **Rationale:** The current controlled arithmetic benchmarks show modest recovery overhead on large valid inputs, but they do not establish performance across realistic source files or malformed-input distributions.
@@ -332,21 +332,18 @@ meaningful regression attributable to token delivery.
 
 ### TB-019 — Structured diagnostics
 
-- **Status:** Committed; schema review required.
-- **Baseline:** Human-readable diagnostics plus machine-readable output for agents and editor tools.
-- **Trigger:** Begin source spans in M1; finalize initial schema before M8 tooling.
-- **Method:** Define stable error codes, severity, file/line/column/spans, related locations and optional suggested fixes.
-- **Criterion:** Diagnostics are actionable, deterministic and easy to parse without requiring prose interpretation.
-- **Evidence:** Pending.
-- **M1 progress:** Tokens and AST nodes use shared half-open source spans. M1-P2 established expression source-location tracking, including the distinction between semantic AST node locations and complete syntactic grouping extents. M1-P3 extended source-span preservation and structured fail-fast diagnostics to `let`, `change`, and `say` statements and complete-program parsing. M1-P4 completed broader positive and negative frontend syntax conformance coverage with 29 additional fixtures covering valid programs, malformed syntax, EOF diagnostics, multiline source locations, nested expression errors, first-error behavior, and lexer/parser error boundaries. Tests verify diagnostic messages, source spans, expected/actual token metadata, and rejection of malformed programs without returning successful partial ASTs. Full Go tests, race detection, and `go vet` passed.
-- **Next action:** Preserve the completed M1 diagnostic contract through H2 and subsequent frontend changes. Extend diagnostics to name resolution and static type checking during M2. Multi-error recovery remains deferred under D-037, and the broader machine-readable diagnostic schema remains scheduled for review before M8 tooling.
-- **Post-M1 status:** Active implementation on `feat/structured-diagnostics`.
-- **Completed foundation:** Introduced the shared `internal/diagnostic` model with stable codes, severity, file identity, half-open byte spans, related locations, notes, and token-expectation metadata. Migrated the lexer, H2 parser, frontend, and associated tests to native structured diagnostics. Retired the legacy M1 pointer-based parser.
-- **Current objective:** Replace fail-fast frontend behavior with bounded multi-error recovery while preserving the canonical arena-backed AST and direct pull-based token streaming.
-- **Remaining work:** Diagnostic accumulation and ownership; explicit lexical recovery; parser synchronization at safe statement and nesting boundaries; error budgets; parse completion, recovery, and abortion outcomes; partial AST retention; and diagnostic cascade suppression.
-- **Acceptance criteria:** Multiple independent errors are reported deterministically; recovery always terminates; lexical diagnostics are not obscured by secondary parser errors; valid statements survive recovery where safe; malformed programs are never treated as valid for execution; and successful-path latency and allocations are validated against the preserved frontend baseline.
-- **Next action:** Finalize recovery contracts and integrate diagnostic accumulation with the existing lexer, token source, and H2 parser. Add recovery conformance tests and reproducible performance benchmarks.
-- **Next review trigger:** Completion of multi-error recovery integration and performance validation, before proceeding to M2.
+- **Status:** Internal structured diagnostic foundation and frontend recovery implemented; compiler-wide integration and public diagnostic schema remain subject to review.
+- **Baseline:** Source-aware, structured diagnostics for the lexer and parser, with a shared internal representation suitable for later semantic-analysis stages.
+- **Completed implementation:** Introduced the shared `internal/diagnostic` model with diagnostic codes, severity, file identity, half-open byte spans, related locations, notes, and token-expectation metadata. Migrated the production lexer and H2 parser to native structured diagnostics.
+- **Frontend recovery:** Implemented recovery-capable parsing through `ParseRecovering`, including lexical recovery, parser synchronization, bounded diagnostic collection, termination outcomes, and partial AST retention where appropriate. The original fail-fast `Parse` API remains available.
+- **Validation:** Completed frontend diagnostic regression, recovery, robustness, stress, and performance testing. Recovery does not make malformed or partially recovered programs eligible for execution.
+- **M2-P1 progress:** Extended diagnostic handling to lexical name resolution, including undefined-name and duplicate-declaration errors for the supported grammar.
+- **Remaining work:** Integrate diagnostics across the complete compiler pipeline, including static type checking and compilation eligibility. Establish a compilation-wide diagnostic budget policy and determine the requirements for a stable public machine-readable diagnostic format.
+- **Review trigger:** M2 compiler-driver and static-checker integration for cross-stage diagnostics; M8 or earlier tooling requirements for public diagnostic serialization.
+- **Method:** Validate diagnostic ordering, source locations, severity, related locations, error budgets, cascade suppression, and behavior across lexical, syntactic, resolution, and typing stages. Evaluate public serialization separately from the internal diagnostic representation.
+- **Acceptance criteria:** Diagnostics remain deterministic, actionable, source-aware, and correctly classified. Recovery terminates safely. Blocking errors prevent executable compilation. Any public diagnostic format has documented compatibility expectations.
+- **Evidence:** Completed pre-M2 structured diagnostic and recovery work, M2-P1 resolver tests and benchmarks, and the associated architecture and design-decision records.
+- **Next action:** Preserve the implemented frontend and resolver diagnostic behavior. Integrate type-checker diagnostics during M2, then review compiler-wide diagnostic budgets and public serialization requirements without reopening completed frontend recovery work.
 
 ### TB-020 — Sandboxed execution budgets
 
@@ -393,7 +390,7 @@ meaningful regression attributable to token delivery.
 - **Evidence:** Recorded optimized lexer throughput of approximately 261.6 MB/s with 2 allocations per operation. Parser benchmarks measured approximately 76.0–99.4 µs for 1,000-operation chains and 664 µs with 13,028 allocations for a 3,000-statement program. The expression-heavy complete frontend benchmark measured approximately 34.5 MB/s.
 - **Comparison:** The original M1-P3 3,000-statement benchmark measured approximately 1.007 ms and 25,015 allocations per parse. The optimized measurement represents approximately 34% lower execution time and 48% fewer allocations under the recorded workload.
 - **Scope:** These measurements cover the currently implemented lexical and syntactic subset. They do not measure static checking, bytecode compilation, or runtime execution.
-- **Next action:** Preserve historical benchmark evidence, use the canonical frontend for M1-P4 conformance testing, and complete the M1-P5 integration and regression review.
+- **Next action:** Preserve the historical optimization benchmarks and conformance evidence. Continue using the canonical H2 frontend as the production baseline, and investigate regressions when later compiler stages or grammar expansions provide measurable evidence.
 - **Next review trigger:** M1-P5, substantial grammar expansion, a reproducible performance regression, or an identified correctness or robustness issue.
 - **Acceptance criteria:** Existing language behavior and diagnostics remain correct; new syntax receives positive and negative conformance tests; performance remains measurable and regressions are investigated before introducing additional optimization complexity.
 
@@ -414,9 +411,11 @@ The H2 measurements are frontend-only. They do not establish Eloque runtime perf
 
 ## M2 architecture follow-through — October 2026
 
-**Status:** Approved decisions and deferred work. No implementation implied.
+**Status:** Historical M2 architecture plan with implementation progress recorded through M2-P1. The diagnostic recovery prerequisite and lexical name-resolution stage are complete. Static type checking, production Monowire bytecode compilation, and VM execution remain pending.
 
 ### Immediate prerequisite: diagnostic migration
+
+**Implementation status:** Completed before M2-P1. The requirements below are retained as the original acceptance contract for structured diagnostics and frontend recovery.
 
 **Priority:** Required before M2 resolver implementation.
 
@@ -437,6 +436,8 @@ The H2 measurements are frontend-only. They do not establish Eloque runtime perf
 
 ### M2 name resolver
 
+**Implementation status:** Completed for the supported language subset in M2-P1. The requirements below preserve the original resolver design; additional grammar-dependent scope cases must be validated as their language features are implemented.
+
 **Priority:** Immediately after diagnostic migration.
 
 **Rationale:** Identifier binding must be established before type checking and bytecode generation.
@@ -455,6 +456,23 @@ The H2 measurements are frontend-only. They do not establish Eloque runtime perf
 - No AST mutation.
 
 **Acceptance criteria:** Resolver behavioral matrix R01–R28 in `ARCHITECTURE.md`, with scope-specific tests introduced as the relevant grammar becomes available.
+
+### M2-P1 — Lexical name-resolution implementation review
+
+- **Status:** Completed.
+- **Milestone:** M2-P1 — Lexical name resolution.
+- **Decision:** Retain a dedicated resolver stage between parsing and static type checking.
+- **Implementation:** Lexical symbol resolution and binding for the supported grammar, including identifier expressions, assignment targets, undefined-name diagnostics, and duplicate-declaration diagnostics.
+- **Correctness evidence:** Resolver tests and regression coverage established during M2-P1.
+- **Performance evidence:** Dedicated parse-and-resolve benchmarks and the completed M2 cross-language v2 comparison.
+- **Recorded mixed-workload medians at 3,000 units:**
+  - Eloque recovery-capable parse + resolve: 2.059516 ms.
+  - Eloque fail-fast parse + resolve: 1.993480 ms.
+  - CPython `symtable`: 17.534834 ms.
+  - CPython `ast.parse`: 25.515754 ms.
+- **Measurement limitation:** These operations differ in language coverage, semantic responsibilities, and measurement boundaries. The results are not equivalent execution benchmarks.
+- **Next action:** Implement mandatory static type checking and definite-assignment analysis, preserving the resolver's established symbol identities and binding semantics.
+- **Next review trigger:** M2 static-checker integration, new scope-bearing grammar constructs, or a reproducible resolver correctness or performance regression.
 
 ### Deferred: diagnostic budget policy and tuning
 
@@ -554,8 +572,12 @@ All deferred items must retain their rationale, reevaluation trigger, and accept
 - [x] **Pre-M2:** Complete the initial Monowire implementation-language benchmark experiment.
 - [x] **Pre-M2:** Resolve TB-011 lexical scope and shadowing semantics.
 - [ ] **Future frontend review:** Revisit TB-026 when representative workloads or regressions justify it.
-- [ ] **M2:** Extend TB-019 diagnostics to name resolution and static type checking.
-- [ ] **M2:** Implement and validate TB-011 lexical binding behavior through the name resolver.
+- [x] **M2-P1:** Extend TB-019 diagnostics to lexical name resolution.
+- [x] **M2-P1:** Implement and validate TB-011 lexical binding for the supported grammar.
+- [x] **M2-P1:** Complete resolver correctness and performance validation.
+- [x] **M2-P1:** Complete the cross-language v2 parse-and-resolve benchmark comparison.
+- [ ] **M2:** Extend TB-019 diagnostics to mandatory static type checking.
+- [ ] **M2:** Implement TB-012 static type checking and definite-assignment analysis.
 - [ ] **M2:** Define the compilation-wide diagnostic budget policy during semantic-analysis integration.
 - [ ] **Before closures:** Review TB-011 capture mechanics.
 - [ ] **M2:** Validate TB-027 Go–Zig integration.

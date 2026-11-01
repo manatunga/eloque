@@ -1,0 +1,10 @@
+{
+  "created_utc": "2026-10-31T19:26:18.690352+00:00",
+  "versions": {
+    "go": "go version go1.27.2 linux/amd64",
+    "cpython": "Python 3.15.0rc2"
+  },
+  "repeats": 10,
+  "benchtime": "1s",
+  "note": "Language-specific wrappers and AST structures; in-process parsing; Go and Eloque via Go benchmark framework, CPython via timeit."
+}

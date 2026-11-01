@@ -1,0 +1,11 @@
+goos: linux
+goarch: amd64
+pkg: github.com/manatunga/eloque/internal/semantic/resolver
+cpu: Intel(R) Core(TM) Ultra 7 155H
+BenchmarkResolve/declarations/3000-22         	    1828	    319896 ns/op	  534359 B/op	      48 allocs/op
+BenchmarkResolve/references/3000-22           	   14008	     46206 ns/op	   24929 B/op	       6 allocs/op
+BenchmarkResolve/mixed/3000-22                	    1027	    579203 ns/op	  632653 B/op	      48 allocs/op
+BenchmarkResolve/undefined/3000-22            	    1345	    385389 ns/op	 1045438 B/op	    3014 allocs/op
+BenchmarkResolve/sparse-undefined/3000-22     	   10000	     50613 ns/op	   33058 B/op	      39 allocs/op
+PASS
+ok  	github.com/manatunga/eloque/internal/semantic/resolver	3.465s

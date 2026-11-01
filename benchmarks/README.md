@@ -4,12 +4,14 @@ This directory contains reproducible performance benchmarks, historical optimiza
 
 The benchmark suites are divided into two primary categories:
 
-- **Frontend benchmarks:** Measure lexical analysis, parsing, AST construction, and the overhead of recovery-capable parsing.
+- **Frontend and resolver benchmarks:** Measure lexical analysis, parsing, AST construction, recovery-capable parsing, and M2-P1 lexical name resolution.
 - **Monowire experiments:** Evaluate candidate implementation languages and instruction-dispatch strategies for Eloque's selected register-based bytecode VM.
 
-**Current production frontend baseline:** H2 direct-streaming parser with an arena-backed flat AST and implemented structured diagnostic recovery.
+**Current compiler frontend baseline:** H2 direct-streaming parser with an arena-backed flat AST, implemented structured diagnostic recovery, and M2-P1 lexical name resolution as a separate compiler stage.
 
 **Historical frontend baseline:** M1 direct-streaming parser with an interface-based AST.
+
+**Current semantic-analysis baseline:** M2-P1 lexical name resolution and symbol binding for the supported grammar. Mandatory static type checking and definite-assignment analysis remain pending.
 
 **Selected execution architecture:** Monowire, a register-based bytecode VM with overlapping caller-outgoing and callee-incoming register windows. Production implementation is planned for M2 — First Execution.
 
@@ -23,14 +25,16 @@ Frontend benchmarks and Monowire experiments have different measurement boundari
 benchmarks/
 ├── README.md
 ├── cpython/
+├── cross-language/
+│   ├── m2_cross_language.py
+│   ├── m2_cross_language_v2.py
+│   ├── m2_native.py
+│   ├── test_m2_native.py
+│   └── test_m2_workload_contract.py
 ├── go/
 ├── monowire/
-│   ├── README.md
-│   ├── SPEC.md
-│   ├── build.sh
-│   ├── compare.py
-│   └── ...
 └── results/
+    ├── cross-language/
     ├── current/
     ├── experimental/
     ├── historical/
@@ -44,7 +48,10 @@ benchmarks/
 - `results/monowire/`: Recorded Monowire experimental measurements and supporting evidence.
 - `results/official/`: Finalized benchmark evidence for the H2 frontend checkpoint.
 - `results/current/`: Previously maintained frontend production-baseline measurements.
-- `results/experimental/`: Exploratory frontend optimization, allocation, recovery, and architecture measurements.
+- `results/experimental/`: Exploratory benchmark measurements, organized by milestone:
+  - `m1-p5/`: M1-P5 frontend optimization and comparison experiments.
+  - `h2/`: H2 parser, arena, recovery, and frontend comparison experiments.
+  - `m2-p1/`: M2-P1 resolver correctness-related performance experiments, allocation and capacity investigations, A/B comparisons, and associated experimental evidence.
 - `results/historical/`: Earlier frontend implementation measurements retained for comparison.
 - `go/`: Go cross-language frontend benchmark implementations.
 - `cpython/`: CPython frontend benchmark implementations.
@@ -135,6 +142,26 @@ The retained M1 parser and buffered frontend are reference implementations for r
 These commands execute the benchmark functions registered in the respective Go packages. Reproducing an individual official H2 result requires the exact benchmark selector, iteration settings, and environment recorded for that result.
 
 The production Eloque frontend incrementally requests tokens from the lexer while parsing and constructing its AST. Buffered frontend benchmarks are retained as a reference implementation. Both measure lexing, parsing, and AST construction, but differ in token-delivery strategy.
+
+### M2-P1 lexical name-resolution benchmarks
+
+M2-P1 introduced a dedicated lexical name-resolution stage following parsing.
+
+The resolver benchmarks measure symbol binding and name-resolution processing for the supported grammar. Combined parse-and-resolve benchmarks include frontend processing as well as resolver work.
+
+The benchmark suite includes declaration-heavy, reference-heavy, mixed, sparse undefined-reference, and undefined-reference workloads.
+
+When interpreting the results, distinguish:
+
+- Parsing alone.
+- Name resolution alone, where separately measured.
+- Fail-fast parsing followed by name resolution.
+- Recovery-capable parsing followed by name resolution.
+- Error-bearing workloads, which may have different diagnostic and termination costs from valid programs.
+
+The completed M2 cross-language v2 suite provides comparative measurements. Exact reproduction commands, benchmark selectors, interpreter versions, and output locations must be taken from the recorded M2-P1 harness and its result metadata.
+
+These measurements do not include mandatory static type checking, Monowire bytecode compilation, or runtime execution.
 
 ### Go Cross-Language Frontend
 
@@ -433,6 +460,113 @@ The retained M1 parser remains a historical reference and a regression-testing i
 
 Future frontend optimization should preserve the official H2 baseline and report correctness, latency, allocation counts, allocated bytes, and memory trade-offs.
 
+## M2-P1 — Lexical name-resolution benchmarks
+
+**Checkpoint:** M2-P1, October 2026.
+
+**Status:** Implementation and benchmark comparison completed.
+
+M2-P1 introduced Eloque's dedicated lexical name-resolution stage after parsing. The benchmarks evaluate the cost of identifier binding and resolver diagnostics for the supported language subset.
+
+### Workloads
+
+The M2 cross-language v2 suite includes:
+
+- Declarations.
+- References.
+- Mixed programs.
+- Sparse undefined references.
+- Undefined-reference workloads.
+
+Workload sizes are 10, 100, 1,000, and 3,000 units.
+
+### Recorded mixed-workload results
+
+Median latency at 3,000 workload units:
+
+| Implementation or operation | Median latency |
+|---|---:|
+| Eloque recovery-capable parse + resolve | 2.059516 ms |
+| Eloque fail-fast parse + resolve | 1.993480 ms |
+| CPython `symtable` | 17.534834 ms |
+| CPython `ast.parse` | 25.515754 ms |
+| Clang C | 52.345913 ms |
+| Clang++ | 58.663674 ms |
+| Rust | 104.461692 ms |
+| Go | 144.474990 ms |
+| Zig | 441.948222 ms |
+
+### Interpretation and limitations
+
+These results are not measurements of identical compiler operations.
+
+Eloque's measurements cover parsing and lexical name resolution for its supported grammar. CPython's `symtable` and `ast.parse` perform different frontend operations. The native compiler measurements include subprocess startup and compiler invocation overhead.
+
+The implementations differ in language grammar, validation responsibilities, diagnostic behavior, source representation, and measurement boundaries.
+
+Consequently, the table is a historical comparison of the recorded benchmark workloads, not evidence that Eloque has a faster complete compiler or execution engine than the listed languages.
+
+For the M2 cross-language v2 comparison, recovery-capable Eloque parsing followed by name resolution is the primary Eloque measurement path. Fail-fast parsing followed by name resolution is retained as a secondary comparison.
+
+CPython `ast.parse` performs parsing and AST construction but does not build a symbol table. CPython `symtable` builds symbol tables but internally reparses the source; it is not an isolated name-resolution benchmark.
+
+Undefined-name workloads also have different semantics across languages. CPython permits unresolved names during compilation, while Eloque's resolver diagnoses them. Native compiler invocations for these cases measure error-path compilation rather than successful resolution.
+
+### Evidence and reproduction
+
+The finalized M2 cross-language v2 benchmark evidence is stored under:
+
+`benchmarks/results/cross-language/m2-v2-final/`
+
+The directory contains:
+
+- `REPORT.md` — measured results, workload-specific rankings, measurement boundaries, and interpretation.
+- `manifest.json` — recorded benchmark configuration and metadata.
+- `samples.csv` — raw measurement samples.
+- `eloque-pipeline.log` — recorded Eloque pipeline benchmark output.
+
+The cross-language v2 benchmark harness is:
+
+`benchmarks/cross-language/m2_cross_language_v2.py`
+
+Separate M2-P1 resolver optimization and A/B experiments are stored under:
+
+`benchmarks/results/experimental/m2-p1/`
+
+These two result collections serve different purposes and must not be conflated.
+
+The exact reproduction command and required options must be verified against the benchmark harness and recorded manifest before being documented as authoritative.
+
+The final run's `manifest.json` records the execution configuration
+(Python 3.14.4, five repeats, Go benchmark benchtime `200ms`,
+Python benchmark duration `0.05` seconds, and one native compiler
+warmup), generated native-language input metadata, SHA-256 source
+hashes, expected compilation outcomes, and individual compiler
+invocations.
+
+The `sparse-undefined` workload includes both successful and
+intentionally failing cases depending on workload size. These
+outcomes must be distinguished when interpreting native compiler
+timings.
+
+#### Reproducing the final M2 cross-language v2 comparison
+
+Run from the Eloque repository root:
+
+```bash
+python3 benchmarks/cross-language/m2_cross_language_v2.py \
+  --repeats 5 \
+  --benchtime 200ms \
+  --python-duration 0.05 \
+  --native-warmups 1 \
+  --native-languages c cpp rust zig go \
+  --out benchmarks/results/cross-language/m2-v2-reproduction
+```
+
+Lexical name resolution is implemented and benchmarked. The next compiler stage is mandatory static type checking and definite-assignment analysis.
+
+Production bytecode compilation and Monowire runtime execution remain pending.
+
 ## Monowire — Register VM implementation-language experiment
 
 **Checkpoint:** Pre-M2 Monowire engine selection, October 23, 2026.
@@ -569,6 +703,8 @@ The tokenization and parsing timings must not be added together.
 
 7. **Different CPython versions:** Historical M1 comparisons used CPython 3.15.0rc2, while the official H2 comparison used CPython 3.14.4. The post-recovery experiment also used CPython 3.15.0rc2. Results from different versions and measurement environments must not be combined as a single uniform comparison.
 
+8. **M2-P1 name-resolution comparisons:** Eloque parse-and-resolve, CPython frontend APIs, and native compiler subprocess invocations have different semantic responsibilities and timing boundaries. Native compiler timings include process startup and additional compiler work. M2-P1 results must not be presented as equivalent complete-compiler or runtime benchmarks.
+
 ## Historical Results
 
 The `results/historical/` directory preserves measurements from earlier lexer/parser implementations, including the previous Full versus Compact frontend comparison.
@@ -587,9 +723,9 @@ These results demonstrate promising frontend performance, but do not establish t
 
 Further benchmarking should include representative real-world source files, more controlled repeated measurements, and eventually bytecode compilation and execution benchmarks.
 
-## Current Benchmark Conclusions — H2
+## Current Benchmark Conclusions — H2 and M2-P1
 
-H2 is the current production frontend performance baseline.
+H2 remains the official production parsing and AST-construction performance baseline. M2-P1 adds a separate, completed lexical name-resolution benchmark baseline. The two checkpoints measure different compiler-stage responsibilities and must be reported separately.
 
 The official M1/H2 comparison demonstrates reduced allocation counts and improved median parsing latency across the five tested workload categories.
 
@@ -597,7 +733,9 @@ The controlled arithmetic comparison also records lower median frontend latency 
 
 These findings do not establish general compiler superiority, language execution performance, or CPython runtime parity.
 
-The next major performance evaluation should occur after M2 provides a working statically checked bytecode VM. At that stage, runtime comparisons must use correctness-equivalent programs, clearly defined measurement boundaries, and reproducible environments.
+M2-P1 has completed the first parse-and-resolve performance comparison. The next compiler-stage evaluation should accompany mandatory static type checking and definite-assignment analysis.
+
+The next production execution-performance evaluation should occur after M2 provides a working statically checked Monowire bytecode VM. Runtime comparisons must use correctness-equivalent programs, clearly defined measurement boundaries, and reproducible environments.
 
 ### M1-P5-C Validation Outcome
 
@@ -696,9 +834,9 @@ go test \
 
 ### Saved evidence
 
-The experimental results are stored under `results/experimental/`.
+The experimental results are stored under `results/experimental/h2/`.
 
-The generated report directory, `h2-post-recovery-report/`, contains:
+The generated report directory, `results/experimental/h2/h2-post-recovery-report/`, contains:
 
 - `REPORT.md` — methodology, results, and limitations
 - `summary.csv` — per-frontend median measurements

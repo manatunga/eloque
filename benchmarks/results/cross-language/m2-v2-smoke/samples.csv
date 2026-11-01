@@ -1,0 +1,81 @@
+engine,workload,size,repetition,ns_per_op,bytes_per_op,allocs_per_op,boundary,source_bytes
+Eloque Recovering parse+resolve,declarations,10,1,7714.0,4217,31,in-process recovering parse + name resolution,
+Eloque Recovering parse+resolve,declarations,100,1,63823.0,30842,40,in-process recovering parse + name resolution,
+Eloque Recovering parse+resolve,declarations,1000,1,663810.0,423774,56,in-process recovering parse + name resolution,
+Eloque Recovering parse+resolve,declarations,3000,1,2101845.0,1376698,70,in-process recovering parse + name resolution,
+Eloque Recovering parse+resolve,references,10,1,3608.0,2104,23,in-process recovering parse + name resolution,
+Eloque Recovering parse+resolve,references,100,1,23157.0,10968,29,in-process recovering parse + name resolution,
+Eloque Recovering parse+resolve,references,1000,1,223203.0,142051,38,in-process recovering parse + name resolution,
+Eloque Recovering parse+resolve,references,3000,1,612445.0,424706,43,in-process recovering parse + name resolution,
+Eloque Recovering parse+resolve,mixed,10,1,7563.0,4216,31,in-process recovering parse + name resolution,
+Eloque Recovering parse+resolve,mixed,100,1,59794.0,30842,40,in-process recovering parse + name resolution,
+Eloque Recovering parse+resolve,mixed,1000,1,609261.0,423768,56,in-process recovering parse + name resolution,
+Eloque Recovering parse+resolve,mixed,3000,1,2039673.0,1376746,71,in-process recovering parse + name resolution,
+Eloque Recovering parse+resolve,sparse-undefined,10,1,3959.0,3160,25,in-process recovering parse + name resolution,
+Eloque Recovering parse+resolve,sparse-undefined,100,1,23121.0,12024,31,in-process recovering parse + name resolution,
+Eloque Recovering parse+resolve,sparse-undefined,1000,1,221074.0,145441,50,in-process recovering parse + name resolution,
+Eloque Recovering parse+resolve,sparse-undefined,3000,1,612138.0,432824,76,in-process recovering parse + name resolution,
+Eloque Recovering parse+resolve,undefined,10,1,4665.0,5176,31,in-process recovering parse + name resolution,
+Eloque Recovering parse+resolve,undefined,100,1,40430.0,45612,130,in-process recovering parse + name resolution,
+Eloque Recovering parse+resolve,undefined,1000,1,363564.0,410321,1042,in-process recovering parse + name resolution,
+Eloque Recovering parse+resolve,undefined,3000,1,1162812.0,1445152,3050,in-process recovering parse + name resolution,
+Eloque FailFast parse+resolve,declarations,10,1,7049.0,4216,31,in-process failfast parse + name resolution,
+Eloque FailFast parse+resolve,declarations,100,1,58747.0,30842,40,in-process failfast parse + name resolution,
+Eloque FailFast parse+resolve,declarations,1000,1,661027.0,423727,56,in-process failfast parse + name resolution,
+Eloque FailFast parse+resolve,declarations,3000,1,1963657.0,1376668,70,in-process failfast parse + name resolution,
+Eloque FailFast parse+resolve,references,10,1,3439.0,2104,23,in-process failfast parse + name resolution,
+Eloque FailFast parse+resolve,references,100,1,21501.0,10969,29,in-process failfast parse + name resolution,
+Eloque FailFast parse+resolve,references,1000,1,200675.0,142051,38,in-process failfast parse + name resolution,
+Eloque FailFast parse+resolve,references,3000,1,622312.0,424710,43,in-process failfast parse + name resolution,
+Eloque FailFast parse+resolve,mixed,10,1,7398.0,4216,31,in-process failfast parse + name resolution,
+Eloque FailFast parse+resolve,mixed,100,1,58110.0,30843,40,in-process failfast parse + name resolution,
+Eloque FailFast parse+resolve,mixed,1000,1,611597.0,423755,56,in-process failfast parse + name resolution,
+Eloque FailFast parse+resolve,mixed,3000,1,1900162.0,1376716,70,in-process failfast parse + name resolution,
+Eloque FailFast parse+resolve,sparse-undefined,10,1,3975.0,3160,25,in-process failfast parse + name resolution,
+Eloque FailFast parse+resolve,sparse-undefined,100,1,21043.0,12025,31,in-process failfast parse + name resolution,
+Eloque FailFast parse+resolve,sparse-undefined,1000,1,219699.0,145445,50,in-process failfast parse + name resolution,
+Eloque FailFast parse+resolve,sparse-undefined,3000,1,635288.0,432847,76,in-process failfast parse + name resolution,
+Eloque FailFast parse+resolve,undefined,10,1,5814.0,5176,31,in-process failfast parse + name resolution,
+Eloque FailFast parse+resolve,undefined,100,1,45168.0,45611,130,in-process failfast parse + name resolution,
+Eloque FailFast parse+resolve,undefined,1000,1,330947.0,410322,1042,in-process failfast parse + name resolution,
+Eloque FailFast parse+resolve,undefined,3000,1,1157896.0,1445167,3050,in-process failfast parse + name resolution,
+CPython ast.parse,declarations,10,1,32084.82421875,,,in-process parse + AST,176
+CPython symtable,declarations,10,1,31574.7890625,,,in-process symbol table (internally reparses source),176
+CPython ast.parse,declarations,100,1,242409.265625,,,in-process parse + AST,1796
+CPython symtable,declarations,100,1,189551.796875,,,in-process symbol table (internally reparses source),1796
+CPython ast.parse,declarations,1000,1,3380622.25,,,in-process parse + AST,19796
+CPython symtable,declarations,1000,1,2972134.5,,,in-process symbol table (internally reparses source),19796
+CPython ast.parse,declarations,3000,1,10275560.0,,,in-process parse + AST,63796
+CPython symtable,declarations,3000,1,11644709.0,,,in-process symbol table (internally reparses source),63796
+CPython ast.parse,references,10,1,27967.529296875,,,in-process parse + AST,119
+CPython symtable,references,10,1,30074.158203125,,,in-process symbol table (internally reparses source),119
+CPython ast.parse,references,100,1,202416.484375,,,in-process parse + AST,929
+CPython symtable,references,100,1,172401.65625,,,in-process symbol table (internally reparses source),929
+CPython ast.parse,references,1000,1,2880193.5,,,in-process parse + AST,9029
+CPython symtable,references,1000,1,2042039.375,,,in-process symbol table (internally reparses source),9029
+CPython ast.parse,references,3000,1,10587694.5,,,in-process parse + AST,27029
+CPython symtable,references,3000,1,6157840.0,,,in-process symbol table (internally reparses source),27029
+CPython ast.parse,mixed,10,1,51701.6484375,,,in-process parse + AST,296
+CPython symtable,mixed,10,1,44007.6640625,,,in-process symbol table (internally reparses source),296
+CPython ast.parse,mixed,100,1,752410.3125,,,in-process parse + AST,3086
+CPython symtable,mixed,100,1,415330.03125,,,in-process symbol table (internally reparses source),3086
+CPython ast.parse,mixed,1000,1,6488504.0,,,in-process parse + AST,33686
+CPython symtable,mixed,1000,1,5567283.5,,,in-process symbol table (internally reparses source),33686
+CPython ast.parse,mixed,3000,1,22406506.0,,,in-process parse + AST,107686
+CPython symtable,mixed,3000,1,15095012.0,,,in-process symbol table (internally reparses source),107686
+CPython ast.parse,sparse-undefined,10,1,28949.6796875,,,in-process parse + AST,119
+CPython symtable,sparse-undefined,10,1,40365.220703125,,,in-process symbol table (internally reparses source),119
+CPython ast.parse,sparse-undefined,100,1,207519.125,,,in-process parse + AST,929
+CPython symtable,sparse-undefined,100,1,161584.515625,,,in-process symbol table (internally reparses source),929
+CPython ast.parse,sparse-undefined,1000,1,3187739.5,,,in-process parse + AST,9092
+CPython symtable,sparse-undefined,1000,1,2087709.125,,,in-process symbol table (internally reparses source),9092
+CPython ast.parse,sparse-undefined,3000,1,9182054.5,,,in-process parse + AST,27252
+CPython symtable,sparse-undefined,3000,1,10877534.5,,,in-process symbol table (internally reparses source),27252
+CPython ast.parse,undefined,10,1,32701.642578125,,,in-process parse + AST,156
+CPython symtable,undefined,10,1,26228.06640625,,,in-process symbol table (internally reparses source),156
+CPython ast.parse,undefined,100,1,212291.890625,,,in-process parse + AST,1506
+CPython symtable,undefined,100,1,183951.53125,,,in-process symbol table (internally reparses source),1506
+CPython ast.parse,undefined,1000,1,3418424.75,,,in-process parse + AST,15906
+CPython symtable,undefined,1000,1,2906348.5,,,in-process symbol table (internally reparses source),15906
+CPython ast.parse,undefined,3000,1,9041721.5,,,in-process parse + AST,49906
+CPython symtable,undefined,3000,1,18676076.0,,,in-process symbol table (internally reparses source),49906
