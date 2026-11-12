@@ -43,7 +43,8 @@ Arena-backed flat AST                   [implemented]
 Name resolution                         [implemented]
     |
     v
-Static type checking                    [M2]
+Static type checking
+and definite assignment                 [M2-P2 — approved; pending]
     |
     v
 Monowire bytecode compiler              [M2]
@@ -210,11 +211,11 @@ result := parser.ParseRecovering(sourceText, parser.ParseOptions{
 
 `ParseResult` exposes:
 
-| Field | Meaning |
-|---|---|
-| `Program` | Parsed program, potentially partial |
+| Field         | Meaning                              |
+| ------------- | ------------------------------------ |
+| `Program`     | Parsed program, potentially partial  |
 | `Diagnostics` | Diagnostics collected during parsing |
-| `Status` | Termination outcome |
+| `Status`      | Termination outcome                  |
 
 The possible statuses are:
 
@@ -323,13 +324,13 @@ The official M1/H2 workload suite evaluated declarations, expressions, strings, 
 
 At 1,000 workload units, the recorded median results were:
 
-| Workload | M1 | H2 | Speedup |
-|---|---:|---:|---:|
-| Declarations | 238.1 µs | 209.0 µs | 1.14× |
-| Expressions | 1,181.5 µs | 667.4 µs | 1.77× |
-| Strings | 400.1 µs | 394.2 µs | 1.01× |
-| Comments | 407.8 µs | 346.4 µs | 1.18× |
-| Mixed | 1,683.8 µs | 1,191.1 µs | 1.41× |
+| Workload     |         M1 |         H2 | Speedup |
+| ------------ | ---------: | ---------: | ------: |
+| Declarations |   238.1 µs |   209.0 µs |   1.14× |
+| Expressions  | 1,181.5 µs |   667.4 µs |   1.77× |
+| Strings      |   400.1 µs |   394.2 µs |   1.01× |
+| Comments     |   407.8 µs |   346.4 µs |   1.18× |
+| Mixed        | 1,683.8 µs | 1,191.1 µs |   1.41× |
 
 H2 reduced allocation counts across these workloads.
 
@@ -343,12 +344,12 @@ A separate controlled arithmetic suite compared Eloque H2, the Go compiler synta
 
 At 10,000 workload units:
 
-| Frontend | Median latency |
-|---|---:|
-| Eloque H2 | 7.16 ms |
-| Go compiler syntax parser | 14.12 ms |
-| Go `go/parser` | 23.92 ms |
-| CPython 3.14.4 `ast.parse` | 147.86 ms |
+| Frontend                   | Median latency |
+| -------------------------- | -------------: |
+| Eloque H2                  |        7.16 ms |
+| Go compiler syntax parser  |       14.12 ms |
+| Go `go/parser`             |       23.92 ms |
+| CPython 3.14.4 `ast.parse` |      147.86 ms |
 
 These measurements are specific to the benchmark inputs and harnesses.
 
@@ -380,7 +381,7 @@ The review trigger and supporting evidence belong in [TECHNICAL_BACKLOG.md](TECH
 
 Semantic analysis follows parsing and is separate from AST construction.
 
-**Current status:** M2-P1 lexical name resolution is implemented. Mandatory static type checking and definite-assignment analysis remain pending.
+**Current status:** M2-P1 lexical name resolution is implemented. M2-P2's mandatory static type checking, definite-assignment analysis, numeric semantics, and bounded local constant evaluation have an approved design but remain unimplemented.
 
 ### 9.1 Lexical name resolution
 
@@ -405,26 +406,96 @@ Lexical scope behavior for future nested blocks, functions, and modules remains 
 
 ### 9.2 Static type checking
 
-**Status:** Pending — M2.
+**Status:** Approved design; implementation pending — M2-P2.
 
-The checker will validate the implemented language's type rules before bytecode compilation.
+Static type checking is mandatory before normal bytecode generation. It consumes the production flat AST and the resolver's symbol-binding information.
 
-Planned responsibilities include:
+Its responsibilities include:
 
-- Type inference for eligible local bindings.
-- Assignment compatibility.
-- Arithmetic operand validation.
-- Definite-assignment analysis.
-- Explicit function signatures when functions are implemented.
-- Return-path checking.
-- Optional-value handling.
-- Source-aware type diagnostics.
+- Determining explicit and inferred types for supported bindings.
+- Determining expression types under the language's expected-type propagation rules.
+- Validating arithmetic operand compatibility and result types.
+- Validating initialization and assignment compatibility.
+- Validating explicit numeric conversions and provably safe implicit conversions.
+- Detecting uninitialized reads through definite-assignment analysis.
+- Diagnosing statically provable numeric errors, including invalid literals, conversions, and constant-expression overflow.
+- Producing source-aware semantic diagnostics.
+- Preserving enough semantic information for Monowire bytecode generation.
 
-Static checking is mandatory for normal executable compilation.
+The checker must implement the approved numeric contract in `LANGUAGE_SPEC.md`, including exact integer literal typing, checked integer arithmetic, IEEE 754 binary64 behavior, and explicit conversion rules.
 
-Successful name resolution does not establish type correctness. A resolved identifier may still be used incorrectly or read before initialization.
+The checker must not silently promote mixed-width typed variables or mixed integer/Float arithmetic. Unsuffixed integer literals may adopt a suitable expected type without changing the types of already-typed operands.
 
-The flat AST, resolution information, and future type-checking results remain conceptually separate compiler artifacts.
+Successful name resolution does not establish type correctness. A resolved identifier may still be used with an incompatible type or read before initialization.
+
+The AST remains immutable. Semantic analysis produces a separate compilation-scoped result containing the symbol and expression type information required by later stages. This result is retained through bytecode generation and released afterward. Its concrete representation remains an implementation decision subject to memory and performance evidence.
+
+A dedicated internal error type represents expressions whose types cannot be trusted after an earlier diagnostic. It suppresses derivative diagnostics while allowing independent expressions to be checked. It is not an Eloque source-language type.
+
+Blocking semantic diagnostics make a program ineligible for normal bytecode generation.
+
+### 9.3 Definite-assignment analysis
+
+**Status:** Approved design; implementation pending — M2-P2.
+
+Definite assignment is a semantic responsibility separate from lexical name resolution.
+
+The resolver establishes which declaration an identifier refers to. The checker determines whether that binding has been initialized at the point where it is read.
+
+The existing declaration-before-initializer rule remains in force. For example:
+
+```elq
+let value be value + 1
+```
+
+The identifier in the initializer resolves to the newly declared binding. Definite-assignment analysis rejects the read because that binding has not yet received a value.
+
+The current declaration grammar requires initializers. This work does not introduce declarations without initializers.
+
+The initial M2 analysis must correctly handle the supported sequential statements and mutation. Its design must remain extensible to control-flow joins and path-sensitive analysis when M3 introduces branches and loops. It must not assume that a future control-flow graph or branch analysis can be represented by a permanently linear initialization model.
+
+### 9.4 Bounded local constant evaluation
+
+**Status:** Approved design; implementation pending — M2-P2.
+
+M2 introduces local constant propagation and evaluation. It does not introduce arbitrary compile-time execution.
+
+The evaluator may determine values for eligible literals, known identifier references, unary numeric operations, supported arithmetic expressions, explicit numeric conversions, and parenthesized expressions.
+
+Known values may propagate through eligible expression chains and declarations. Mutation invalidates the old known value of the affected binding. If the new assigned expression is itself known, the evaluator may establish the new value and resume propagation.
+
+For example:
+
+```elq
+let value as Int be 10
+let first be value + 5
+change value to 20
+let second be value + 5
+```
+
+The known values are `value = 10`, `first = 15`, and subsequently `value = 20`, `second = 25`. The earlier value of `first` is not retroactively changed.
+
+The evaluator must not execute functions, loops, arbitrary control flow, or I/O. Comparisons and Boolean evaluation remain outside the M2 evaluator scope because their operators are introduced in M3.
+
+Compile-time evaluation must preserve the same numeric semantics as runtime execution. It must not use a more permissive arithmetic model or silently accept an operation that would fail at runtime.
+
+Evaluation is bounded by deterministic per-compilation work, depth, and memory limits. The concrete thresholds must be established through stress testing and compile-time and memory benchmarks.
+
+When a limit is exhausted, the affected value becomes unknown and valid runtime computation remains in the program. Budget exhaustion alone is not a semantic error. Operations that are independently provably invalid must still be diagnosed.
+
+### 9.5 Semantic result and compiler integration
+
+**Status:** Approved design; implementation pending — M2-P2.
+
+Semantic analysis produces a compact result scoped to one compilation. It retains the explicit and inferred symbol types and expression types required by bytecode generation.
+
+The result is separate from the immutable AST and resolver output. It must not duplicate information without a demonstrated downstream need. Temporary checker and evaluator data may be discarded when no longer needed.
+
+The bytecode compiler consumes the AST, symbol bindings, and validated semantic result. It must not infer missing type rules independently or bypass blocking semantic diagnostics.
+
+The semantic result remains available until bytecode generation has consumed it, after which it can be released with the rest of the compilation-scoped data.
+
+The exact representation, indexing strategy, and memory-management implementation remain engineering decisions. They must be evaluated against representative checker workloads rather than selected solely for initial implementation convenience.
 
 ## 10. Monowire bytecode compiler
 
@@ -777,25 +848,25 @@ Changes to internal implementation should preserve observable behavior unless a 
 
 ## 15. Architecture review gates
 
-| Decision | Review trigger |
-|---|---|
-| Arena capacity and allocation tuning | Representative frontend profiling demonstrates a meaningful opportunity |
-| Additional parser lookahead | A grammar feature requires it or a measured regression justifies it |
-| Numeric edge cases | Arithmetic checker and runtime implementation |
-| Monowire architecture | Resolved — register-based Monowire selected; no stack-VM prerequisite |
-| Monowire implementation language | Before production Go–Zig integration is committed |
-| Go–Zig integration boundary | Before end-to-end M2 bytecode execution |
-| Production bytecode format and register-window invariants | Before implementing the bytecode compiler and VM |
-| Runtime value representation | Before first production VM value implementation |
-| Instruction dispatch optimization | After working Monowire VM and representative VM-only profiling |
-| Runtime memory management and garbage collection | When implemented heap-backed values require managed lifetimes |
-| Native concurrency and ownership | Dedicated concurrency design milestone |
-| JIT, AOT, and WebAssembly | Demonstrated performance or deployment requirement |
-| Backend-neutral IR | Concrete second-backend or optimization requirement |
-| Collection value independence | Before mutable collections |
-| Exception taxonomy and unwinding | Exception implementation milestone |
-| Module resolution and caching | Module implementation milestone |
-| Structured diagnostics and sandbox controls | Tooling and agent-execution milestones |
+| Decision                                                  | Review trigger                                                          |
+| --------------------------------------------------------- | ----------------------------------------------------------------------- |
+| Arena capacity and allocation tuning                      | Representative frontend profiling demonstrates a meaningful opportunity |
+| Additional parser lookahead                               | A grammar feature requires it or a measured regression justifies it     |
+| Numeric edge cases                                        | Arithmetic checker and runtime implementation                           |
+| Monowire architecture                                     | Resolved — register-based Monowire selected; no stack-VM prerequisite   |
+| Monowire implementation language                          | Before production Go–Zig integration is committed                       |
+| Go–Zig integration boundary                               | Before end-to-end M2 bytecode execution                                 |
+| Production bytecode format and register-window invariants | Before implementing the bytecode compiler and VM                        |
+| Runtime value representation                              | Before first production VM value implementation                         |
+| Instruction dispatch optimization                         | After working Monowire VM and representative VM-only profiling          |
+| Runtime memory management and garbage collection          | When implemented heap-backed values require managed lifetimes           |
+| Native concurrency and ownership                          | Dedicated concurrency design milestone                                  |
+| JIT, AOT, and WebAssembly                                 | Demonstrated performance or deployment requirement                      |
+| Backend-neutral IR                                        | Concrete second-backend or optimization requirement                     |
+| Collection value independence                             | Before mutable collections                                              |
+| Exception taxonomy and unwinding                          | Exception implementation milestone                                      |
+| Module resolution and caching                             | Module implementation milestone                                         |
+| Structured diagnostics and sandbox controls               | Tooling and agent-execution milestones                                  |
 
 All deferred engineering decisions must retain a rationale, review trigger, and measurable acceptance criteria in [TECHNICAL_BACKLOG.md](TECHNICAL_BACKLOG.md).
 

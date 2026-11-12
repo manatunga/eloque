@@ -71,20 +71,156 @@ design specifications unless explicitly marked as implemented.
 
 ## 3. Types and literals [Decided unless noted]
 
-| Type | Meaning | Examples |
-|---|---|---|
-| `Int` | Signed 64-bit integer; checked overflow | `42`, `-7` |
-| `Float` | IEEE 754 binary64 | `3.14`, `0.5` |
-| `String` | Immutable Unicode text, stored as UTF-8 | `"Hello"` |
-| `Bool` | Exactly `true` or `false` | `true` |
-| Optional `T?` | Value of type `T` or absence | `String?` |
+| Type          | Meaning                                                       | Examples      |
+| ------------- | ------------------------------------------------------------- | ------------- |
+| `Int8`        | Signed 8-bit integer; checked overflow                        | `42`, `-7`    |
+| `Int16`       | Signed 16-bit integer; checked overflow                       | `1200`        |
+| `Int32`       | Signed 32-bit integer; checked overflow                       | `100000`      |
+| `Int`         | Signed 64-bit integer; checked overflow; default integer type | `42`, `-7`    |
+| `Float`       | IEEE 754 binary64                                             | `3.14`, `0.5` |
+| `String`      | Immutable Unicode text, stored as UTF-8                       | `"Hello"`     |
+| `Bool`        | Exactly `true` or `false`                                     | `true`        |
+| Optional `T?` | Value of type `T` or absence                                  | `String?`     |
+
+Unsigned integer types are deferred to M3. The canonical default integer type remains `Int`.
 
 `none` is the absence literal, valid in optional contexts; it is not a general substitute for a non-optional value. `List[T]`, `Map[K, V]`, and user-defined types are statically checked. Literal examples: `[1, 2, 3]`, `{"name": "Alex"}`. Tuple and set types are **deferred**, not established core syntax.
 
-- Integer overflow raises `IntegerOverflow`; integer division by zero raises an error.
-- Float arithmetic is approximate; use the shortest round-trippable decimal when displaying a Float. Rounding is explicit.
-- Implicit `Int` to `Float` promotion is permitted only when exactness can be established. Precise rules for value-dependent conversions and Float exceptional values remain provisional.
-- No implicit truthiness; conditions require `Bool`.
+Integer overflow is an error. Integer division by zero is an error. Integer arithmetic must not silently wrap, saturate, or widen.
+
+`Float` uses IEEE 754 binary64 arithmetic. Floating-point overflow produces signed infinity. Floating-point division preserves IEEE behavior for infinities, NaN, and signed zero.
+
+Use the shortest round-trippable decimal when displaying a `Float`. Rounding is explicit.
+
+Implicit numeric conversions are restricted to the value-preserving cases defined in the numeric conversion rules. Mixed-width arithmetic and mixed integer/Float arithmetic require explicit conversions.
+
+No implicit truthiness; conditions require `Bool`.
+
+### 3.1 Numeric semantics [Decided; M2-P2 implementation pending]
+
+#### Integer literal typing
+
+An unsuffixed integer literal initially represents an exact compile-time integer constant. It is not immediately rounded or restricted to the default runtime integer type.
+
+Its type is determined using the following rules:
+
+1. A suitable expected integer type determines the literal's type when its exact value fits that type.
+2. In a binary arithmetic expression, a typed integer peer supplies the expected type for an unsuffixed integer literal on the other side.
+3. An enclosing expected integer type propagates through otherwise-untyped arithmetic expressions.
+4. Explicitly typed operands retain their declared types. Expected-type propagation never silently converts an already-typed variable.
+5. If no suitable context determines the type, an unsuffixed integer literal defaults to `Int`.
+6. A literal that does not fit its selected type is a compile-time error.
+
+For example:
+
+```elq
+let small as Int8 be 100
+let next be small + 10
+let total as Int8 be (10 + 20) * 2
+```
+
+The literals adopt `Int8` in these contexts. Each arithmetic operation retains `Int8` semantics and is checked for overflow.
+
+Mixed-width arithmetic between already-typed variables requires explicit conversion.
+
+The minimum signed `Int` value, `-9223372036854775808`, is valid. Implementations must not reject it merely because its positive magnitude cannot first be represented as a signed `Int`.
+
+#### Integer arithmetic
+
+For operands of the same integer type, `+`, `-`, `*`, `//`, `%`, and `**` retain that integer type. No automatic widening occurs.
+
+Integer overflow is an error. The compiler diagnoses overflow whenever it can prove it. Otherwise, the runtime checks the operation. A runtime check may be eliminated only when the compiler proves that overflow is impossible.
+
+- `/` is real division and produces `Float` from integer operands.
+- `//` is floor division. For example, `-5 // 2` is `-3`.
+- Integer `%` is floor-compatible remainder. For example, `-5 % 2` is `1`. A nonzero remainder has the divisor's sign.
+- Division by integer zero is an error.
+- The minimum signed integer divided by `-1` using `//` is overflow.
+- The corresponding `%` result is zero and must be computed without evaluating an overflowing quotient.
+
+Integer exponentiation requires operands of the same integer type, returns the base type, and requires a non-negative exponent. A negative integer exponent is an error, not an implicit conversion to `Float`. `0 ** 0` is `1`. Overflow is checked. Implementations should use an efficient checked algorithm rather than a linear multiplication loop for large exponents.
+
+Ordinary integer arithmetic never silently wraps, saturates, or widens. Explicit wrapping and saturating operations are not part of the M2 contract.
+
+#### Floating-point arithmetic
+
+`Float` uses IEEE 754 binary64 arithmetic.
+
+Basic arithmetic preserves IEEE behavior for signed zero, infinities, and NaN. Floating-point overflow produces signed infinity rather than an integer-style overflow error.
+
+Floating-point division follows IEEE behavior, including:
+
+- A finite nonzero value divided by positive or negative zero produces the corresponding signed infinity.
+- Zero divided by zero produces NaN.
+- Signed zero is preserved where required by IEEE arithmetic.
+
+Floating-point `//` and `%` use floor-compatible semantics for finite operands and a finite nonzero divisor:
+
+- `a // b` is the mathematical floor of `a / b`.
+- `a % b` is `a - floor(a / b) * b`.
+- A nonzero remainder has the divisor's sign.
+
+If either operand is NaN or infinite, or the divisor is zero, these two floor-compatible operators produce NaN. This is a language convention, not the IEEE 754 `remainder` operation.
+
+Floating-point exponentiation follows IEEE-compatible binary64 behavior and established mainstream math-library conventions. In particular:
+
+- `(-2.0) ** 0.5` produces NaN.
+- `0.0 ** 0.0` produces `1.0`.
+- `0.0 ** -1.0` produces positive infinity.
+
+IEEE 754 does not fully prescribe a general-purpose `pow` function. Eloque's conformance suite defines the required observable cases and tolerances.
+
+#### Numeric conversions
+
+Numeric conversion syntax uses the destination type:
+
+```elq
+let narrow be Int16(small)
+let floating be Float(count)
+let widened be Int(value)
+```
+
+Integer-to-integer widening is safe when the entire source type range fits the destination type. Narrowing requires a range check.
+
+If an out-of-range value is known at compile time, compilation fails. Otherwise, the runtime checks it. Integer narrowing never silently wraps, truncates, or saturates.
+
+Integer-to-`Float` conversion rounds according to IEEE 754 binary64 conversion. Mixed integer/Float arithmetic requires explicit conversion, even when a particular integer is exactly representable.
+
+Implicit conversion is permitted for initialization and assignment only when the compiler proves that the conversion preserves the value. Proof may come from the complete source-type range or from a particular known value.
+
+If safety cannot be established, an explicit conversion is required. The same policy applies to function arguments and return values when those features are introduced. This policy does not authorize implicit conversions in unrelated expression contexts.
+
+Float-to-integer conversion is always explicit, even when the compiler knows the Float is an exact integral value in range.
+
+Its conversion order is:
+
+1. Reject NaN and positive or negative infinity.
+2. Truncate the finite value toward zero.
+3. Check that the truncated result fits the destination integer type.
+4. Reject the conversion if it does not fit.
+
+A provably invalid conversion is a compile-time error. Otherwise, the runtime checks it.
+
+Examples:
+
+- `Int8(127.9)` produces `127`.
+- `Int8(-128.9)` produces `-128`.
+- `Int8(128.0)` is invalid.
+- `Int8(-129.0)` is invalid.
+
+#### Mixed numeric comparisons
+
+Comparisons are specified for M3, not part of the M2 executable subset. Their accepted numeric contract is recorded here to prevent later incompatibility.
+
+- Mixed-width signed integer comparisons use exact mathematical comparison.
+- Mixed integer/Float comparisons must not first round the integer to binary64 when that would lose information. Comparison is exact with respect to the represented integer and binary64 value.
+- NaN comparison behavior follows IEEE 754: equality is false, inequality is true, and ordered comparisons are false, regardless of which operand is NaN.
+
+#### Numeric literal frontend requirements
+
+M2-P2 requires frontend support for Float literals. The exact lexical grammar for decimal Float literals must be specified alongside the lexer and parser conformance cases before implementation. Existing integer-literal rules, including leading-zero and invalid-suffix diagnostics, must remain intact.
+
+Built-in numeric conversion expressions must also be parsed in M2-P2. Their syntax does not introduce general user-defined function-call support ahead of M4.
 
 ## 4. Bindings, mutability, scope [Decided]
 
@@ -106,19 +242,23 @@ Block scopes are lexical. **Shadowing is permitted in nested lexical scopes**, b
 
 Variables must be declared before use. Future function and named-type declarations may be forward-referenced, subject to the rules established when those constructs are implemented.
 
-A declaration introduces its binding before its initializer is resolved. Consequently, in `let x be x + 1`, the initializer's `x` refers to the newly declared binding, not an enclosing binding. A subsequent definite-assignment check rejects the uninitialized read.
+A declaration introduces its binding before its initializer is resolved. Consequently, in `let x be x + 1`, the initializer's `x` refers to the newly declared binding, not an enclosing binding. Definite-assignment analysis rejects this uninitialized read.
 
-Lexical name resolution is implemented for the supported grammar through M2-P1. The approved scope and shadowing rules remain authoritative for additional scope-bearing constructs introduced in later milestones.
+Lexical name resolution is implemented for the supported grammar through M2-P1. Definite-assignment analysis is a separate M2-P2 semantic responsibility. The existing M1 declaration syntax requires an initializer; declarations without initializers are not introduced by this decision.
 
 Initializer self-reference is a name-resolution question: the identifier binds to the newly declared symbol. Rejecting an uninitialized read is a separate definite-assignment responsibility and remains pending.
 
-Lists, maps and structured values use **value semantics**: assignment creates an independent *logical* value. The runtime may optimize with copy-on-write or structural sharing without observable aliasing. Explicit references/shared mutable state are deferred to the concurrency design.
+Lists, maps and structured values use **value semantics**: assignment creates an independent _logical_ value. The runtime may optimize with copy-on-write or structural sharing without observable aliasing. Explicit references/shared mutable state are deferred to the concurrency design.
 
 ## 5. Expressions [Decided unless noted]
 
-Arithmetic: `+`, `-`, `*`, `/` (real division), `//` (floor division), `%` (floor-compatible remainder). For example, `-5 // 2` is `-3` and `-7 % 3` is `2`. Division by zero raises an exception. Exact rules for mixed numeric operands require conformance tests.
+Arithmetic operators are `+`, `-`, `*`, `/`, `//`, `%`, and `**`. Their numeric typing, overflow, conversion, and exceptional-value semantics are defined in [Section 3.1 — Numeric semantics](#31-numeric-semantics-decided-m2-p2-implementation-pending).
 
-**Implementation status:** The M1 frontend parses the supported arithmetic operators and constructs expression ASTs according to their precedence and associativity rules.
+The M1 frontend parses these arithmetic operators and constructs expression ASTs according to their precedence and associativity rules. Exponentiation is right-associative and binds more tightly than unary negation on its left.
+
+**Implementation status:** Arithmetic parsing is implemented. Numeric type checking, conversion validation, constant evaluation, and runtime arithmetic remain pending M2-P2 and subsequent M2 execution work.
+
+Comparisons and Boolean operations are target-language features assigned to M3. Their numeric comparison contract is specified in Section 3.1 to preserve compatibility when those operators are implemented.
 
 Arithmetic evaluation, numeric type compatibility, overflow checking, division-by-zero handling, and runtime exceptions are not yet implemented. These remain semantic requirements for the future type checker and runtime.
 

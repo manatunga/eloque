@@ -6,7 +6,7 @@
 
 - Build the smallest **correct, statically checked, executable** subset before broadening syntax.
 - Keep the full language design distinct from features implemented in a particular release.
-- Require type checking on the normal compilation path from the first executable milestone. A checker can be incremental in *coverage* without being optional.
+- Require type checking on the normal compilation path from the first executable milestone. A checker can be incremental in _coverage_ without being optional.
 - Make each milestone demonstrable with fixtures, tests, and readable diagnostics.
 - Avoid committing to dates or performance outcomes before measurement.
 - The user writes production code; mentoring and reviews can guide Go, architecture, and testing.
@@ -15,18 +15,18 @@
 
 These are development checkpoints, **not** promises that each becomes a public release.
 
-| Milestone | Scope | Demonstrable outcome |
-|---|---|---|
-| **M0 — Foundation** | Go module, repository structure as needed, CLI skeleton, tests, initial conformance fixtures | `go test ./...` succeeds; a minimal CLI starts; specification and decisions are aligned |
-| **M1 — Frontend foundations** | Lexer, four-space indentation, source spans, parser, AST, syntax diagnostics | Parse a small valid `.elq` program; reject malformed input with locations |
-| **M2 — First execution** | Name resolution, **mandatory basic static type checking**, Monowire register-based bytecode compiler and VM, literals, `let`, `change`, arithmetic, `say` | Execute statically checked hello-world and arithmetic programs through Monowire; reject invalid programs before execution; establish initial runtime correctness and performance baselines |
-| **M3 — Control flow** | Comparisons, Boolean logic, `if`/`otherwise if`/`otherwise`, `repeat`, `for each` after minimal list/iteration support, `skip`, `stop` | Execute conditional and looping programs with verified scope rules |
-| **M4 — Functions** | Typed parameters, `giving`, calls with mandatory `with (...)`, return checking, recursion, default/named arguments in stages | Execute statically checked functions, including valid and invalid call examples |
-| **M5 — Values and collections** | `Int` overflow, `Float` rules, optional `T?`, Unicode strings, lists/maps, safe access, slicing, value semantics, `fixed`/`frozen` | Verify value independence, mutation rules, numeric failures and safe lookup |
-| **M6 — Structured features** | Custom `define` types, methods, structural interfaces, pattern matching | Construct values, call methods, check interface conformance, evaluate match cases |
-| **M7 — Integration** | `import`, module initialization, visibility, typed exceptions, `try`/`catch`/`finally` | Run multi-file programs; report module and exception failures predictably |
-| **M8 — Developer experience** | `eloque check`, formatter/REPL exploration, structured diagnostics, packaging and documentation | Usable tooling and a conformance corpus for the implemented subset |
-| **M9 — Concurrency and agent safeguards (later)** | Design ownership/references, safe task execution, configurable sandbox limits | Prototype and validate semantics before committing public syntax |
+| Milestone                                         | Scope                                                                                                                                                                                                                                                                       | Demonstrable outcome                                                                                                                                                           |
+| ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **M0 — Foundation**                               | Go module, repository structure as needed, CLI skeleton, tests, initial conformance fixtures                                                                                                                                                                                | `go test ./...` succeeds; a minimal CLI starts; specification and decisions are aligned                                                                                        |
+| **M1 — Frontend foundations**                     | Lexer, four-space indentation, source spans, parser, AST, syntax diagnostics                                                                                                                                                                                                | Parse a small valid `.elq` program; reject malformed input with locations                                                                                                      |
+| **M2 — First execution**                          | Name resolution, mandatory static type checking, definite assignment, signed integer types, IEEE binary64 Float semantics, numeric conversions, bounded local constant evaluation, Monowire register-based bytecode compiler and VM, literals, let, change, arithmetic, say | Execute statically checked arithmetic and binding programs through Monowire; reject invalid programs before execution; establish runtime correctness and performance baselines |
+| **M3 — Control flow**                             | Comparisons, Boolean logic, `if`/`otherwise if`/`otherwise`, `repeat`, `for each` after minimal list/iteration support, `skip`, `stop`                                                                                                                                      | Execute conditional and looping programs with verified scope rules                                                                                                             |
+| **M4 — Functions**                                | Typed parameters, `giving`, calls with mandatory `with (...)`, return checking, recursion, default/named arguments in stages                                                                                                                                                | Execute statically checked functions, including valid and invalid call examples                                                                                                |
+| **M5 — Values and collections**                   | Optional `T?`, Unicode strings, lists/maps, safe access, slicing, value semantics, fixed/frozen, expanded numeric and value-type refinements if justified                                                                                                                   | Verify value independence, mutation rules, safe lookup, and the additional numeric/value features assigned to this milestone                                                   |
+| **M6 — Structured features**                      | Custom `define` types, methods, structural interfaces, pattern matching                                                                                                                                                                                                     | Construct values, call methods, check interface conformance, evaluate match cases                                                                                              |
+| **M7 — Integration**                              | `import`, module initialization, visibility, typed exceptions, `try`/`catch`/`finally`                                                                                                                                                                                      | Run multi-file programs; report module and exception failures predictably                                                                                                      |
+| **M8 — Developer experience**                     | `eloque check`, formatter/REPL exploration, structured diagnostics, packaging and documentation                                                                                                                                                                             | Usable tooling and a conformance corpus for the implemented subset                                                                                                             |
+| **M9 — Concurrency and agent safeguards (later)** | Design ownership/references, safe task execution, configurable sandbox limits                                                                                                                                                                                               | Prototype and validate semantics before committing public syntax                                                                                                               |
 
 The order may change where dependencies demand it. In particular, implement enough list/iterator support before `for each`, and add type rules **with** each runtime feature rather than deferring a large checker rewrite.
 
@@ -110,7 +110,7 @@ The order may change where dependencies demand it. In particular, implement enou
 - Deferred bounded lookahead until a concrete grammar requirement justifies it.
 - Retained eager buffering as a comparison and regression-testing implementation.
 - Production integration was subsequently completed in M1-P5-B,
-followed by cross-language benchmark validation in M1-P5-C.
+  followed by cross-language benchmark validation in M1-P5-C.
 
 **M1-P5-B — Production frontend integration: Completed**
 
@@ -179,13 +179,13 @@ The official comparison used workload sizes of 10, 100, and 1,000 units, with te
 
 At 1,000 units:
 
-| Workload | M1 median | H2 median | Speedup |
-|---|---:|---:|---:|
-| Declarations | 238.1 µs | 209.0 µs | 1.14× |
-| Expressions | 1,181.5 µs | 667.4 µs | 1.77× |
-| Strings | 400.1 µs | 394.2 µs | 1.01× |
-| Comments | 407.8 µs | 346.4 µs | 1.18× |
-| Mixed | 1,683.8 µs | 1,191.1 µs | 1.41× |
+| Workload     |  M1 median |  H2 median | Speedup |
+| ------------ | ---------: | ---------: | ------: |
+| Declarations |   238.1 µs |   209.0 µs |   1.14× |
+| Expressions  | 1,181.5 µs |   667.4 µs |   1.77× |
+| Strings      |   400.1 µs |   394.2 µs |   1.01× |
+| Comments     |   407.8 µs |   346.4 µs |   1.18× |
+| Mixed        | 1,683.8 µs | 1,191.1 µs |   1.41× |
 
 H2 reduced allocation counts across these workloads. String-heavy parsing showed little latency improvement, while expression-heavy parsing showed the largest improvement.
 
@@ -193,12 +193,12 @@ A separate controlled arithmetic benchmark compared H2 with the Go compiler synt
 
 At 10,000 units, the recorded median frontend latencies were:
 
-| Implementation | Median latency |
-|---|---:|
-| Eloque H2 | 7.16 ms |
-| Go compiler syntax parser | 14.12 ms |
-| Go `go/parser` | 23.92 ms |
-| CPython 3.14.4 `ast.parse` | 147.86 ms |
+| Implementation             | Median latency |
+| -------------------------- | -------------: |
+| Eloque H2                  |        7.16 ms |
+| Go compiler syntax parser  |       14.12 ms |
+| Go `go/parser`             |       23.92 ms |
+| CPython 3.14.4 `ast.parse` |      147.86 ms |
 
 These measurements concern synthetic frontend workloads, not program execution. Differences in language grammar, source wrappers, AST representations, and measurement harnesses limit cross-language comparability.
 
@@ -262,11 +262,11 @@ The comparison harness built and executed all 16 measured configurations, checke
 **Recorded median results (milliseconds):**
 
 | Implementation | Call loop | Arithmetic | Branch | Recursion |
-|---|---:|---:|---:|---:|
-| Zig labeled | 18.802 | 9.268 | 15.919 | 14.033 |
-| Zig switch | 19.794 | 9.280 | 15.985 | 14.413 |
-| Rust | 33.049 | 11.892 | 21.395 | 23.859 |
-| Go | 53.362 | 18.262 | 29.022 | 39.246 |
+| -------------- | --------: | ---------: | -----: | --------: |
+| Zig labeled    |    18.802 |      9.268 | 15.919 |    14.033 |
+| Zig switch     |    19.794 |      9.280 | 15.985 |    14.413 |
+| Rust           |    33.049 |     11.892 | 21.395 |    23.859 |
+| Go             |    53.362 |     18.262 | 29.022 |    39.246 |
 
 Zig recorded the lowest median wall-clock time in every measured workload.
 
@@ -304,16 +304,95 @@ The M2 cross-language v2 suite evaluated declarations, references, mixed program
 
 For the 3,000-unit mixed workload, recorded median latencies were:
 
-| Implementation or operation | Median latency |
-|---|---:|
-| Eloque recovery-capable parse + resolve | 2.059516 ms |
-| Eloque fail-fast parse + resolve | 1.993480 ms |
-| CPython `symtable` | 17.534834 ms |
-| CPython `ast.parse` | 25.515754 ms |
+| Implementation or operation             | Median latency |
+| --------------------------------------- | -------------: |
+| Eloque recovery-capable parse + resolve |    2.059516 ms |
+| Eloque fail-fast parse + resolve        |    1.993480 ms |
+| CPython `symtable`                      |   17.534834 ms |
+| CPython `ast.parse`                     |   25.515754 ms |
 
 These results have different measurement boundaries and compiler responsibilities. They do not establish equivalent language coverage or runtime performance superiority.
 
 **Outcome:** M2-P1 lexical name resolution is complete. Mandatory static type checking and definite-assignment analysis are the next implementation phase.
+
+### M2-P2 — Mandatory static semantics and numeric foundations: Design approved; implementation pending
+
+**Status:** Design approved. Repository implementation and validation have not yet begun.
+
+M2-P2 establishes the mandatory semantic foundation required before Eloque can safely generate executable Monowire bytecode.
+
+The approved design covers:
+
+- Signed `Int8`, `Int16`, `Int32`, and `Int` types, plus IEEE 754 binary64 `Float`.
+- Exact, context-directed unsuffixed integer literal typing.
+- Same-type integer arithmetic with checked overflow.
+- IEEE-compatible floating-point arithmetic and explicitly documented operator conventions.
+- Explicit numeric conversions and restricted provably safe implicit conversions.
+- Mandatory static type checking and definite-assignment analysis.
+- An internal error type for controlled diagnostic recovery.
+- An immutable AST and separate compilation-scoped semantic result.
+- Bounded local constant propagation and evaluation with mutation invalidation.
+- Compiler/runtime semantic consistency and reproducible validation.
+
+**Accepted implementation work packages**
+
+1. **P2.1 — Numeric frontend prerequisites**
+   - Add Float literal recognition and parsing.
+   - Add built-in numeric conversion expression syntax without enabling general user-defined function calls.
+   - Preserve the existing integer literal grammar and diagnostics.
+   - Establish lexical and parser conformance fixtures for the supported Float literal forms.
+
+2. **P2.2 — Semantic foundations**
+   - Establish the type representation and type identity rules.
+   - Implement expression typing and symbol type information.
+   - Produce the compilation-scoped semantic result without modifying the AST.
+   - Avoid duplicating resolver and AST information without a demonstrated need.
+
+3. **P2.3 — Definite assignment and compatibility**
+   - Track binding initialization state.
+   - Reject reads before initialization, including declaration-initializer self-reference.
+   - Implement initialization and assignment compatibility.
+   - Introduce controlled type-error propagation and diagnostic recovery.
+
+4. **P2.4 — Numeric semantics**
+   - Implement exact integer literal typing and expected-type propagation.
+   - Implement arithmetic operand and result typing.
+   - Implement compile-time-provable and runtime integer overflow checks.
+   - Implement division, remainder, exponentiation, and numeric conversions.
+   - Preserve the specified IEEE 754 binary64 behavior.
+
+5. **P2.5 — Constant evaluator**
+   - Implement literal-only evaluation first.
+   - Propagate known values through eligible pure expressions.
+   - Invalidate stale values after mutation and establish new facts when assignments are known.
+   - Apply deterministic work, depth, and memory limits.
+   - Preserve runtime behavior when evaluation cannot continue.
+
+6. **P2.6 — Compiler integration**
+   - Make bytecode generation consume the validated semantic result.
+   - Ensure blocking semantic errors prevent normal bytecode generation.
+   - Preserve source information and the required runtime operation semantics.
+
+7. **P2.7 — Validation and performance**
+   - Add semantic and numeric conformance tests.
+   - Validate constant-evaluator behavior against runtime execution.
+   - Stress-test malformed, deeply nested, large, and resource-intensive inputs.
+   - Benchmark checker throughput, allocations, compile-time cost, and memory usage.
+   - Preserve reproducible benchmark inputs and environment metadata.
+
+**Implementation constraints**
+
+- These work packages are part of M2-P2, not separate public language milestones.
+- The sequence may be adjusted when measured dependencies justify it, but approved semantics must not be weakened for convenience.
+- The AST remains immutable.
+- The semantic result is compilation-scoped and released after bytecode generation.
+- The initial evaluator is not a general compile-time interpreter.
+- Comparisons and Boolean evaluation remain M3 features.
+- General user-defined function calls remain an M4 feature.
+- Unsigned integer types remain deferred to M3.
+- Concrete constant-evaluator resource thresholds must be selected using measurements rather than arbitrary assumptions.
+
+**Completion criterion:** The supported M2 subset is mandatorily type-checked, definite-assignment errors are rejected, numeric behavior is consistent between compile-time evaluation and runtime execution, and validated semantic information is available to the Monowire bytecode compiler.
 
 ### M2 — First execution: In progress
 
@@ -324,11 +403,12 @@ M2 builds upon the implemented H2 frontend, structured diagnostic recovery, and 
 Its primary implementation stages are:
 
 1. Dedicated lexical name resolution and scope validation — completed (M2-P1).
-2. Mandatory basic static type checking, including definite-assignment analysis.
-3. Monowire register-based bytecode compilation.
-4. A sequential Monowire virtual machine.
-5. End-to-end execution and diagnostic tests.
-6. Initial runtime correctness and performance benchmarks.
+2. Mandatory static semantics and numeric foundations — approved design, implementation pending (M2-P2).
+3. Monowire execution contracts and compiler/runtime integration.
+4. Monowire register-based bytecode compilation.
+5. A sequential Monowire virtual machine.
+6. End-to-end execution and diagnostic tests.
+7. Initial runtime correctness and performance benchmarks.
 
 **VM architecture:** Monowire is the selected register-based execution architecture. The previous Go stack-VM plan has been superseded.
 
@@ -362,17 +442,17 @@ Eloque can currently parse supported source programs and perform lexical name re
 
 A release version describes what actually works, not everything present in the language specification.
 
-| Proposed version | Minimum release theme |
-|---|---|
-| `0.1.0` | Frontend foundations: tokens, AST, parsing, syntax diagnostics, minimal CLI |
-| `0.2.0` | First executable **statically checked** subset with a bytecode VM |
-| `0.3.x` | Control flow and expanded expression typing |
-| `0.4.x` | Functions, typed calls and return validation |
-| `0.5.x` | Collections, optional values and value-semantics foundations |
-| `0.6.x` | Custom types, methods and interfaces |
-| `0.7.x` | Modules and exception handling |
-| `0.8–0.9.x` | Tooling, conformance, stability and further feature breadth |
-| `1.0.0` | Stable, documented, well-tested language contract **when ready** |
+| Proposed version | Minimum release theme                                                       |
+| ---------------- | --------------------------------------------------------------------------- |
+| `0.1.0`          | Frontend foundations: tokens, AST, parsing, syntax diagnostics, minimal CLI |
+| `0.2.0`          | First executable **statically checked** subset with a bytecode VM           |
+| `0.3.x`          | Control flow and expanded expression typing                                 |
+| `0.4.x`          | Functions, typed calls and return validation                                |
+| `0.5.x`          | Collections, optional values and value-semantics foundations                |
+| `0.6.x`          | Custom types, methods and interfaces                                        |
+| `0.7.x`          | Modules and exception handling                                              |
+| `0.8–0.9.x`      | Tooling, conformance, stability and further feature breadth                 |
+| `1.0.0`          | Stable, documented, well-tested language contract **when ready**            |
 
 These versions are illustrative. Internal milestones can be combined, split, or shipped under different numbers. Native concurrency need not be a 1.0 prerequisite; it should not be rushed into the initial VM.
 
@@ -381,6 +461,7 @@ These versions are illustrative. Internal milestones can be combined, split, or 
 The implementation uses Go. Prior Python experience transfers conceptually, but Go-specific behavior deserves explicit study.
 
 Learn concepts **just before using them**:
+
 - Module/package layout and `go mod`, `go test`.
 - Structs, methods, slices, maps, and interfaces.
 - Pointers and value-versus-reference behavior.
@@ -394,6 +475,7 @@ Do not require a lengthy Go course before M0. Introduce small Go exercises along
 ## Definition of done for early milestones
 
 **M0**
+
 - [x] Existing design documents are consistent.
 - [x] Go module path matches the actual repository.
 - [x] Minimal CLI can be built and tested.
@@ -401,6 +483,7 @@ Do not require a lengthy Go course before M0. Introduce small Go exercises along
 - [x] At least one `.elq` example is explicitly marked as illustrative until supported.
 
 **M1**
+
 - [x] Indentation and source spans have tests.
 - [x] The lexer handles keywords as precise tokens rather than free-form English.
 - [x] Parser produces stable AST shapes for the selected subset.
@@ -408,6 +491,7 @@ Do not require a lengthy Go course before M0. Introduce small Go exercises along
 - [x] The grammar covered by the implementation has conformance examples.
 
 **M2**
+
 - [x] Resolver rejects unknown names and duplicate declarations for the supported grammar.
 - [ ] Checker rejects type-invalid programs **before** VM execution.
 - [ ] Definite-assignment checking rejects invalid uninitialized reads.
@@ -523,6 +607,7 @@ Outstanding engineering reviews and their acceptance criteria are tracked in `TE
 ## Versioning and compatibility
 
 Eloque intends to use Semantic Versioning as a guideline:
+
 - Before `1.0`, breaking changes are possible and should be documented.
 - After `1.0`, breaking public language behavior warrants a major version.
 - Internal bytecode format is not part of the public compatibility contract unless standardized later.

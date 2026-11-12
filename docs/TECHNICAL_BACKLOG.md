@@ -199,23 +199,53 @@ At each milestone, inspect items whose triggers have arrived. Record the decisio
 - **Next action:** Preserve the implemented resolver behavior and validate additional scope cases as their grammar becomes available. Implement definite-assignment analysis during M2 static type checking without changing the established initializer self-reference binding rule.
 - **Next review trigger:** M2 static type checking for definite assignment; future nested-scope grammar milestones for additional lexical behavior; M5 for mutable collection ownership and deep immutability; a future closure implementation milestone for capture semantics.
 
-### TB-012 — Static type inference and checking
+### TB-012 — Static type inference, semantic checking and definite assignment
 
-- **Status:** Committed; implementation review required.
-- **Baseline:** Strict static types, explicit parameter annotations, local inference and `T?`; type errors block normal execution.
-- **Trigger:** Before first executable subset in M2.
-- **Method:** Specify expression typing, assignment compatibility, return-path validation, optional narrowing and invalidation, and error recovery. Add positive/negative checker fixtures for every implemented feature.
-- **Criterion:** Predictable soundness boundaries and actionable diagnostics; never silently downgrade type errors to warnings.
-- **Evidence:** Pending.
+- **Status:** Design approved (M2-P2); implementation pending.
+- **Baseline:** Mandatory static typing, explicit type annotations where required, eligible local inference, assignment compatibility, and blocking semantic diagnostics. The AST remains immutable. Semantic analysis produces a separate compilation-scoped result.
+- **Decision:** M2-P2 establishes expression typing, symbol type information, definite-assignment analysis, controlled type-error recovery, and semantic-result integration. The internal error type suppresses derivative diagnostics without preventing independent checking.
+- **Trigger:** M2-P2 implementation.
+- **Method:** Implement the approved semantic contract in `LANGUAGE_SPEC.md` and `DESIGN_DECISIONS.md`. Add positive and negative fixtures for binding inference, expected-type propagation, initialization, assignment, uninitialized reads, incompatible expressions, conversion compatibility, and independent diagnostic recovery.
+- **Criterion:** Every supported executable expression and binding is statically checked before bytecode generation. Blocking errors prevent normal bytecode generation. The checker preserves independent diagnostics and does not mutate the AST.
+- **Evidence:** Approved M2-P2 design in D-053–D-061. Implementation and benchmark evidence pending.
+- **Next action:** Follow the M2-P2 work packages, beginning with numeric frontend prerequisites and then semantic foundations.
+- **Next review trigger:** Before the first production bytecode compiler consumes semantic results; revisit control-flow joins when M3 introduces branches and loops.
 
-### TB-013 — Numeric semantics and conversions
+### TB-013 — Numeric semantics, conversions and compiler/runtime consistency
 
-- **Status:** Review required.
-- **Baseline:** Checked signed 64-bit `Int`; IEEE 754 binary64 `Float`; floor division/remainder; exact-only implicit Int-to-Float promotion.
-- **Trigger:** Before arithmetic checker and VM implementation (M2).
-- **Method:** Test overflow, division by zero, negative operands, mixed types, representability, NaN/infinity policy and shortest round-trip formatting.
-- **Criterion:** Compiler/runtime agreement and reproducible edge-case behavior.
-- **Evidence:** Pending.
+- **Status:** Language design resolved (M2-P2); implementation and conformance validation pending.
+- **Baseline:** Signed `Int8`, `Int16`, `Int32`, and `Int`; IEEE 754 binary64 `Float`; exact context-directed integer literal typing; checked integer arithmetic; explicit conversions; restricted provably safe implicit conversions; floor-compatible integer division and remainder.
+- **Decision:** Follow D-053–D-057 and the normative numeric rules in `LANGUAGE_SPEC.md`. Do not reintroduce automatic mixed-width promotion or implicit mixed integer/Float arithmetic.
+- **Trigger:** M2-P2 numeric semantics and before production Monowire arithmetic execution.
+- **Method:** Build a table-driven conformance suite covering integer boundaries, minimum signed values, contextual literal typing, arithmetic overflow, negative floor division/remainder, zero division, minimum-integer division by `-1`, exponentiation, explicit conversions, NaN, infinities, signed zero, floating overflow, and mixed numeric comparisons when M3 implements comparisons.
+- **Criterion:** Compile-time evaluation and runtime execution agree on every supported operation. Integer operations never silently wrap or widen. Floating-point behavior matches the documented binary64 and Eloque-specific conventions.
+- **Evidence:** Approved language rules in D-053–D-057. Test and benchmark evidence pending.
+- **Next action:** Implement numeric frontend prerequisites, then checker and runtime semantics. Establish reusable expected-result cases before optimizing.
+- **Next review trigger:** Before enabling each numeric operation in the production VM; revisit unsigned and comparison behavior in M3.
+
+### TB-032 — Float literal lexical grammar and frontend conformance
+
+- **Status:** M2-P2 prerequisite; exact lexical grammar requires specification before implementation.
+- **Baseline:** The current frontend recognizes decimal integer literals. The language specification includes Float examples but the production lexer/parser do not yet implement Float literal support.
+- **Decision:** M2-P2 adds Float literal recognition and parsing without changing existing integer literal rules. Float literals must represent values using the language's IEEE 754 binary64 semantics.
+- **Trigger:** M2-P2.1.
+- **Method:** Specify accepted decimal Float forms, including the treatment of fractional digits, exponent notation, leading and trailing decimal points, malformed exponents, leading zeros, and invalid identifier suffixes. Add lexer and parser fixtures for valid forms, malformed forms, boundary values, and source spans.
+- **Criterion:** Float literal syntax is unambiguous, diagnostics are deterministic, and existing integer-literal conformance remains unchanged. Parsing must not silently convert malformed numeric tokens into identifiers or valid literals.
+- **Evidence:** Existing numeric literal rules in `LANGUAGE_SPEC.md`; implementation and conformance evidence pending.
+- **Next action:** Complete the Float lexical grammar as part of P2.1 before implementing lexer/parser changes.
+- **Next review trigger:** Before merging Float literal support.
+
+### TB-033 — Constant-evaluator resource budgets and scalability
+
+- **Status:** Design approved (M2-P2); concrete limits and implementation strategy pending.
+- **Baseline:** Bounded local constant propagation and evaluation. Arbitrary compile-time execution is excluded.
+- **Decision:** The evaluator uses deterministic per-compilation work, depth, and memory limits. Exhaustion makes an affected value unknown and preserves valid runtime computation. Provably invalid operations remain diagnostics.
+- **Trigger:** During P2.5, before enabling evaluation on unrestricted source inputs.
+- **Method:** Stress-test deep expression trees, long constant chains, large integer literals, repeated propagation, mutation invalidation, and expressions that cause expensive evaluation. Measure checker latency, allocation counts, peak memory, and budget-exhaustion behavior. Compare alternative representations and evaluation strategies using representative whole-program workloads.
+- **Criterion:** Evaluation terminates predictably within documented resource limits, does not compromise compiler correctness, and does not turn a valid program into a semantic error merely because an optimization budget is exhausted.
+- **Evidence:** Approved D-060. Concrete thresholds and benchmark results pending.
+- **Next action:** Establish benchmark workloads and deterministic accounting before choosing production thresholds.
+- **Next review trigger:** Before enabling the evaluator by default in the compiler.
 
 ### TB-014 — Collection value semantics and mutation
 
@@ -268,29 +298,29 @@ At each milestone, inspect items whose triggers have arrived. Record the decisio
 - **Baseline:** Eagerly buffered lexer tokens supplied to the parser.
 - **Trigger:** M1-P5-A lexer–parser integration experiments.
 - **Alternatives evaluated:** Complete token buffering, direct pull streaming,
-and bounded two-token lookahead.
+  and bounded two-token lookahead.
 - **Decision:** Use direct pull streaming for the canonical frontend.
-The parser requests tokens incrementally through a token-source
-abstraction. Buffered delivery remains available for compatibility
-tests and comparative benchmarks.
+  The parser requests tokens incrementally through a token-source
+  abstraction. Buffered delivery remains available for compatibility
+  tests and comparative benchmarks.
 - **Rationale:** The implemented grammar does not require two-token
-lookahead. Direct streaming avoids full token-buffer allocation and
-avoids maintaining an unnecessary lookahead window.
+  lookahead. Direct streaming avoids full token-buffer allocation and
+  avoids maintaining an unnecessary lookahead window.
 - **Evidence:** M1-P5-A token-delivery and complete-frontend
-experiments, followed by M1-P5-B production integration.
-In the 20-case integrated buffered-versus-streaming comparison,
-direct streaming was faster in 19 cases and allocated fewer
-bytes in all 20. H2 retained direct pull-based token streaming while replacing the production AST representation with an arena-backed flat AST.
-Production integration and diagnostic regression tests passed.
+  experiments, followed by M1-P5-B production integration.
+  In the 20-case integrated buffered-versus-streaming comparison,
+  direct streaming was faster in 19 cases and allocated fewer
+  bytes in all 20. H2 retained direct pull-based token streaming while replacing the production AST representation with an arena-backed flat AST.
+  Production integration and diagnostic regression tests passed.
 - **Criterion:** Preserve AST equivalence, lexical-error propagation,
-EOF behavior, and performance across representative workloads.
+  EOF behavior, and performance across representative workloads.
 - **Next action:** Retain buffered-versus-streaming regression
-benchmarks and repeat them when significant grammar changes
-are introduced. Reconsider bounded lookahead only if a concrete
-grammar requirement or measured performance regression justifies it.
+  benchmarks and repeat them when significant grammar changes
+  are introduced. Reconsider bounded lookahead only if a concrete
+  grammar requirement or measured performance regression justifies it.
 - **Next review trigger:** A future grammar feature demonstrably
-requires additional token lookahead, or profiling reveals a
-meaningful regression attributable to token delivery.
+  requires additional token lookahead, or profiling reveals a
+  meaningful regression attributable to token delivery.
 
 ### TB-024 — Arena-backed flat AST architecture
 
@@ -562,8 +592,8 @@ All deferred items must retain their rationale, reevaluation trigger, and accept
 - [x] **M1-P2:** Verify arithmetic expression precedence, associativity, source spans, syntax diagnostics, robustness, and initial performance scaling.
 - [x] **M1-P3:** Verify statement and complete-program source spans, structured syntax diagnostics, nested expression diagnostic propagation, and program-parsing performance.
 - [x] **Post-M1-P3:** Complete canonical lexer/parser
-  optimization, establish updated performance baselines,
-  and preserve reproducible benchmark evidence.
+      optimization, establish updated performance baselines,
+      and preserve reproducible benchmark evidence.
 - [x] **M1-P4:** Complete broader syntax diagnostics and positive/negative frontend conformance fixtures.
 - [x] **M1-P5:** Complete lexer–parser integration, end-to-end frontend validation, and performance regression review.
 - [x] **Pre-M2:** Implement structured diagnostics and recovery-capable parsing.
@@ -576,8 +606,12 @@ All deferred items must retain their rationale, reevaluation trigger, and accept
 - [x] **M2-P1:** Implement and validate TB-011 lexical binding for the supported grammar.
 - [x] **M2-P1:** Complete resolver correctness and performance validation.
 - [x] **M2-P1:** Complete the cross-language v2 parse-and-resolve benchmark comparison.
-- [ ] **M2:** Extend TB-019 diagnostics to mandatory static type checking.
-- [ ] **M2:** Implement TB-012 static type checking and definite-assignment analysis.
+- [ ] **M2-P2:** Implement TB-032 Float literal grammar and frontend support.
+- [ ] **M2-P2:** Implement TB-012 semantic foundations, mandatory static checking, and definite-assignment analysis.
+- [ ] **M2-P2:** Implement TB-013 numeric typing, arithmetic, conversions, and compiler/runtime conformance.
+- [ ] **M2-P2:** Implement TB-033 bounded constant evaluation and validate resource budgets.
+- [ ] **M2-P2:** Integrate semantic diagnostics with TB-019's shared compiler-wide diagnostic contract.
+- [ ] **M2-P2:** Verify that blocking semantic diagnostics prevent bytecode generation.
 - [ ] **M2:** Define the compilation-wide diagnostic budget policy during semantic-analysis integration.
 - [ ] **Before closures:** Review TB-011 capture mechanics.
 - [ ] **M2:** Validate TB-027 Go–Zig integration.

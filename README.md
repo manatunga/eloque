@@ -6,9 +6,9 @@
 
 **Eloque** is a proposed general-purpose programming language with structured, conversational-English-inspired syntax and precise, statically checked semantics. It is intended to be approachable for beginners while providing predictable diagnostics and tooling for AI-assisted development.
 
-> **Status:** Active development — M1 frontend foundations, post-M1 H2 optimization, structured diagnostic recovery, and M2-P1 lexical name resolution are implemented. The Go frontend supports pull-based token streaming, arena-backed flat AST construction, fail-fast and recovery-capable parsing, and lexical symbol binding.
+> **Status:** Active development — M1 frontend foundations, H2 optimization, structured diagnostic recovery, and M2-P1 lexical name resolution are implemented. The Go frontend provides pull-based token streaming, arena-backed flat AST construction, fail-fast and recovery-capable parsing, and lexical symbol binding.
 >
-> **Current milestone:** M2 — First Execution (in progress). Lexical name resolution is complete. The next implementation phase is mandatory static type checking, followed by Monowire bytecode compilation and sequential VM execution.
+> **Current milestone:** M2 — First Execution (in progress). M2-P1 is complete. M2-P2's mandatory static semantics and numeric design has been approved; implementation has not yet begun. Monowire bytecode compilation and sequential VM execution remain pending.
 >
 > **Execution availability:** The examples below are illustrative, not executable. Eloque cannot yet compile and run programs through Monowire.
 
@@ -65,8 +65,7 @@ Eloque combines a **Go-based compiler frontend** with **Monowire**, its selected
 
 The implemented frontend uses pull-based token streaming, Pratt expression parsing, and an arena-backed flat AST. Monowire is designed around explicit register operands and overlapping call-frame register windows.
 
-The frontend is operational, including structured diagnostic recovery and M2-P1 lexical name resolution. Mandatory static type checking, Monowire bytecode compilation, and runtime execution remain to be implemented during **M2 — First Execution**.
-
+The frontend is operational, including structured diagnostic recovery and M2-P1 lexical name resolution. M2-P2's semantic and numeric rules have been approved but are not yet implemented. Mandatory static type checking, Monowire bytecode compilation, and runtime execution remain part of M2 — First Execution.
 
 ```text
         Eloque source (.elq)
@@ -162,11 +161,13 @@ See [Monowire Benchmarks](benchmarks/monowire/README.md) for methodology and exp
 
 M2-P1 lexical name resolution and symbol binding have been implemented. The remaining work includes:
 
-1. Mandatory basic static type checking and definite-assignment analysis.
-2. Monowire bytecode format and register-window execution contracts.
-3. Monowire register-based bytecode compilation.
-4. Sequential Monowire VM execution.
-5. End-to-end correctness tests and initial runtime performance baselines.
+1. M2-P2 mandatory static semantics and numeric foundations, beginning with Float literals and built-in numeric conversion expressions.
+2. Definite-assignment analysis, expression typing, and assignment compatibility.
+3. Checked numeric operations, explicit conversions, and bounded local constant evaluation.
+4. Monowire bytecode format and register-window execution contracts.
+5. Monowire register-based bytecode compilation.
+6. Sequential Monowire VM execution.
+7. End-to-end correctness tests and initial runtime performance baselines.
 
 The initial executable subset targets supported literals, arithmetic, `let`, `change`, and `say`.
 
@@ -212,12 +213,12 @@ The official M1/H2 comparison measured five workload categories over ten benchma
 
 A separate controlled arithmetic benchmark at 10,000 units recorded:
 
-| Implementation | Median latency |
-|---|---:|
-| Eloque H2 | 7.16 ms |
-| Go compiler syntax parser | 14.12 ms |
-| Go `go/parser` | 23.92 ms |
-| CPython 3.14.4 | 147.86 ms |
+| Implementation            | Median latency |
+| ------------------------- | -------------: |
+| Eloque H2                 |        7.16 ms |
+| Go compiler syntax parser |       14.12 ms |
+| Go `go/parser`            |       23.92 ms |
+| CPython 3.14.4            |      147.86 ms |
 
 These results describe synthetic frontend workloads. Different language grammars, AST representations, and benchmark harnesses limit direct comparability.
 
@@ -242,12 +243,12 @@ The experiment covered arithmetic, conditional branching, repeated function call
 
 **Median subprocess wall-clock times (milliseconds):**
 
-| Implementation | Call loop | Arithmetic | Branch | Recursion |
-|---|---:|---:|---:|---:|
-| Zig (labeled switch) | 18.802 | 9.268 | 15.919 | 14.033 |
-| Zig (switch) | 19.794 | 9.280 | 15.985 | 14.413 |
-| Rust | 33.049 | 11.892 | 21.395 | 23.859 |
-| Go | 53.362 | 18.262 | 29.022 | 39.246 |
+| Implementation       | Call loop | Arithmetic | Branch | Recursion |
+| -------------------- | --------: | ---------: | -----: | --------: |
+| Zig (labeled switch) |    18.802 |      9.268 | 15.919 |    14.033 |
+| Zig (switch)         |    19.794 |      9.280 | 15.985 |    14.413 |
+| Rust                 |    33.049 |     11.892 | 21.395 |    23.859 |
+| Go                   |    53.362 |     18.262 | 29.022 |    39.246 |
 
 Zig recorded the lowest median time across all four workloads. The labeled-switch variant showed a smaller additional advantage over conventional switch dispatch.
 
