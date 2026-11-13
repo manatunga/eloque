@@ -225,15 +225,15 @@ At each milestone, inspect items whose triggers have arrived. Record the decisio
 
 ### TB-032 — Float literal lexical grammar and frontend conformance
 
-- **Status:** M2-P2 prerequisite; exact lexical grammar requires specification before implementation.
-- **Baseline:** The current frontend recognizes decimal integer literals. The language specification includes Float examples but the production lexer/parser do not yet implement Float literal support.
-- **Decision:** M2-P2 adds Float literal recognition and parsing without changing existing integer literal rules. Float literals must represent values using the language's IEEE 754 binary64 semantics.
+- **Status:** Grammar decided (D-063); implementation pending (M2-P2.1).
+- **Baseline:** The current frontend recognizes decimal integer literals. Float literal support is not yet implemented.
+- **Decision:** Recognize decimal Float literals using the grammar in D-063 and the normative examples in `LANGUAGE_SPEC.md`. Preserve existing integer literal rules and diagnostics.
 - **Trigger:** M2-P2.1.
-- **Method:** Specify accepted decimal Float forms, including the treatment of fractional digits, exponent notation, leading and trailing decimal points, malformed exponents, leading zeros, and invalid identifier suffixes. Add lexer and parser fixtures for valid forms, malformed forms, boundary values, and source spans.
-- **Criterion:** Float literal syntax is unambiguous, diagnostics are deterministic, and existing integer-literal conformance remains unchanged. Parsing must not silently convert malformed numeric tokens into identifiers or valid literals.
-- **Evidence:** Existing numeric literal rules in `LANGUAGE_SPEC.md`; implementation and conformance evidence pending.
-- **Next action:** Complete the Float lexical grammar as part of P2.1 before implementing lexer/parser changes.
-- **Next review trigger:** Before merging Float literal support.
+- **Method:** Add Float token recognition and parser support. Cover fractional forms, exponent forms, uppercase and lowercase exponent markers, optional exponent signs, leading-zero restrictions, malformed exponents, missing fractional digits, and invalid suffixes. Verify exact token spans and deterministic diagnostic recovery.
+- **Criterion:** Every accepted Float form produces one correctly spanned Float token and AST expression. Invalid numeric forms produce deterministic positioned diagnostics and cannot be misinterpreted as valid integer-plus-identifier sequences. Existing integer-literal conformance remains unchanged.
+- **Evidence:** Approved D-063 and the existing integer lexer/parser tests. Implementation and benchmark evidence pending.
+- **Next action:** Implement Float recognition and parsing during P2.1, alongside the dedicated numeric conversion expression.
+- **Next review trigger:** Before semantic analysis consumes Float literal nodes.
 
 ### TB-033 — Constant-evaluator resource budgets and scalability
 

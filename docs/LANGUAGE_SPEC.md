@@ -220,9 +220,55 @@ Comparisons are specified for M3, not part of the M2 executable subset. Their ac
 
 #### Numeric literal frontend requirements
 
-M2-P2 requires frontend support for Float literals. The exact lexical grammar for decimal Float literals must be specified alongside the lexer and parser conformance cases before implementation. Existing integer-literal rules, including leading-zero and invalid-suffix diagnostics, must remain intact.
+M2-P2 supports decimal Float literal syntax using the following grammar:
 
-Built-in numeric conversion expressions must also be parsed in M2-P2. Their syntax does not introduce general user-defined function-call support ahead of M4.
+```text
+FloatLiteral :=
+    DecimalDigits "." DecimalDigits Exponent?
+  | DecimalDigits Exponent
+
+Exponent :=
+    ("e" | "E") ("+" | "-")? DecimalDigits
+```
+
+`DecimalDigits` is a non-empty sequence of ASCII decimal digits.
+
+The integer portion must obey the existing leading-zero restriction: a multi-digit integer portion must not begin with `0`. Both sides of a decimal point must contain at least one digit. An exponent, when present, must contain at least one digit after its optional sign. Both lowercase `e` and uppercase `E` are accepted.
+
+Signs remain separate unary operators and are not part of Float literal tokens.
+
+Valid examples:
+
+```elq
+let a be 3.14
+let b be 0.5
+let c be 1e3
+let d be 1.25e-4
+let e be 6E+2
+let f be 0.0
+let g be 1E-10
+```
+
+Invalid examples:
+
+```elq
+let a be .5
+let b be 5.
+let c be 01.5
+let d be 1e
+let e be 1e+
+let f be 1e-
+```
+
+Float literal suffixes, digit separators, hexadecimal Float forms, and special NaN or infinity literal spellings are not supported.
+
+Malformed Float-looking sequences and unsupported suffixes must produce deterministic lexical diagnostics rather than being silently interpreted as unrelated valid tokens. Existing integer-literal recognition, leading-zero restrictions, invalid-suffix diagnostic precedence, source positioning, and recovery behavior must remain intact.
+
+The grammar above defines lexical recognition. Decimal-to-binary64 conversion details, including rounding and underflow/overflow behavior, remain a separate open design question tracked by TB-035.
+
+Built-in numeric conversion expressions are also parsed in M2-P2. They use the dedicated `convert expression to Type` syntax defined by D-062 and are not general user-defined function calls. General function-call support remains assigned to M4.
+
+````
 
 ## 4. Bindings, mutability, scope [Decided]
 
@@ -232,7 +278,7 @@ change age to 21
 let fixed max_attempts as Int be 3
 let frozen names as List[String] be ["Alice", "Bob"]
 let nickname as String? be none
-```
+````
 
 The M1 frontend parses `let` declarations and `change ... to ...` assignments. M2-P1 subsequently added lexical binding resolution for the supported grammar. Binding types, mutability restrictions, and definite-assignment requirements are not yet enforced by the static checker.
 
