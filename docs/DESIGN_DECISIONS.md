@@ -114,6 +114,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for the implementation structure, [ROADMA
 | D-061         | Decided; implementation pending (M2-P2)                                                                    | **M2-P2 implementation sequence.** P2.1 numeric frontend prerequisites; P2.2 semantic foundations; P2.3 definite assignment and compatibility; P2.4 numeric semantics; P2.5 constant evaluator; P2.6 compiler integration; P2.7 validation and performance. This sequence must preserve future extensibility and the approved language semantics rather than optimize only for the initial implementation.                                                                                                                                                                                                                                                                                              |
 | D-062         | Decided; implementation pending (M2-P2)                                                                    | **Explicit numeric conversion expression syntax.** Numeric conversions use `convert expression to Type`. The `convert` keyword is reserved and introduces a dedicated numeric conversion expression. The operand is a complete expression terminated by `to`; parentheses group complex or nested operands. The destination must be a supported numeric type. This syntax does not introduce general function calls, which retain the established `name with (arguments)` form. This decision supersedes the conversion syntax portion of D-056 and the corresponding examples in `LANGUAGE_SPEC.md`; all conversion semantics in D-056 remain unchanged.                                               |
 | D-063         | Decided; implementation pending (M2-P2)                                                                    | **Decimal Float literal grammar.** Float literals use either decimal digits followed by a decimal point and at least one fractional digit, optionally followed by an exponent, or decimal digits followed by an exponent. Exponents accept `e` or `E`, an optional sign, and at least one digit. The integer portion must obey the existing leading-zero restriction. Decimal points require digits on both sides; leading-dot and trailing-dot forms are invalid. Signs remain separate unary operators. Suffixes, digit separators, hexadecimal Float forms, and special NaN/infinity literal spellings are excluded. Existing integer literal recognition and diagnostic behavior must be preserved. |
+| D-064         | Decided; implementation pending (M2-P2)                                                                    | **Decimal Float literal conversion to binary64.** Decimal Float literals are converted directly to IEEE 754 binary64 using correct rounding, round-to-nearest, ties-to-even. Gradual underflow is preserved; values that round to zero are accepted, including subnormal-range values that underflow to signed zero after application of the separate unary sign. A literal whose correctly rounded result is infinity is rejected at compile time. Runtime arithmetic retains the separately specified IEEE infinity and NaN behavior.                                                                                                                                                                 |
 
 ## M2-P2 semantic and numeric decisions — November 2026
 
@@ -180,6 +181,26 @@ The accepted work packages are:
 7. **P2.7 — Validation and performance:** Conformance, stress, runtime parity, compile-time, allocation, and memory benchmarks.
 
 The work packages express dependencies and review boundaries. They do not justify implementing a shortcut that compromises future type extensibility, semantic clarity, or runtime compatibility.
+
+### D-064 — Decimal Float literal conversion to binary64
+
+Decimal Float literals are interpreted as exact decimal values and converted directly to IEEE 754 binary64 using round-to-nearest, ties-to-even. Conversion must not depend on intermediate floating-point precision.
+
+Normal and subnormal binary64 results are accepted. Gradual underflow is preserved. If a nonzero decimal literal is too small to produce a nonzero binary64 result and correctly rounds to zero, the literal remains valid.
+
+The sign is a separate unary operator. Consequently, a positive literal that rounds to positive zero can produce negative zero when negated.
+
+If correctly rounding a decimal literal would produce positive or negative infinity, the literal is rejected with a compile-time numeric-literal overflow diagnostic. This restriction applies to source literal conversion, not runtime arithmetic. Runtime floating-point operations retain the approved IEEE behavior, including signed infinity and NaN.
+
+Examples:
+
+- `0.1` is accepted and converted to its correctly rounded binary64 value.
+- `1e308` is accepted as a finite binary64 value.
+- `1e-400` is accepted and rounds to positive zero.
+- `-1e-400` is accepted and produces negative zero through unary negation.
+- `1e309` is rejected because its correctly rounded binary64 result is infinity.
+
+The conformance suite must cover rounding, ties-to-even, normal/subnormal boundaries, underflow to zero, signed zero, the largest finite binary64 boundary, and literal overflow.
 
 ## Superseded syntax and semantics
 

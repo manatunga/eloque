@@ -264,11 +264,18 @@ Float literal suffixes, digit separators, hexadecimal Float forms, and special N
 
 Malformed Float-looking sequences and unsupported suffixes must produce deterministic lexical diagnostics rather than being silently interpreted as unrelated valid tokens. Existing integer-literal recognition, leading-zero restrictions, invalid-suffix diagnostic precedence, source positioning, and recovery behavior must remain intact.
 
-The grammar above defines lexical recognition. Decimal-to-binary64 conversion details, including rounding and underflow/overflow behavior, remain a separate open design question tracked by TB-035.
+The grammar above defines lexical recognition. Decimal-to-binary64 conversion follows D-064: exact decimal values are correctly rounded to binary64 using round-to-nearest, ties-to-even. Normal and subnormal results are accepted, including underflow to zero. A literal that rounds to infinity is a compile-time error. These rules concern source literals; runtime arithmetic retains its separately specified IEEE behavior. See TB-035 for implementation and conformance requirements.
+
+Examples of decimal conversion behavior:
+
+```elq
+let a be 0.1
+let b be 1e308
+let c be 1e-400
+let d be -1e-400
+```
 
 Built-in numeric conversion expressions are also parsed in M2-P2. They use the dedicated `convert expression to Type` syntax defined by D-062 and are not general user-defined function calls. General function-call support remains assigned to M4.
-
-````
 
 ## 4. Bindings, mutability, scope [Decided]
 
@@ -278,7 +285,7 @@ change age to 21
 let fixed max_attempts as Int be 3
 let frozen names as List[String] be ["Alice", "Bob"]
 let nickname as String? be none
-````
+```
 
 The M1 frontend parses `let` declarations and `change ... to ...` assignments. M2-P1 subsequently added lexical binding resolution for the supported grammar. Binding types, mutability restrictions, and definite-assignment requirements are not yet enforced by the static checker.
 

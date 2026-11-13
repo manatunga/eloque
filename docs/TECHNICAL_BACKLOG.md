@@ -225,15 +225,15 @@ At each milestone, inspect items whose triggers have arrived. Record the decisio
 
 ### TB-032 — Float literal lexical grammar and frontend conformance
 
-- **Status:** Grammar decided (D-063); implementation pending (M2-P2.1).
-- **Baseline:** The current frontend recognizes decimal integer literals. Float literal support is not yet implemented.
-- **Decision:** Recognize decimal Float literals using the grammar in D-063 and the normative examples in `LANGUAGE_SPEC.md`. Preserve existing integer literal rules and diagnostics.
+- **Status:** Decimal Float grammar decided (D-063); implementation pending (M2-P2.1).
+- **Baseline:** The production frontend currently recognizes decimal integer literals. Float literal recognition and parsing are not yet implemented.
+- **Decision:** Implement the decimal Float grammar defined in D-063 and `LANGUAGE_SPEC.md`. Preserve existing integer-literal rules, including leading-zero restrictions and invalid-suffix diagnostic precedence. Float literal syntax does not include suffixes, digit separators, hexadecimal forms, or special NaN/infinity spellings.
 - **Trigger:** M2-P2.1.
-- **Method:** Add Float token recognition and parser support. Cover fractional forms, exponent forms, uppercase and lowercase exponent markers, optional exponent signs, leading-zero restrictions, malformed exponents, missing fractional digits, and invalid suffixes. Verify exact token spans and deterministic diagnostic recovery.
-- **Criterion:** Every accepted Float form produces one correctly spanned Float token and AST expression. Invalid numeric forms produce deterministic positioned diagnostics and cannot be misinterpreted as valid integer-plus-identifier sequences. Existing integer-literal conformance remains unchanged.
-- **Evidence:** Approved D-063 and the existing integer lexer/parser tests. Implementation and benchmark evidence pending.
-- **Next action:** Implement Float recognition and parsing during P2.1, alongside the dedicated numeric conversion expression.
-- **Next review trigger:** Before semantic analysis consumes Float literal nodes.
+- **Method:** Add Float token recognition and parser support. Cover fractional forms, exponent forms, uppercase and lowercase exponent markers, optional exponent signs, leading-zero restrictions, missing fractional digits, malformed exponents, unsupported suffixes, exact source spans, and recovery behavior. Validate that malformed Float-looking sequences cannot be misinterpreted as valid integer-plus-identifier sequences.
+- **Criterion:** Every valid Float form produces one correctly positioned Float token and corresponding AST expression. Invalid forms produce deterministic positioned diagnostics. Existing integer-literal conformance and diagnostic precedence remain unchanged.
+- **Evidence:** Approved D-063 and the normative grammar in `LANGUAGE_SPEC.md`. Implementation, conformance, and benchmark evidence pending.
+- **Next action:** Implement Float recognition and parsing alongside the dedicated numeric conversion expression in P2.1.
+- **Next review trigger:** Before semantic analysis consumes Float literal values.
 
 ### TB-033 — Constant-evaluator resource budgets and scalability
 
@@ -258,6 +258,18 @@ At each milestone, inspect items whose triggers have arrived. Record the decisio
 - **Evidence:** Approved D-062 and the existing Pratt parser and arena-backed AST architecture. Implementation and benchmark evidence pending.
 - **Next action:** Implement alongside Float literal frontend prerequisites in P2.1, after the Float lexical grammar is specified.
 - **Next review trigger:** Before semantic type checking consumes conversion-expression nodes.
+
+### TB-035 — Decimal Float literal conversion semantics
+
+- **Status:** Decided (D-064); implementation and conformance validation pending (M2-P2.1).
+- **Baseline:** D-063 establishes decimal Float lexical grammar. `Float` is IEEE 754 binary64.
+- **Decision:** Convert exact decimal literal values directly to binary64 using correct rounding, round-to-nearest, ties-to-even. Accept normal and subnormal results, including underflow to zero. Reject literals whose correctly rounded result is infinity. Runtime arithmetic retains its separately approved IEEE infinity and NaN behavior.
+- **Trigger:** M2-P2.1, when Float literal values are interpreted.
+- **Method:** Implement deterministic decimal-to-binary64 conversion. Test ordinary rounding, ties-to-even, normal/subnormal boundaries, underflow to positive zero, negative zero through unary negation, the largest finite binary64 boundary, and overflow. Ensure conversion does not depend on intermediate floating-point precision.
+- **Criterion:** Every valid decimal Float literal produces the correctly rounded binary64 value. Underflow and overflow follow D-064. Compile-time interpretation is deterministic and consistent across supported platforms.
+- **Evidence:** Approved D-064; IEEE 754 binary64 representation and the language's explicit decimal-literal conversion policy. Implementation, conformance, and performance evidence pending.
+- **Next action:** Implement and test decimal-to-binary64 conversion as part of P2.1 Float literal support.
+- **Next review trigger:** Before semantic analysis and constant evaluation consume Float literal values.
 
 ### TB-014 — Collection value semantics and mutation
 
@@ -619,6 +631,7 @@ All deferred items must retain their rationale, reevaluation trigger, and accept
 - [x] **M2-P1:** Complete resolver correctness and performance validation.
 - [x] **M2-P1:** Complete the cross-language v2 parse-and-resolve benchmark comparison.
 - [ ] **M2-P2:** Implement TB-032 Float literal grammar and frontend support.
+- [ ] **M2-P2:** Implement TB-035 decimal Float-to-binary64 conversion and its boundary conformance tests.
 - [ ] **M2-P2:** Implement TB-012 semantic foundations, mandatory static checking, and definite-assignment analysis.
 - [ ] **M2-P2:** Implement TB-013 numeric typing, arithmetic, conversions, and compiler/runtime conformance.
 - [ ] **M2-P2:** Implement TB-033 bounded constant evaluation and validate resource budgets.
