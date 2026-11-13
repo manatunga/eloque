@@ -1008,3 +1008,141 @@ func TestNewResolverPreallocatedRootScope(t *testing.T) {
 			id, ok)
 	}
 }
+
+func TestResolveConversionExpressionOperand(t *testing.T) {
+	sourceText := "let value be 10\nsay convert value to Int16\n"
+
+	program, err := parser.Parse(sourceText)
+	if err != nil {
+		t.Fatalf("Parse failed: %v", err)
+	}
+
+	result, diagnostics := Resolve(program)
+	if len(diagnostics) != 0 {
+		t.Fatalf("unexpected diagnostics: %+v", diagnostics)
+	}
+
+	statements := program.Arena.StatementRange(program.Statements)
+
+	valueSymbolID, ok := result.Declaration(statements[0])
+	if !ok {
+		t.Fatal("value declaration was not bound")
+	}
+
+	sayNode := program.Arena.Get(statements[1])
+	if sayNode.Kind != ast.NodeSayStatement {
+		t.Fatalf("statement kind = %v, want say", sayNode.Kind)
+	}
+
+	conversionID := ast.NodeID(sayNode.Data)
+	conversionNode := program.Arena.Get(conversionID)
+	if conversionNode.Kind != ast.NodeConversionExpression {
+		t.Fatalf("expression kind = %v, want conversion", conversionNode.Kind)
+	}
+
+	payload := program.Arena.ConversionPayload(conversionNode.Data)
+
+	if got := program.Arena.SourceText(payload.TargetType); got != "Int16" {
+		t.Fatalf("target type = %q, want Int16", got)
+	}
+
+	operand := program.Arena.Get(payload.Operand)
+	if operand.Kind != ast.NodeIdentifier {
+		t.Fatalf("operand kind = %v, want identifier", operand.Kind)
+	}
+
+	referenceID, ok := result.Reference(payload.Operand)
+	if !ok {
+		t.Fatal("conversion operand was not resolved")
+	}
+	if referenceID != valueSymbolID {
+		t.Fatalf("operand symbol = %d, want %d", referenceID, valueSymbolID)
+	}
+}
+
+func TestResolveUndefinedIdentifierInsideConversion(t *testing.T) {
+	sourceText := "say convert missing to Int16\n"
+
+	program, err := parser.Parse(sourceText)
+	if err != nil {
+		t.Fatalf("Parse failed: %v", err)
+	}
+
+	_, diagnostics := Resolve(program)
+
+	if len(diagnostics) != 1 {
+		t.Fatalf("diagnostic count = %d, want 1: %+v", len(diagnostics), diagnostics)
+	}
+
+	diag := diagnostics[0]
+
+	if diag.Code != CodeUndefinedName {
+		t.Errorf("code = %q, want %q", diag.Code, CodeUndefinedName)
+	}
+	if diag.Severity != diagnostic.SeverityError {
+		t.Errorf("severity = %v, want error", diag.Severity)
+	}
+	if diag.Message != "undefined variable: missing" {
+		t.Errorf("message = %q, want undefined variable diagnostic", diag.Message)
+	}
+	if got := program.Arena.SourceText(diag.Primary.Span); got != "missing" {
+		t.Errorf("highlighted text = %q, want missing", got)
+	}
+}
+
+func TestResolveNestedConversionsAndFloatOperand(t *testing.T) {
+	sourceText := "let value be 10\nsay convert (convert value to Int16 + 1.5) to Float\n"
+
+	program, err := parser.Parse(sourceText)
+	if err != nil {
+		t.Fatalf("Parse failed: %v", err)
+	}
+
+	result, diagnostics := Resolve(program)
+	if len(diagnostics) != 0 {
+		t.Fatalf("unexpected diagnostics: %+v", diagnostics)
+	}
+
+	statements := program.Arena.StatementRange(program.Statements)
+
+	valueSymbolID, ok := result.Declaration(statements[0])
+	if !ok {
+		t.Fatal("value declaration was not bound")
+	}
+
+	sayNode := program.Arena.Get(statements[1])
+	outerID := ast.NodeID(sayNode.Data)
+	outer := program.Arena.Get(outerID)
+
+	if outer.Kind != ast.NodeConversionExpression {
+		t.Fatalf("outer expression kind = %v, want conversion", outer.Kind)
+	}
+
+	outerPayload := program.Arena.ConversionPayload(outer.Data)
+	outerOperand := program.Arena.Get(outerPayload.Operand)
+
+	if outerOperand.Kind != ast.NodeBinaryExpression {
+		t.Fatalf("outer operand kind = %v, want binary expression", outerOperand.Kind)
+	}
+
+	binary := program.Arena.BinaryPayload(outerOperand.Data)
+	inner := program.Arena.Get(binary.Left)
+
+	if inner.Kind != ast.NodeConversionExpression {
+		t.Fatalf("left operand kind = %v, want nested conversion", inner.Kind)
+	}
+
+	innerPayload := program.Arena.ConversionPayload(inner.Data)
+	referenceID, ok := result.Reference(innerPayload.Operand)
+	if !ok {
+		t.Fatal("identifier inside nested conversion was not resolved")
+	}
+	if referenceID != valueSymbolID {
+		t.Fatalf("nested operand symbol = %d, want %d", referenceID, valueSymbolID)
+	}
+
+	floatOperand := program.Arena.Get(binary.Right)
+	if floatOperand.Kind != ast.NodeFloatLiteral {
+		t.Fatalf("right operand kind = %v, want Float literal", floatOperand.Kind)
+	}
+}

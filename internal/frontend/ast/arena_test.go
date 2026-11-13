@@ -1029,3 +1029,35 @@ func TestArenaRollbackRestoresConversionNodeAndPayload(t *testing.T) {
 			got, NodeIdentifier)
 	}
 }
+
+func TestArenaRollbackPreservesExistingConversionPayloads(t *testing.T) {
+	arena := NewArena("value Int16 other Float")
+
+	first := ConversionPayload{
+		Operand:    0,
+		TargetType: source.ByteSpan{Start: 6, End: 11},
+	}
+	second := ConversionPayload{
+		Operand:    1,
+		TargetType: source.ByteSpan{Start: 18, End: 23},
+	}
+
+	firstIndex := arena.AddConversionPayload(first)
+	checkpoint := arena.Checkpoint()
+
+	secondIndex := arena.AddConversionPayload(second)
+
+	if firstIndex == secondIndex {
+		t.Fatal("conversion payload indices unexpectedly match")
+	}
+
+	arena.Rollback(checkpoint)
+
+	if got := len(arena.conversions); got != 1 {
+		t.Fatalf("conversion payload count after rollback = %d, want 1", got)
+	}
+
+	if got := arena.ConversionPayload(firstIndex); got != first {
+		t.Errorf("preserved conversion payload = %+v, want %+v", got, first)
+	}
+}

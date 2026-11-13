@@ -239,7 +239,9 @@ func (r *resolver) resolveStatement(nodeID ast.NodeID) {
 func (r *resolver) resolveExpression(nodeID ast.NodeID) {
 	node := r.arena.Get(nodeID)
 	switch node.Kind {
-	case ast.NodeIntegerLiteral, ast.NodeStringLiteral:
+	case ast.NodeIntegerLiteral,
+		ast.NodeFloatLiteral,
+		ast.NodeStringLiteral:
 		return
 
 	case ast.NodeIdentifier:
@@ -270,6 +272,11 @@ func (r *resolver) resolveExpression(nodeID ast.NodeID) {
 		payload := r.arena.BinaryPayload(node.Data)
 		r.resolveExpression(payload.Left)
 		r.resolveExpression(payload.Right)
+		return
+
+	case ast.NodeConversionExpression:
+		payload := r.arena.ConversionPayload(node.Data)
+		r.resolveExpression(payload.Operand)
 		return
 	}
 }

@@ -47,13 +47,14 @@ func NewArena(sourceText string) *Arena {
 // Creating a checkpoint performs no allocations.
 func (a *Arena) Checkpoint() ArenaCheckpoint {
 	return ArenaCheckpoint{
-		nodes:      len(a.nodes),
-		strings:    len(a.strings),
-		binaries:   len(a.binaries),
-		unaries:    len(a.unaries),
-		bindings:   len(a.bindings),
-		statements: len(a.statements),
-		arena:      a,
+		nodes:       len(a.nodes),
+		strings:     len(a.strings),
+		binaries:    len(a.binaries),
+		unaries:     len(a.unaries),
+		conversions: len(a.conversions),
+		bindings:    len(a.bindings),
+		statements:  len(a.statements),
+		arena:       a,
 	}
 }
 
