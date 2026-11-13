@@ -247,6 +247,18 @@ At each milestone, inspect items whose triggers have arrived. Record the decisio
 - **Next action:** Establish benchmark workloads and deterministic accounting before choosing production thresholds.
 - **Next review trigger:** Before enabling the evaluator by default in the compiler.
 
+### TB-034 — Numeric conversion expression parsing and AST
+
+- **Status:** Syntax decided (D-062); implementation pending (M2-P2.1).
+- **Baseline:** The production frontend supports integer literals, identifiers, unary expressions, binary expressions, and grouping. General function-call parsing is deferred to M4.
+- **Decision:** Parse numeric conversions using `convert expression to Type`. Represent conversions as dedicated expression nodes in the arena-backed AST. Do not implement them as general function calls.
+- **Trigger:** M2-P2.1.
+- **Method:** Add the `convert` keyword and its token handling. Extend Pratt expression parsing to recognise conversion expressions, consume the `to` delimiter, and validate the destination type syntactically. Preserve source spans and arena checkpoint/rollback guarantees. Add positive, negative, nested, precedence, and recovery-mode tests.
+- **Criterion:** Valid numeric conversion expressions produce structurally correct AST nodes. Unsupported destination types, missing operands, missing `to`, and malformed expressions produce deterministic positioned diagnostics. Existing expressions and function-call design remain unaffected.
+- **Evidence:** Approved D-062 and the existing Pratt parser and arena-backed AST architecture. Implementation and benchmark evidence pending.
+- **Next action:** Implement alongside Float literal frontend prerequisites in P2.1, after the Float lexical grammar is specified.
+- **Next review trigger:** Before semantic type checking consumes conversion-expression nodes.
+
 ### TB-014 — Collection value semantics and mutation
 
 - **Status:** Review required.

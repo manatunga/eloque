@@ -346,7 +346,7 @@ At 10,000 workload units:
 
 | Frontend                   | Median latency |
 | -------------------------- | -------------: |
-| Eloque H2                  |        7.16 ms |
+| Eloque H2 (M1)             |        7.16 ms |
 | Go compiler syntax parser  |       14.12 ms |
 | Go `go/parser`             |       23.92 ms |
 | CPython 3.14.4 `ast.parse` |      147.86 ms |
@@ -421,6 +421,7 @@ Its responsibilities include:
 - Diagnosing statically provable numeric errors, including invalid literals, conversions, and constant-expression overflow.
 - Producing source-aware semantic diagnostics.
 - Preserving enough semantic information for Monowire bytecode generation.
+- Participating in the shared compiler-wide diagnostic collection and respecting its configured error budget.
 
 The checker must implement the approved numeric contract in `LANGUAGE_SPEC.md`, including exact integer literal typing, checked integer arithmetic, IEEE 754 binary64 behavior, and explicit conversion rules.
 

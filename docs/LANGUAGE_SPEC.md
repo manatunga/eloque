@@ -175,9 +175,9 @@ IEEE 754 does not fully prescribe a general-purpose `pow` function. Eloque's con
 Numeric conversion syntax uses the destination type:
 
 ```elq
-let narrow be Int16(small)
-let floating be Float(count)
-let widened be Int(value)
+let narrow be convert small to Int16
+let floating be convert count to Float
+let widened be convert value to Int
 ```
 
 Integer-to-integer widening is safe when the entire source type range fits the destination type. Narrowing requires a range check.
@@ -203,10 +203,12 @@ A provably invalid conversion is a compile-time error. Otherwise, the runtime ch
 
 Examples:
 
-- `Int8(127.9)` produces `127`.
-- `Int8(-128.9)` produces `-128`.
-- `Int8(128.0)` is invalid.
-- `Int8(-129.0)` is invalid.
+- `convert 127.9 to Int8` produces `127`.
+- `convert -128.9 to Int8` produces `-128`.
+- `convert 128.0 to Int8` is invalid.
+- `convert -129.0 to Int8` is invalid.
+
+The convert keyword introduces a built-in numeric conversion expression. The source expression is followed by to and a destination numeric type. The operand may contain ordinary arithmetic expressions. Parentheses explicitly group complex or nested conversions. The destination must be one of the supported numeric types. Numeric conversions are dedicated language expressions, not user-defined function calls. General function calls retain the name with (arguments) syntax
 
 #### Mixed numeric comparisons
 
