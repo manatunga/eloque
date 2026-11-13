@@ -16,6 +16,7 @@ const (
 	TokenSay
 	TokenIdent
 	TokenInt
+	TokenFloat
 	TokenString
 	TokenNewline
 	TokenEOF
@@ -35,6 +36,7 @@ const (
 	TokenTo
 	TokenWith
 	TokenGiving
+	TokenConvert
 )
 
 // String returns the human-readable name of a token kind.
@@ -53,6 +55,8 @@ func (kind TokenKind) String() string {
 		return "IDENT"
 	case TokenInt:
 		return "INT"
+	case TokenFloat:
+		return "FLOAT"
 	case TokenString:
 		return "STRING"
 	case TokenNewline:
@@ -91,6 +95,8 @@ func (kind TokenKind) String() string {
 		return "WITH"
 	case TokenGiving:
 		return "GIVING"
+	case TokenConvert:
+		return "CONVERT"
 	default:
 		return "UNKNOWN"
 	}
@@ -136,6 +142,8 @@ func lookupIdentifier(word string) TokenKind {
 		return TokenWith
 	case "giving":
 		return TokenGiving
+	case "convert":
+		return TokenConvert
 	default:
 		return TokenIdent
 	}

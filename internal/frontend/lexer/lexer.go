@@ -180,14 +180,104 @@ func isDigit(ch byte) bool {
 	return ch >= '0' && ch <= '9'
 }
 
-// scanInteger consumes consecutive decimal digits and returns their
-// original source text. The first digit must already be consumed.
-// Literal validation is performed separately by nextToken.
-func (l *Lexer) scanInteger() string {
+// scanNumber consumes the remainder of a numeric literal and returns a
+// Token and an optional diagnostic. The first decimal digit must already
+// be consumed. It validates the literal's lexical structure and reports
+// malformed numeric literals.
+func (l *Lexer) scanNumber() (Token, *diagnostic.Diagnostic) {
 	for isDigit(l.peek()) {
 		l.advance()
 	}
-	return l.source[l.start:l.current]
+
+	integerEnd := l.current
+	invalidFloatStructure := false
+
+	hasFraction := false
+	if l.peek() == '.' {
+		l.advance()
+		hasFraction = true
+
+		if !isDigit(l.peek()) {
+			invalidFloatStructure = true
+		}
+
+		for isDigit(l.peek()) {
+			l.advance()
+		}
+	}
+
+	hasExponent := false
+	if l.peek() == 'e' || l.peek() == 'E' {
+		hasExponent = true
+		l.advance()
+
+		if l.peek() == '+' || l.peek() == '-' {
+			l.advance()
+		}
+
+		if !isDigit(l.peek()) {
+			invalidFloatStructure = true
+		}
+
+		for isDigit(l.peek()) {
+			l.advance()
+		}
+	}
+
+	if !hasFraction && !hasExponent {
+		if isIdentifierStart(l.peek()) {
+			return Token{}, l.newDiagnostic(
+				CodeInvalidInteger,
+				"invalid integer literal",
+				source.ByteSpan{
+					Start: uint32(l.start),
+					End:   uint32(l.current),
+				},
+			)
+		}
+	}
+
+	integerPart := l.source[l.start:integerEnd]
+	if hasLeadingZero(integerPart) {
+		return Token{}, l.newDiagnostic(
+			CodeLeadingZero,
+			"decimal integer portion cannot contain leading zeros",
+			source.ByteSpan{
+				Start: uint32(l.start),
+				End:   uint32(l.current),
+			},
+		)
+	}
+
+	if invalidFloatStructure {
+		return Token{}, l.newDiagnostic(
+			CodeInvalidFloat,
+			"invalid floating-point literal",
+			source.ByteSpan{
+				Start: uint32(l.start),
+				End:   uint32(l.current),
+			},
+		)
+	}
+
+	if isIdentifierStart(l.peek()) {
+		if hasFraction || hasExponent {
+			return Token{}, l.newDiagnostic(
+				CodeInvalidFloat,
+				"floating-point literal cannot have trailing characters",
+				source.ByteSpan{
+					Start: uint32(l.start),
+					End:   uint32(l.current),
+				},
+			)
+		}
+	}
+
+	if hasFraction || hasExponent {
+		return l.makeToken(TokenFloat), nil
+	}
+
+	return l.makeToken(TokenInt), nil
 }
 
 // hasLeadingZero reports whether a decimal integer literal contains
@@ -498,28 +588,7 @@ func (l *Lexer) NextToken() (Token, *diagnostic.Diagnostic) {
 		return l.makeToken(kind), nil
 	}
 	if isDigit(char) {
-		lexeme := l.scanInteger()
-		if isIdentifierStart(l.peek()) {
-			return Token{}, l.newDiagnostic(
-				CodeInvalidInteger,
-				"invalid integer literal",
-				source.ByteSpan{
-					Start: uint32(l.start),
-					End:   uint32(l.current),
-				},
-			)
-		}
-		if hasLeadingZero(lexeme) {
-			return Token{}, l.newDiagnostic(
-				CodeLeadingZero,
-				"integer literal cannot have leading zeros",
-				source.ByteSpan{
-					Start: uint32(l.start),
-					End:   uint32(l.current),
-				},
-			)
-		}
-		return l.makeToken(TokenInt), nil
+		return l.scanNumber()
 	}
 
 	return Token{}, l.newDiagnostic(

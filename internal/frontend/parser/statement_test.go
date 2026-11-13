@@ -237,11 +237,13 @@ func TestFlatStatementDiagnostics(t *testing.T) {
 			wantActual:  lexer.TokenEOF,
 			wantExpected: []lexer.TokenKind{
 				lexer.TokenInt,
+				lexer.TokenFloat,
 				lexer.TokenString,
 				lexer.TokenIdent,
 				lexer.TokenLeftParen,
 				lexer.TokenPlus,
 				lexer.TokenMinus,
+				lexer.TokenConvert,
 			},
 		},
 		{
@@ -253,11 +255,13 @@ func TestFlatStatementDiagnostics(t *testing.T) {
 			wantActual:  lexer.TokenNewline,
 			wantExpected: []lexer.TokenKind{
 				lexer.TokenInt,
+				lexer.TokenFloat,
 				lexer.TokenString,
 				lexer.TokenIdent,
 				lexer.TokenLeftParen,
 				lexer.TokenPlus,
 				lexer.TokenMinus,
+				lexer.TokenConvert,
 			},
 		},
 		{

@@ -28,3 +28,13 @@ type BindingPayload struct {
 	Name  source.ByteSpan
 	Value NodeID
 }
+
+// ConversionPayload stores the operand and destination type of a
+// numeric conversion expression.
+//
+// Operand identifies the expression being converted. TargetType
+// identifies the destination type's spelling in the retained source.
+type ConversionPayload struct {
+	Operand    NodeID
+	TargetType source.ByteSpan
+}

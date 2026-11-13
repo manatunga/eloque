@@ -40,6 +40,7 @@ func TestFlatRepresentationSizes(t *testing.T) {
 		{"BinaryPayload", unsafe.Sizeof(BinaryPayload{}), 12},
 		{"UnaryPayload", unsafe.Sizeof(UnaryPayload{}), 8},
 		{"NodeID", unsafe.Sizeof(NodeID(0)), 4},
+		{"ConversionPayload", unsafe.Sizeof(ConversionPayload{}), 12},
 	}
 
 	for _, tc := range cases {

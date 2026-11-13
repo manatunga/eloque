@@ -738,3 +738,294 @@ func TestArenaRollbackRestoresAllBuffers(t *testing.T) {
 		t.Errorf("preserved statement count = %d, want 1", got)
 	}
 }
+
+func TestArenaAddFloat(t *testing.T) {
+	sourceText := "1.25e-4"
+	arena := NewArena(sourceText)
+	span := source.ByteSpan{Start: 0, End: uint32(len(sourceText))}
+
+	id := arena.AddFloat(span)
+	node := arena.Get(id)
+
+	if node.Kind != NodeFloatLiteral {
+		t.Fatalf("node kind = %v, want float literal", node.Kind)
+	}
+
+	if node.Span != span {
+		t.Errorf("node span = %+v, want %+v", node.Span, span)
+	}
+
+	if got := arena.SourceText(node.Span); got != sourceText {
+		t.Errorf("source text = %q, want %q", got, sourceText)
+	}
+
+	if node.Data != 0 {
+		t.Errorf("node data = %d, want 0", node.Data)
+	}
+
+	if !node.Kind.IsExpression() {
+		t.Error("Float literal is not classified as an expression")
+	}
+
+	if node.Kind.IsStatement() {
+		t.Error("Float literal is incorrectly classified as a statement")
+	}
+}
+
+func TestArenaAddConversion(t *testing.T) {
+	sourceText := "convert value to Int16"
+	arena := NewArena(sourceText)
+
+	operandSpan := source.ByteSpan{Start: 8, End: 13}
+	operand := arena.AddIdentifier(operandSpan)
+
+	targetType := source.ByteSpan{Start: 17, End: 22}
+	span := source.ByteSpan{Start: 0, End: 22}
+
+	id := arena.AddConversion(span, operand, targetType)
+
+	if id != 1 {
+		t.Fatalf("conversion node ID = %d, want 1", id)
+	}
+
+	node := arena.Get(id)
+
+	if node.Kind != NodeConversionExpression {
+		t.Fatalf(
+			"node kind = %v, want conversion expression",
+			node.Kind,
+		)
+	}
+
+	if node.Span != span {
+		t.Errorf("node span = %+v, want %+v", node.Span, span)
+	}
+
+	payload := arena.ConversionPayload(node.Data)
+
+	if payload.Operand != operand {
+		t.Errorf(
+			"conversion operand = %d, want %d",
+			payload.Operand,
+			operand,
+		)
+	}
+
+	if payload.TargetType != targetType {
+		t.Errorf(
+			"target type span = %+v, want %+v",
+			payload.TargetType,
+			targetType,
+		)
+	}
+
+	if got := arena.SourceText(payload.TargetType); got != "Int16" {
+		t.Errorf("target type text = %q, want %q", got, "Int16")
+	}
+}
+
+func TestArenaConversionPayloadRoundTrip(t *testing.T) {
+	arena := NewArena("value Int16")
+
+	payload := ConversionPayload{
+		Operand:    7,
+		TargetType: source.ByteSpan{Start: 6, End: 11},
+	}
+
+	index := arena.AddConversionPayload(payload)
+
+	if got := arena.ConversionPayload(index); got != payload {
+		t.Errorf("ConversionPayload(%d) = %+v, want %+v",
+			index, got, payload)
+	}
+}
+
+func TestArenaConversionPayloadInvalidIndex(t *testing.T) {
+	arena := NewArena("")
+
+	defer func() {
+		if recover() == nil {
+			t.Error("ConversionPayload did not panic for invalid index")
+		}
+	}()
+
+	arena.ConversionPayload(0)
+}
+
+func TestArenaAddConversionInvalidOperand(t *testing.T) {
+	arena := NewArena("say value")
+
+	statement := arena.Add(FlatNode{
+		Kind: NodeSayStatement,
+		Span: source.ByteSpan{Start: 0, End: 9},
+	})
+
+	beforeNodes := arena.Len()
+	beforePayloads := len(arena.conversions)
+
+	defer func() {
+		if recover() == nil {
+			t.Error("AddConversion did not panic for statement operand")
+		}
+
+		if arena.Len() != beforeNodes ||
+			len(arena.conversions) != beforePayloads {
+			t.Error("arena modified after rejected conversion")
+		}
+	}()
+
+	arena.AddConversion(
+		source.ByteSpan{Start: 0, End: 9},
+		statement,
+		source.ByteSpan{Start: 5, End: 9},
+	)
+}
+
+func TestArenaAddConversionInvalidOperandID(t *testing.T) {
+	arena := NewArena("convert value to Int16")
+
+	beforeNodes := arena.Len()
+	beforePayloads := len(arena.conversions)
+
+	defer func() {
+		if recover() == nil {
+			t.Error("AddConversion did not panic for invalid operand ID")
+		}
+
+		if arena.Len() != beforeNodes ||
+			len(arena.conversions) != beforePayloads {
+			t.Error("arena modified after rejected conversion")
+		}
+	}()
+
+	arena.AddConversion(
+		source.ByteSpan{Start: 0, End: 22},
+		InvalidNodeID,
+		source.ByteSpan{Start: 17, End: 22},
+	)
+}
+
+func TestArenaAddConversionInvalidTargetSpan(t *testing.T) {
+	arena := NewArena("convert value to Int16")
+
+	operand := arena.AddIdentifier(
+		source.ByteSpan{Start: 8, End: 13},
+	)
+
+	beforeNodes := arena.Len()
+	beforePayloads := len(arena.conversions)
+
+	defer func() {
+		if recover() == nil {
+			t.Error("AddConversion did not panic for invalid target span")
+		}
+
+		if arena.Len() != beforeNodes ||
+			len(arena.conversions) != beforePayloads {
+			t.Error("arena modified after rejected conversion")
+		}
+	}()
+
+	arena.AddConversion(
+		source.ByteSpan{Start: 0, End: 22},
+		operand,
+		source.ByteSpan{Start: 17, End: 30},
+	)
+}
+
+func TestArenaRollbackRestoresConversionBuffer(t *testing.T) {
+	arena := NewArena("value Int16")
+
+	checkpoint := arena.Checkpoint()
+
+	arena.AddConversionPayload(ConversionPayload{
+		Operand:    0,
+		TargetType: source.ByteSpan{Start: 6, End: 11},
+	})
+
+	arena.Rollback(checkpoint)
+
+	if got := len(arena.conversions); got != 0 {
+		t.Errorf("conversion payload count = %d, want 0", got)
+	}
+
+	defer func() {
+		if recover() == nil {
+			t.Error("ConversionPayload did not panic after rollback")
+		}
+	}()
+
+	arena.ConversionPayload(0)
+}
+
+func TestArenaAddConversionInvalidExpressionSpan(t *testing.T) {
+	tests := []struct {
+		name string
+		span source.ByteSpan
+	}{
+		{
+			name: "out of bounds",
+			span: source.ByteSpan{Start: 0, End: 30},
+		},
+		{
+			name: "reversed",
+			span: source.ByteSpan{Start: 22, End: 0},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			arena := NewArena("convert value to Int16")
+			operand := arena.AddIdentifier(
+				source.ByteSpan{Start: 8, End: 13},
+			)
+
+			beforeNodes := arena.Len()
+			beforePayloads := len(arena.conversions)
+
+			defer func() {
+				if recover() == nil {
+					t.Error("AddConversion did not panic for invalid expression span")
+				}
+				if arena.Len() != beforeNodes ||
+					len(arena.conversions) != beforePayloads {
+					t.Error("arena modified after rejected conversion")
+				}
+			}()
+
+			arena.AddConversion(
+				tt.span,
+				operand,
+				source.ByteSpan{Start: 17, End: 22},
+			)
+		})
+	}
+}
+
+func TestArenaRollbackRestoresConversionNodeAndPayload(t *testing.T) {
+	arena := NewArena("value convert value to Int16")
+
+	operand := arena.AddIdentifier(
+		source.ByteSpan{Start: 0, End: 5},
+	)
+	checkpoint := arena.Checkpoint()
+
+	arena.AddConversion(
+		source.ByteSpan{Start: 6, End: 28},
+		operand,
+		source.ByteSpan{Start: 23, End: 28},
+	)
+
+	arena.Rollback(checkpoint)
+
+	if got := arena.Len(); got != 1 {
+		t.Errorf("node count after rollback = %d, want 1", got)
+	}
+	if got := len(arena.conversions); got != 0 {
+		t.Errorf("conversion payload count after rollback = %d, want 0", got)
+	}
+	if got := arena.Get(operand).Kind; got != NodeIdentifier {
+		t.Errorf("preserved operand kind = %d, want %d",
+			got, NodeIdentifier)
+	}
+}

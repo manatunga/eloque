@@ -472,36 +472,51 @@ func TestIsDigit(t *testing.T) {
 	}
 }
 
-func TestScanInteger(t *testing.T) {
-	testCases := []struct {
-		input           string
-		expectedLexeme  string
-		expectedCurrent int
+func TestScanNumber(t *testing.T) {
+	tests := []struct {
+		input       string
+		wantKind    TokenKind
+		wantLexeme  string
+		wantCurrent int
+		wantNext    byte
 	}{
-		{"123", "123", 3},
-		{"0", "0", 1},
-		{"007", "007", 3},
-		{"42 age", "42", 2},
-		{"123abc", "123", 3},
-		{"99\n", "99", 2},
+		{"123", TokenInt, "123", 3, 0},
+		{"0", TokenInt, "0", 1, 0},
+		{"42 age", TokenInt, "42", 2, ' '},
+		{"99\n", TokenInt, "99", 2, '\n'},
+		{"3.14", TokenFloat, "3.14", 4, 0},
+		{"0.5", TokenFloat, "0.5", 3, 0},
+		{"1e3", TokenFloat, "1e3", 3, 0},
+		{"1.25e-4", TokenFloat, "1.25e-4", 7, 0},
+		{"6E+2", TokenFloat, "6E+2", 4, 0},
+		{"0.0", TokenFloat, "0.0", 3, 0},
+		{"1E-10", TokenFloat, "1E-10", 5, 0},
 	}
-	for _, tC := range testCases {
-		t.Run(tC.input, func(t *testing.T) {
-			lexer := New(tC.input, 0)
-			lexer.advance()
-			result := lexer.scanInteger()
-			if lexer.start != 0 {
-				t.Errorf("expected start to remain 0, got %d", lexer.start)
-			}
-			if result != tC.expectedLexeme {
-				t.Errorf("input %q: expected lexeme %q, got %q", tC.input, tC.expectedLexeme, result)
-			}
-			if lexer.current != tC.expectedCurrent {
-				t.Errorf("input %q: expected current %d, got %d", tC.input, tC.expectedCurrent, lexer.current)
-			}
 
-			if tC.input == "99\n" && lexer.peek() != '\n' {
-				t.Errorf("input %q: expected next character %q, got %q", tC.input, '\n', lexer.peek())
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			l := New(tt.input, 0)
+			l.advance()
+
+			token, diag := l.scanNumber()
+
+			if diag != nil {
+				t.Fatalf("unexpected diagnostic: %+v", diag)
+			}
+			if token.Kind != tt.wantKind {
+				t.Errorf("kind = %v, want %v", token.Kind, tt.wantKind)
+			}
+			if got := testTokenLexeme(l.source, token); got != tt.wantLexeme {
+				t.Errorf("lexeme = %q, want %q", got, tt.wantLexeme)
+			}
+			if l.current != tt.wantCurrent {
+				t.Errorf("current = %d, want %d", l.current, tt.wantCurrent)
+			}
+			if got := l.peek(); got != tt.wantNext {
+				t.Errorf("next byte = %q, want %q", got, tt.wantNext)
+			}
+			if l.start != 0 {
+				t.Errorf("start = %d, want 0", l.start)
 			}
 		})
 	}
@@ -604,7 +619,7 @@ func TestNextTokenLeadingZero(t *testing.T) {
 		t,
 		diag,
 		CodeLeadingZero,
-		"integer literal cannot have leading zeros",
+		"decimal integer portion cannot contain leading zeros",
 		source.ByteSpan{Start: 11, End: 14},
 	)
 
@@ -687,6 +702,113 @@ func TestNextTokenValidIntegers(t *testing.T) {
 			}
 			if testTokenSpan(lexer.source, token).Start.Column != 1 {
 				t.Errorf("expected start column %d, got %d", 1, testTokenSpan(lexer.source, token).Start.Column)
+			}
+		})
+	}
+}
+
+func TestNextTokenValidFloats(t *testing.T) {
+	tests := []struct {
+		input      string
+		wantLexeme string
+		wantNext   byte
+	}{
+		{"3.14", "3.14", 0},
+		{"0.5 ", "0.5", ' '},
+		{"1e3\n", "1e3", '\n'},
+		{"1.25e-4:", "1.25e-4", ':'},
+		{"6E+2", "6E+2", 0},
+		{"0.0", "0.0", 0},
+		{"1E-10", "1E-10", 0},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			l := New(tt.input, 0)
+
+			token, diag := l.NextToken()
+
+			if diag != nil {
+				t.Fatalf("unexpected diagnostic: %+v", diag)
+			}
+			if token.Kind != TokenFloat {
+				t.Fatalf("kind = %v, want TokenFloat", token.Kind)
+			}
+			if got := testTokenLexeme(l.source, token); got != tt.wantLexeme {
+				t.Errorf("lexeme = %q, want %q", got, tt.wantLexeme)
+			}
+			if got := l.peek(); got != tt.wantNext {
+				t.Errorf("next byte = %q, want %q", got, tt.wantNext)
+			}
+		})
+	}
+}
+
+func TestNextTokenInvalidFloat(t *testing.T) {
+	tests := []struct {
+		input string
+		code  diagnostic.Code
+		span  source.ByteSpan
+	}{
+		{"5.", CodeInvalidFloat, source.ByteSpan{Start: 0, End: 2}},
+		{"1e", CodeInvalidFloat, source.ByteSpan{Start: 0, End: 2}},
+		{"1e+", CodeInvalidFloat, source.ByteSpan{Start: 0, End: 3}},
+		{"1e-", CodeInvalidFloat, source.ByteSpan{Start: 0, End: 3}},
+		{"1.5abc", CodeInvalidFloat, source.ByteSpan{Start: 0, End: 3}},
+		{"1e3abc", CodeInvalidFloat, source.ByteSpan{Start: 0, End: 3}},
+		{".5", CodeUnexpectedCharacter, source.ByteSpan{Start: 0, End: 1}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			l := New(tt.input, 0)
+
+			token, diag := l.NextToken()
+
+			if token != (Token{}) {
+				t.Errorf("token = %+v, want zero-value token", token)
+			}
+			if diag == nil {
+				t.Fatal("expected diagnostic")
+			}
+			if diag.Code != tt.code {
+				t.Errorf("code = %s, want %s", diag.Code, tt.code)
+			}
+			if diag.Primary.Span != tt.span {
+				t.Errorf("span = %+v, want %+v",
+					diag.Primary.Span, tt.span)
+			}
+		})
+	}
+}
+
+func TestNextTokenNumericValidationPrecedence(t *testing.T) {
+	tests := []struct {
+		input string
+		code  diagnostic.Code
+		span  source.ByteSpan
+	}{
+		{"01", CodeLeadingZero, source.ByteSpan{Start: 0, End: 2}},
+		{"01abc", CodeInvalidInteger, source.ByteSpan{Start: 0, End: 2}},
+		{"01.5", CodeLeadingZero, source.ByteSpan{Start: 0, End: 4}},
+		{"01.", CodeLeadingZero, source.ByteSpan{Start: 0, End: 3}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			l := New(tt.input, 0)
+
+			_, diag := l.NextToken()
+
+			if diag == nil {
+				t.Fatal("expected diagnostic")
+			}
+			if diag.Code != tt.code {
+				t.Errorf("code = %s, want %s", diag.Code, tt.code)
+			}
+			if diag.Primary.Span != tt.span {
+				t.Errorf("span = %+v, want %+v",
+					diag.Primary.Span, tt.span)
 			}
 		})
 	}
@@ -2841,6 +2963,9 @@ func TestLookupIdentifierConversationalKeywords(t *testing.T) {
 		{"together", TokenIdent},
 		{"without", TokenIdent},
 		{"give", TokenIdent},
+		{"convert", TokenConvert},
+		{"convertible", TokenIdent},
+		{"Convert", TokenIdent},
 	}
 
 	for _, tt := range tests {
@@ -2901,4 +3026,46 @@ func byteSpanAtPosition(text string, pos Position) source.ByteSpan {
 		}
 	}
 	panic("test fixture position outside source")
+}
+
+func TestNextTokenConvertSequence(t *testing.T) {
+	input := "convert value to Int16 convertible"
+
+	tests := []struct {
+		kind   TokenKind
+		lexeme string
+		start  uint32
+		end    uint32
+	}{
+		{TokenConvert, "convert", 0, 7},
+		{TokenIdent, "value", 8, 13},
+		{TokenTo, "to", 14, 16},
+		{TokenIdent, "Int16", 17, 22},
+		{TokenIdent, "convertible", 23, 34},
+		{TokenEOF, "", 34, 34},
+	}
+
+	l := New(input, 0)
+
+	for i, tt := range tests {
+		token, diag := l.NextToken()
+		if diag != nil {
+			t.Fatalf("token %d: unexpected diagnostic: %+v", i, diag)
+		}
+
+		if token.Kind != tt.kind {
+			t.Errorf("token %d kind = %s, want %s",
+				i, token.Kind, tt.kind)
+		}
+
+		if token.Start != tt.start || token.End != tt.end {
+			t.Errorf("token %d span = [%d, %d), want [%d, %d)",
+				i, token.Start, token.End, tt.start, tt.end)
+		}
+
+		if got := input[token.Start:token.End]; got != tt.lexeme {
+			t.Errorf("token %d lexeme = %q, want %q",
+				i, got, tt.lexeme)
+		}
+	}
 }

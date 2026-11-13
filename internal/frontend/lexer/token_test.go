@@ -45,3 +45,32 @@ func TestLookupIdentifier(t *testing.T) {
 		})
 	}
 }
+
+func TestLookupIdentifierConvert(t *testing.T) {
+	tests := []struct {
+		input string
+		want  TokenKind
+	}{
+		{"convert", TokenConvert},
+		{"convertible", TokenIdent},
+		{"convert2", TokenIdent},
+		{"my_convert", TokenIdent},
+		{"Convert", TokenIdent},
+		{"CONVERT", TokenIdent},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			if got := lookupIdentifier(tt.input); got != tt.want {
+				t.Errorf("lookupIdentifier(%q) = %s, want %s",
+					tt.input, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestTokenConvertString(t *testing.T) {
+	if got := TokenConvert.String(); got != "CONVERT" {
+		t.Errorf("TokenConvert.String() = %q, want %q", got, "CONVERT")
+	}
+}

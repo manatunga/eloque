@@ -31,11 +31,13 @@ func (p *Parser) unexpectedExpression(
 		TokenExpectation: &diagnostic.TokenExpectation{
 			Expected: []string{
 				lexer.TokenInt.String(),
+				lexer.TokenFloat.String(),
 				lexer.TokenString.String(),
 				lexer.TokenIdent.String(),
 				lexer.TokenLeftParen.String(),
 				lexer.TokenPlus.String(),
 				lexer.TokenMinus.String(),
+				lexer.TokenConvert.String(),
 			},
 			Actual: token.Kind.String(),
 		},

@@ -10,12 +10,13 @@ import (
 type Arena struct {
 	sourceText string
 
-	nodes      []FlatNode
-	strings    []string
-	binaries   []BinaryPayload
-	unaries    []UnaryPayload
-	bindings   []BindingPayload
-	statements []NodeID
+	nodes       []FlatNode
+	strings     []string
+	binaries    []BinaryPayload
+	unaries     []UnaryPayload
+	conversions []ConversionPayload
+	bindings    []BindingPayload
+	statements  []NodeID
 }
 
 // ArenaCheckpoint records the arena's allocation boundaries.
@@ -23,13 +24,14 @@ type Arena struct {
 // Restoring a checkpoint discards nodes and payloads appended after
 // it. Existing node IDs and statement references remain valid.
 type ArenaCheckpoint struct {
-	nodes      int
-	strings    int
-	binaries   int
-	unaries    int
-	bindings   int
-	statements int
-	arena      *Arena
+	nodes       int
+	strings     int
+	binaries    int
+	unaries     int
+	conversions int
+	bindings    int
+	statements  int
+	arena       *Arena
 }
 
 // NewArena creates an AST arena backed by the given source text.
@@ -66,6 +68,7 @@ func (a *Arena) Rollback(cp ArenaCheckpoint) {
 		cp.strings > len(a.strings) ||
 		cp.binaries > len(a.binaries) ||
 		cp.unaries > len(a.unaries) ||
+		cp.conversions > len(a.conversions) ||
 		cp.bindings > len(a.bindings) ||
 		cp.statements > len(a.statements) {
 		panic("ast: invalid arena checkpoint")
@@ -75,6 +78,7 @@ func (a *Arena) Rollback(cp ArenaCheckpoint) {
 	a.strings = a.strings[:cp.strings]
 	a.binaries = a.binaries[:cp.binaries]
 	a.unaries = a.unaries[:cp.unaries]
+	a.conversions = a.conversions[:cp.conversions]
 	a.bindings = a.bindings[:cp.bindings]
 	a.statements = a.statements[:cp.statements]
 }
@@ -160,6 +164,19 @@ func (a *Arena) AddInteger(span source.ByteSpan) NodeID {
 	return a.Add(FlatNode{
 		Span: span,
 		Kind: NodeIntegerLiteral,
+	})
+}
+
+// AddFloat appends a floating-point literal node to the arena.
+//
+// The node retains the literal's original source span. Numeric
+// conversion is deferred to semantic analysis.
+func (a *Arena) AddFloat(span source.ByteSpan) NodeID {
+	a.SourceText(span) // Validate the source range.
+
+	return a.Add(FlatNode{
+		Span: span,
+		Kind: NodeFloatLiteral,
 	})
 }
 
@@ -275,6 +292,35 @@ func (a *Arena) UnaryPayload(index uint32) UnaryPayload {
 	return a.unaries[index]
 }
 
+// AddConversionPayload appends a numeric conversion payload to the arena's
+// conversion payload buffer and returns its zero-based index.
+//
+// This is a low-level storage operation. It does not validate whether
+// Operand references an existing expression node, whether TargetType
+// identifies a valid source range, or whether the payload is associated
+// with a corresponding AST node.
+//
+// Callers constructing conversion expression nodes should use AddConversion,
+// which validates the operand and source spans before storing the payload.
+//
+// It panics if the next payload index cannot be represented by uint32.
+func (a *Arena) AddConversionPayload(payload ConversionPayload) uint32 {
+	checkPayloadCapacity(len(a.conversions))
+	index := uint32(len(a.conversions))
+	a.conversions = append(a.conversions, payload)
+	return index
+}
+
+// ConversionPayload returns the numeric conversion payload at index.
+//
+// It panics if index is outside the conversion payload buffer.
+func (a *Arena) ConversionPayload(index uint32) ConversionPayload {
+	if uint64(index) >= uint64(len(a.conversions)) {
+		panic("ast: invalid conversion payload index")
+	}
+	return a.conversions[index]
+}
+
 // AddBinary creates a binary expression node and its payload.
 // Left and right must identify existing nodes in the arena.
 func (a *Arena) AddBinary(
@@ -326,6 +372,43 @@ func (a *Arena) AddUnary(
 	return a.Add(FlatNode{
 		Span: span,
 		Kind: NodeUnaryExpression,
+		Data: index,
+	})
+}
+
+// AddConversion creates a numeric conversion expression node and its payload.
+//
+// Operand must identify an existing expression node. TargetType must be a
+// valid source span identifying the destination type's spelling. The complete
+// expression span must cover the conversion keyword, operand, and destination
+// type.
+//
+// It panics if any source span is invalid, Operand does not identify an
+// existing expression node, or the arena exhausts its available node or
+// payload indices.
+func (a *Arena) AddConversion(
+	span source.ByteSpan,
+	operand NodeID,
+	targetType source.ByteSpan,
+) NodeID {
+	a.SourceText(span)
+	a.SourceText(targetType)
+	a.requireExpression(operand)
+	if uint64(len(a.nodes)) >= uint64(InvalidNodeID) {
+		panic("ast: node arena exhausted")
+	}
+
+	a.requireExpression(operand)
+	checkPayloadCapacity(len(a.conversions))
+
+	index := a.AddConversionPayload(ConversionPayload{
+		Operand:    operand,
+		TargetType: targetType,
+	})
+
+	return a.Add(FlatNode{
+		Span: span,
+		Kind: NodeConversionExpression,
 		Data: index,
 	})
 }

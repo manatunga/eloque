@@ -139,8 +139,12 @@ func (p *FlatParser) parseFlatExpression(
 	return left, nil
 }
 
-// parseFlatPrimary parses integer, string, and identifier expressions,
-// as well as parenthesized expressions.
+// parseFlatPrimary parses integer, floating-point, string, identifier,
+// and numeric conversion expressions, as well as parenthesized expressions.
+//
+// Conversion expressions parse their operand up to the reserved "to"
+// keyword and preserve the destination type's source span for semantic
+// analysis.
 //
 // Parenthesized expressions reuse the inner expression's AST node
 // while extending its syntactic extent to include the parentheses.
@@ -160,6 +164,14 @@ func (p *FlatParser) parseFlatPrimary() (flatExpressionResult, *diagnostic.Diagn
 
 		return flatExpressionResult{
 			id:     p.arena.AddInteger(span),
+			extent: span,
+		}, nil
+
+	case lexer.TokenFloat:
+		p.advance()
+
+		return flatExpressionResult{
+			id:     p.arena.AddFloat(span),
 			extent: span,
 		}, nil
 
@@ -203,6 +215,50 @@ func (p *FlatParser) parseFlatPrimary() (flatExpressionResult, *diagnostic.Diagn
 				Start: opening.Start,
 				End:   closing.End,
 			},
+		}, nil
+
+	case lexer.TokenConvert:
+		conversion := p.advance()
+
+		operand, diagnostic := p.parseFlatExpression(0)
+		if diagnostic != nil {
+			return flatExpressionResult{}, diagnostic
+		}
+
+		_, diagnostic = p.expect(
+			lexer.TokenTo,
+			"expected 'to' after conversion operand",
+		)
+		if diagnostic != nil {
+			return flatExpressionResult{}, diagnostic
+		}
+
+		target, diagnostic := p.expect(
+			lexer.TokenIdent,
+			"expected a numeric type after 'to' in conversion expression",
+		)
+		if diagnostic != nil {
+			return flatExpressionResult{}, diagnostic
+		}
+
+		targetType := source.ByteSpan{
+			Start: target.Start,
+			End:   target.End,
+		}
+		span := source.ByteSpan{
+			Start: conversion.Start,
+			End:   target.End,
+		}
+
+		id := p.arena.AddConversion(
+			span,
+			operand.id,
+			targetType,
+		)
+
+		return flatExpressionResult{
+			id:     id,
+			extent: span,
 		}, nil
 
 	default:

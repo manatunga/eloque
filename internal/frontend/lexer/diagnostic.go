@@ -43,4 +43,8 @@ const (
 	// CodeUnclosedOpeningParen identifies an opening parenthesis that
 	// remains unmatched when the lexer reaches end of source.
 	CodeUnclosedOpeningParen diagnostic.Code = "LEX_UNCLOSED_OPENING_PAREN"
+
+	// CodeInvalidFloat identifies a malformed decimal floating-point literal,
+	// including invalid characters immediately following its digits.
+	CodeInvalidFloat diagnostic.Code = "LEX_INVALID_FLOAT"
 )

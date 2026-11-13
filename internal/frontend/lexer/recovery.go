@@ -48,6 +48,20 @@ func (l *Lexer) recoverInvalidInteger() {
 	}
 }
 
+// recoverInvalidFloat consumes the remaining identifier characters
+// belonging to a malformed floating-point literal.
+//
+// NextToken has already consumed the numeric prefix. This method
+// discards the trailing identifier suffix so subsequent scanning
+// cannot misinterpret it as a separate token.
+//
+// The lexer remains positioned immediately after the malformed literal.
+func (l *Lexer) recoverInvalidFloat() {
+	for isIdentifierContinue(l.peek()) {
+		l.advance()
+	}
+}
+
 // recoverInvalidString consumes the unread remainder of a malformed
 // string literal after an invalid escape.
 //
@@ -166,6 +180,7 @@ func (l *Lexer) NextRecoverable() RecoveryResult {
 			Diagnostic: diag,
 			Status:     RecoveryResynchronized,
 		}
+
 	case CodeInvalidInteger:
 		l.recoverInvalidInteger()
 		diag.Primary.Span.End = uint32(l.current)
@@ -173,6 +188,15 @@ func (l *Lexer) NextRecoverable() RecoveryResult {
 			Diagnostic: diag,
 			Status:     RecoveryResynchronized,
 		}
+
+	case CodeInvalidFloat:
+		l.recoverInvalidFloat()
+		diag.Primary.Span.End = uint32(l.current)
+		return RecoveryResult{
+			Diagnostic: diag,
+			Status:     RecoveryResynchronized,
+		}
+
 	case CodeInvalidEscape:
 		quote := l.source[l.start]
 		l.recoverInvalidString(quote)
@@ -181,6 +205,7 @@ func (l *Lexer) NextRecoverable() RecoveryResult {
 			Diagnostic: diag,
 			Status:     RecoveryResynchronized,
 		}
+
 	case CodeUnterminatedString:
 		if !l.isAtEnd() && l.peek() == '\n' {
 			return RecoveryResult{
@@ -195,6 +220,7 @@ func (l *Lexer) NextRecoverable() RecoveryResult {
 			Diagnostic: diag,
 			Status:     RecoveryTerminal,
 		}
+
 	case CodeInvalidIndentation, CodeInvalidDedent:
 		l.RecoverToLineBoundary(false)
 
@@ -202,6 +228,7 @@ func (l *Lexer) NextRecoverable() RecoveryResult {
 			Diagnostic: diag,
 			Status:     RecoveryResynchronized,
 		}
+
 	default:
 		l.recoveryTerminated = true
 		return RecoveryResult{

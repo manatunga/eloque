@@ -15,6 +15,7 @@ type NodeKind uint8
 
 const (
 	NodeIntegerLiteral NodeKind = iota
+	NodeFloatLiteral
 	NodeStringLiteral
 	NodeIdentifier
 	NodeUnaryExpression
@@ -22,6 +23,7 @@ const (
 	NodeLetStatement
 	NodeChangeStatement
 	NodeSayStatement
+	NodeConversionExpression
 )
 
 // FlatNode is the compact header of an AST node.
@@ -42,10 +44,12 @@ type FlatNode struct {
 func (kind NodeKind) IsExpression() bool {
 	switch kind {
 	case NodeIntegerLiteral,
+		NodeFloatLiteral,
 		NodeStringLiteral,
 		NodeIdentifier,
 		NodeUnaryExpression,
-		NodeBinaryExpression:
+		NodeBinaryExpression,
+		NodeConversionExpression:
 		return true
 	default:
 		return false

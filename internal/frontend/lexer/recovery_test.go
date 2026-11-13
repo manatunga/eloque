@@ -550,3 +550,112 @@ func TestRecoverableScanResetsNewlineMetadata(t *testing.T) {
 		}
 	}
 }
+
+func TestNextRecoverableInvalidFloat(t *testing.T) {
+	tests := []struct {
+		name     string
+		source   string
+		wantEnd  uint32
+		wantNext TokenKind
+	}{
+		{
+			name:     "alphabetic suffix",
+			source:   "1.5abc say 1",
+			wantEnd:  6,
+			wantNext: TokenSay,
+		},
+		{
+			name:     "underscore suffix",
+			source:   "1.5abc_def say 1",
+			wantEnd:  10,
+			wantNext: TokenSay,
+		},
+		{
+			name:     "exponent suffix",
+			source:   "1e3abc say 1",
+			wantEnd:  6,
+			wantNext: TokenSay,
+		},
+		{
+			name:     "incomplete exponent with suffix",
+			source:   "1e+abc say 1",
+			wantEnd:  6,
+			wantNext: TokenSay,
+		},
+		{
+			name:     "suffix at EOF",
+			source:   "1.5abc",
+			wantEnd:  6,
+			wantNext: TokenEOF,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			l := New(tt.source, 0)
+
+			result := l.NextRecoverable()
+
+			if result.Status != RecoveryResynchronized {
+				t.Fatalf("status = %v, want RecoveryResynchronized",
+					result.Status)
+			}
+			if result.Diagnostic == nil {
+				t.Fatal("expected diagnostic")
+			}
+			if result.Diagnostic.Code != CodeInvalidFloat {
+				t.Fatalf("code = %s, want %s",
+					result.Diagnostic.Code, CodeInvalidFloat)
+			}
+			if got := result.Diagnostic.Primary.Span.End; got != tt.wantEnd {
+				t.Errorf("span end = %d, want %d", got, tt.wantEnd)
+			}
+
+			next := l.NextRecoverable()
+
+			if next.Status != RecoveryReady {
+				t.Fatalf("next status = %v, want RecoveryReady",
+					next.Status)
+			}
+			if next.Token.Kind != tt.wantNext {
+				t.Errorf("next token = %v, want %v",
+					next.Token.Kind, tt.wantNext)
+			}
+		})
+	}
+}
+
+func TestNextRecoverableInvalidFloatPreservesNewline(t *testing.T) {
+	l := New("1.5abc\nsay 1", 0)
+
+	result := l.NextRecoverable()
+
+	if result.Status != RecoveryResynchronized {
+		t.Fatalf("status = %v, want RecoveryResynchronized",
+			result.Status)
+	}
+	if result.Diagnostic == nil ||
+		result.Diagnostic.Code != CodeInvalidFloat {
+		t.Fatalf("diagnostic = %v, want CodeInvalidFloat",
+			result.Diagnostic)
+	}
+	if got := result.Diagnostic.Primary.Span.End; got != 6 {
+		t.Errorf("span end = %d, want 6", got)
+	}
+
+	for _, want := range []TokenKind{
+		TokenNewline,
+		TokenSay,
+		TokenInt,
+		TokenEOF,
+	} {
+		next := l.NextRecoverable()
+
+		if next.Status != RecoveryReady {
+			t.Fatalf("status = %v, want RecoveryReady", next.Status)
+		}
+		if next.Token.Kind != want {
+			t.Fatalf("token = %v, want %v", next.Token.Kind, want)
+		}
+	}
+}

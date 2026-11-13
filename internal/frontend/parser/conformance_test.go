@@ -75,8 +75,8 @@ func TestProgramConformanceValid(t *testing.T) {
 
 func TestProgramConformanceInvalid(t *testing.T) {
 	expressionStarters := []lexer.TokenKind{
-		lexer.TokenInt, lexer.TokenString, lexer.TokenIdent,
-		lexer.TokenLeftParen, lexer.TokenPlus, lexer.TokenMinus,
+		lexer.TokenInt, lexer.TokenFloat, lexer.TokenString, lexer.TokenIdent,
+		lexer.TokenLeftParen, lexer.TokenPlus, lexer.TokenMinus, lexer.TokenConvert,
 	}
 
 	tests := []struct {
@@ -151,8 +151,8 @@ func TestProgramConformanceInvalid(t *testing.T) {
 
 func TestProgramConformanceDiagnosticEdges(t *testing.T) {
 	expressionStarters := []lexer.TokenKind{
-		lexer.TokenInt, lexer.TokenString, lexer.TokenIdent,
-		lexer.TokenLeftParen, lexer.TokenPlus, lexer.TokenMinus,
+		lexer.TokenInt, lexer.TokenFloat, lexer.TokenString, lexer.TokenIdent,
+		lexer.TokenLeftParen, lexer.TokenPlus, lexer.TokenMinus, lexer.TokenConvert,
 	}
 
 	tests := []struct {
@@ -258,7 +258,7 @@ func TestProgramConformanceLexicalBoundaries(t *testing.T) {
 		{
 			"leading zero", "say 007",
 			lexer.CodeLeadingZero,
-			"integer literal cannot have leading zeros",
+			"decimal integer portion cannot contain leading zeros",
 			source.ByteSpan{Start: 4, End: 7},
 		},
 	}
