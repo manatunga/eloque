@@ -20,7 +20,7 @@ func TestFlatNodeSize(t *testing.T) {
 }
 
 func TestBindingPayloadSize(t *testing.T) {
-	const expectedSize = 12
+	const expectedSize = 20
 
 	if got := unsafe.Sizeof(BindingPayload{}); got != expectedSize {
 		t.Errorf(

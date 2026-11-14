@@ -35,6 +35,8 @@ func TestProgramConformanceValid(t *testing.T) {
 		{"surrounding blank lines", "\nlet x be 1\n\nsay x\n",
 			[]ast.NodeKind{ast.NodeLetStatement, ast.NodeSayStatement},
 			source.ByteSpan{Start: 1, End: 18}},
+		{"annotated variable declaration", "let count as Int be 20",
+			[]ast.NodeKind{ast.NodeLetStatement}, source.ByteSpan{Start: 0, End: 22}},
 	}
 
 	for _, tt := range tests {
@@ -131,6 +133,13 @@ func TestProgramConformanceInvalid(t *testing.T) {
 			"invalid second statement", "let x be 1\nsay (2 + )",
 			"expected an expression",
 			source.ByteSpan{Start: 20, End: 21}, expressionStarters, lexer.TokenRightParen,
+		},
+		{
+			"missing annotation type name", "let x as be 10",
+			"expected a type name after 'as'",
+			source.ByteSpan{Start: 9, End: 11},
+			[]lexer.TokenKind{lexer.TokenIdent},
+			lexer.TokenBe,
 		},
 	}
 

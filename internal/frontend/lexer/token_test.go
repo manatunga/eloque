@@ -74,3 +74,22 @@ func TestTokenConvertString(t *testing.T) {
 		t.Errorf("TokenConvert.String() = %q, want %q", got, "CONVERT")
 	}
 }
+
+func TestTokenTypeAnnotationStrings(t *testing.T) {
+	tests := []struct {
+		kind TokenKind
+		want string
+	}{
+		{TokenAs, "AS"},
+		{TokenQuestion, "QUESTION"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.want, func(t *testing.T) {
+			if got := tt.kind.String(); got != tt.want {
+				t.Errorf("%s.String() = %q, want %q",
+					tt.kind, got, tt.want)
+			}
+		})
+	}
+}

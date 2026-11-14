@@ -11,17 +11,18 @@ import (
 // Eloque's arena-backed AST.
 //
 // The current token must be LET. The parser consumes the declaration
-// keyword, an identifier, the BE keyword, and an initializer expression.
+// keyword, an identifier, an optional type annotation, the BE keyword,
+// and an initializer expression.
 //
-// The variable name is represented by its original source byte span,
-// avoiding a separate string allocation for the identifier. The
-// initializer is referenced through its arena-assigned NodeID.
+// The variable name and optional type annotation are represented by
+// their original source byte spans. The initializer is referenced
+// through its arena-assigned NodeID.
 //
 // The resulting statement spans the complete declaration, including
 // any parentheses surrounding the initializer.
 //
 // NEWLINE and EOF are left unconsumed for the program parser.
-// Malformed declarations return the same diagnostics as M1.
+// Malformed declarations return positioned diagnostics.
 func (p *FlatParser) parseFlatLetStatement() (ast.NodeID, *diagnostic.Diagnostic) {
 	keyword := p.advance()
 
@@ -31,6 +32,31 @@ func (p *FlatParser) parseFlatLetStatement() (ast.NodeID, *diagnostic.Diagnostic
 	)
 	if diagnostic != nil {
 		return ast.InvalidNodeID, diagnostic
+	}
+
+	// An annotation is optional. Its zero-width span represents
+	// a declaration without an explicit type annotation.
+	typeAnnotation := source.ByteSpan{}
+
+	if p.peek().Kind == lexer.TokenAs {
+		p.advance()
+
+		typeToken, diagnostic := p.expect(
+			lexer.TokenIdent,
+			"expected a type name after 'as'",
+		)
+		if diagnostic != nil {
+			return ast.InvalidNodeID, diagnostic
+		}
+
+		typeAnnotation = source.ByteSpan{
+			Start: typeToken.Start,
+			End:   typeToken.End,
+		}
+		if p.peek().Kind == lexer.TokenQuestion {
+			question := p.advance()
+			typeAnnotation.End = question.End
+		}
 	}
 
 	_, diagnostic = p.expect(
@@ -54,6 +80,15 @@ func (p *FlatParser) parseFlatLetStatement() (ast.NodeID, *diagnostic.Diagnostic
 	nameSpan := source.ByteSpan{
 		Start: identifier.Start,
 		End:   identifier.End,
+	}
+
+	if typeAnnotation.Start < typeAnnotation.End {
+		return p.arena.AddLetWithTypeAnnotation(
+			span,
+			nameSpan,
+			typeAnnotation,
+			value.id,
+		), nil
 	}
 
 	return p.arena.AddLet(span, nameSpan, value.id), nil

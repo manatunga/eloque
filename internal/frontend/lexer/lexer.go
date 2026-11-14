@@ -534,6 +534,10 @@ func (l *Lexer) NextToken() (Token, *diagnostic.Diagnostic) {
 		return l.makeToken(TokenColon), nil
 	}
 
+	if char == '?' {
+		return l.makeToken(TokenQuestion), nil
+	}
+
 	if char == '+' {
 		return l.makeToken(TokenPlus), nil
 	}

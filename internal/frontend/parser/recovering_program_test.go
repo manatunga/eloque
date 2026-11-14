@@ -328,3 +328,79 @@ func TestParseRecoveringUnlimitedErrors(t *testing.T) {
 		t.Fatalf("statements = %d, want 1", got)
 	}
 }
+
+func TestParseRecoveringAnnotatedDeclaration(t *testing.T) {
+	result := ParseRecovering(
+		"let count as Int be 10\n",
+		ParseOptions{},
+	)
+
+	if result.Status != ParseComplete {
+		t.Fatalf("status = %v, want ParseComplete; diagnostics: %v",
+			result.Status, result.Diagnostics)
+	}
+
+	if len(result.Diagnostics) != 0 {
+		t.Fatalf("unexpected diagnostics: %v", result.Diagnostics)
+	}
+
+	if result.Program == nil {
+		t.Fatal("expected program")
+	}
+
+	if got := result.Program.Arena.StatementCount(); got != 1 {
+		t.Fatalf("statement count = %d, want 1", got)
+	}
+
+	ids := result.Program.Arena.StatementRange(
+		ast.StatementRange{
+			Start: result.Program.Statements.Start,
+			End:   result.Program.Statements.End,
+		},
+	)
+
+	if len(ids) != 1 {
+		t.Fatalf("committed statements = %d, want 1", len(ids))
+	}
+
+	node := result.Program.Arena.Get(ids[0])
+	if node.Kind != ast.NodeLetStatement {
+		t.Fatalf("node kind = %v, want NodeLetStatement", node.Kind)
+	}
+
+	payload := result.Program.Arena.BindingPayload(node.Data)
+
+	if got := result.Program.Arena.SourceText(payload.TypeAnnotation); got != "Int" {
+		t.Errorf("type annotation = %q, want %q", got, "Int")
+	}
+}
+
+func TestParseRecoveringMalformedAnnotationPreservesFollowingStatement(t *testing.T) {
+	result := ParseRecovering(
+		"let count as be 10\nsay 7\n",
+		ParseOptions{},
+	)
+
+	if result.Status != ParseRecovered {
+		t.Fatalf("status = %v, want ParseRecovered", result.Status)
+	}
+
+	if len(result.Diagnostics) != 1 {
+		t.Fatalf("diagnostics = %d, want 1: %v",
+			len(result.Diagnostics), result.Diagnostics)
+	}
+
+	if got := result.Diagnostics[0].Message; got !=
+		"expected a type name after 'as'" {
+		t.Errorf("diagnostic message = %q, want %q",
+			got, "expected a type name after 'as'")
+	}
+
+	if result.Program == nil {
+		t.Fatal("expected partial program")
+	}
+
+	if got := result.Program.Arena.StatementCount(); got != 1 {
+		t.Fatalf("statement count = %d, want 1", got)
+	}
+}

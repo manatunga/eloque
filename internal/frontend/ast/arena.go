@@ -424,9 +424,14 @@ func (a *Arena) AddConversion(
 // binding name's source span, the value's NodeID or node kind,
 // or whether the payload is associated with a statement node.
 //
-// Callers constructing binding statements should use AddLet or
-// AddChange, which validate the name span and value expression
-// before storing the payload.
+// Callers constructing binding statements should use AddLet,
+// AddLetWithTypeAnnotation, or AddChange, which validate the relevant
+// source spans and value expression before storing the payload.
+//
+// This is a low-level storage operation. It does not validate the
+// binding name's source span, the type annotation's source span,
+// the value's NodeID or node kind, or whether the payload is
+// associated with a statement node.
 //
 // It panics if the next payload index cannot be represented by uint32.
 func (a *Arena) AddBindingPayload(payload BindingPayload) uint32 {
@@ -454,7 +459,25 @@ func (a *Arena) AddLet(
 	name source.ByteSpan,
 	value NodeID,
 ) NodeID {
-	return a.addBinding(NodeLetStatement, span, name, value)
+	return a.addBinding(NodeLetStatement, span, name, source.ByteSpan{}, value)
+}
+
+// AddLetWithTypeAnnotation creates a variable declaration node with an
+// explicit type annotation and its binding payload.
+//
+// The annotation identifies the type's spelling in the retained source,
+// including an optional suffix such as '?'.
+// It panics if the annotation is invalid or empty.
+func (a *Arena) AddLetWithTypeAnnotation(
+	span source.ByteSpan,
+	name source.ByteSpan,
+	typeAnnotation source.ByteSpan,
+	value NodeID,
+) NodeID {
+	if typeAnnotation.Start == typeAnnotation.End {
+		panic("ast: empty type annotation")
+	}
+	return a.addBinding(NodeLetStatement, span, name, typeAnnotation, value)
 }
 
 // AddChange creates a variable reassignment node and its binding payload.
@@ -463,7 +486,7 @@ func (a *Arena) AddChange(
 	name source.ByteSpan,
 	value NodeID,
 ) NodeID {
-	return a.addBinding(NodeChangeStatement, span, name, value)
+	return a.addBinding(NodeChangeStatement, span, name, source.ByteSpan{}, value)
 }
 
 // addBinding creates a statement node with a binding payload.
@@ -471,10 +494,22 @@ func (a *Arena) addBinding(
 	kind NodeKind,
 	span source.ByteSpan,
 	name source.ByteSpan,
+	typeAnnotation source.ByteSpan,
 	value NodeID,
 ) NodeID {
 	a.SourceText(span)
 	a.SourceText(name)
+
+	a.SourceText(typeAnnotation)
+	if typeAnnotation.Start < typeAnnotation.End {
+		if typeAnnotation.Start < span.Start ||
+			typeAnnotation.End > span.End {
+			panic("ast: type annotation is out of bounds")
+		}
+		if kind != NodeLetStatement {
+			panic("ast: type annotation is only allowed with let statements")
+		}
+	}
 
 	a.requireExpression(value)
 	if uint64(len(a.nodes)) >= uint64(InvalidNodeID) {
@@ -483,8 +518,9 @@ func (a *Arena) addBinding(
 	checkPayloadCapacity(len(a.bindings))
 
 	index := a.AddBindingPayload(BindingPayload{
-		Name:  name,
-		Value: value,
+		Name:           name,
+		Value:          value,
+		TypeAnnotation: typeAnnotation,
 	})
 
 	return a.Add(FlatNode{

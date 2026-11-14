@@ -37,6 +37,8 @@ const (
 	TokenWith
 	TokenGiving
 	TokenConvert
+	TokenAs
+	TokenQuestion
 )
 
 // String returns the human-readable name of a token kind.
@@ -97,6 +99,10 @@ func (kind TokenKind) String() string {
 		return "GIVING"
 	case TokenConvert:
 		return "CONVERT"
+	case TokenAs:
+		return "AS"
+	case TokenQuestion:
+		return "QUESTION"
 	default:
 		return "UNKNOWN"
 	}
@@ -144,6 +150,8 @@ func lookupIdentifier(word string) TokenKind {
 		return TokenGiving
 	case "convert":
 		return TokenConvert
+	case "as":
+		return TokenAs
 	default:
 		return TokenIdent
 	}

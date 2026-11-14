@@ -3069,3 +3069,61 @@ func TestNextTokenConvertSequence(t *testing.T) {
 		}
 	}
 }
+
+func TestNextTokenTypeAnnotationTokens(t *testing.T) {
+	input := "as Int?"
+
+	tests := []struct {
+		kind   TokenKind
+		lexeme string
+		start  uint32
+		end    uint32
+	}{
+		{TokenAs, "as", 0, 2},
+		{TokenIdent, "Int", 3, 6},
+		{TokenQuestion, "?", 6, 7},
+		{TokenEOF, "", 7, 7},
+	}
+
+	l := New(input, 0)
+
+	for i, tt := range tests {
+		token, diag := l.NextToken()
+		if diag != nil {
+			t.Fatalf(
+				"token %d: unexpected diagnostic: %+v",
+				i,
+				diag,
+			)
+		}
+
+		if token.Kind != tt.kind {
+			t.Errorf(
+				"token %d kind = %s, want %s",
+				i,
+				token.Kind,
+				tt.kind,
+			)
+		}
+
+		if token.Start != tt.start || token.End != tt.end {
+			t.Errorf(
+				"token %d span = [%d, %d), want [%d, %d)",
+				i,
+				token.Start,
+				token.End,
+				tt.start,
+				tt.end,
+			)
+		}
+
+		if got := input[token.Start:token.End]; got != tt.lexeme {
+			t.Errorf(
+				"token %d lexeme = %q, want %q",
+				i,
+				got,
+				tt.lexeme,
+			)
+		}
+	}
+}

@@ -52,6 +52,11 @@ func TestFlatStatementBindings(t *testing.T) {
 
 			binding := p.arena.BindingPayload(node.Data)
 
+			if binding.TypeAnnotation != (source.ByteSpan{}) {
+				t.Errorf("type annotation = %+v, want absent annotation",
+					binding.TypeAnnotation)
+			}
+
 			if got := p.arena.SourceText(binding.Name); got != tt.wantName {
 				t.Errorf("binding name = %q, want %q", got, tt.wantName)
 			}
@@ -68,6 +73,77 @@ func TestFlatStatementBindings(t *testing.T) {
 			if node.Span != wantSpan {
 				t.Errorf("statement span = %+v, want %+v",
 					node.Span, wantSpan)
+			}
+
+			if got := p.peek().Kind; got != lexer.TokenEOF {
+				t.Errorf("remaining token = %v, want EOF", got)
+			}
+		})
+	}
+}
+
+func TestFlatLetTypeAnnotations(t *testing.T) {
+	tests := []struct {
+		name           string
+		source         string
+		wantAnnotation string
+		wantSpan       source.ByteSpan
+	}{
+		{
+			name:           "explicit integer type",
+			source:         "let count as Int be 10",
+			wantAnnotation: "Int",
+			wantSpan:       source.ByteSpan{Start: 13, End: 16},
+		},
+		{
+			name:           "optional floating point type",
+			source:         "let ratio as Float? be 10",
+			wantAnnotation: "Float?",
+			wantSpan:       source.ByteSpan{Start: 13, End: 19},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p := newFlatStatementTestParser(tt.source)
+
+			id, diag := p.parseFlatStatement()
+			if diag != nil {
+				t.Fatalf("unexpected diagnostic: %+v", diag)
+			}
+
+			node := p.arena.Get(id)
+			if node.Kind != ast.NodeLetStatement {
+				t.Fatalf("node kind = %v, want let statement", node.Kind)
+			}
+
+			binding := p.arena.BindingPayload(node.Data)
+
+			if got := p.arena.SourceText(binding.TypeAnnotation); got != tt.wantAnnotation {
+				t.Errorf("type annotation = %q, want %q", got, tt.wantAnnotation)
+			}
+
+			if binding.TypeAnnotation != tt.wantSpan {
+				t.Errorf("annotation span = %+v, want %+v",
+					binding.TypeAnnotation, tt.wantSpan)
+			}
+
+			value := p.arena.Get(binding.Value)
+			if value.Kind != ast.NodeIntegerLiteral {
+				t.Errorf("initializer kind = %v, want integer literal", value.Kind)
+			}
+
+			if got := p.arena.SourceText(value.Span); got != "10" {
+				t.Errorf("initializer source = %q, want %q", got, "10")
+			}
+
+			wantStatementSpan := source.ByteSpan{
+				Start: 0,
+				End:   uint32(len(tt.source)),
+			}
+			if node.Span != wantStatementSpan {
+				t.Errorf("statement span = %+v, want %+v",
+					node.Span, wantStatementSpan)
 			}
 
 			if got := p.peek().Kind; got != lexer.TokenEOF {
@@ -275,6 +351,42 @@ func TestFlatStatementDiagnostics(t *testing.T) {
 				lexer.TokenLet,
 				lexer.TokenChange,
 				lexer.TokenSay,
+			},
+		},
+		{
+			name:         "let missing type after as",
+			source:       "let x as be 10",
+			wantMessage:  "expected a type name after 'as'",
+			wantStart:    9,
+			wantEnd:      11,
+			wantActual:   lexer.TokenBe,
+			wantExpected: []lexer.TokenKind{lexer.TokenIdent},
+		},
+		{
+			name:         "let annotated missing be",
+			source:       "let x as Int 10",
+			wantMessage:  "expected 'be' after variable name to initialize a variable value",
+			wantStart:    13,
+			wantEnd:      15,
+			wantActual:   lexer.TokenInt,
+			wantExpected: []lexer.TokenKind{lexer.TokenBe},
+		},
+		{
+			name:        "let annotated missing initializer",
+			source:      "let x as Int be",
+			wantMessage: "expected an expression",
+			wantStart:   15,
+			wantEnd:     15,
+			wantActual:  lexer.TokenEOF,
+			wantExpected: []lexer.TokenKind{
+				lexer.TokenInt,
+				lexer.TokenFloat,
+				lexer.TokenString,
+				lexer.TokenIdent,
+				lexer.TokenLeftParen,
+				lexer.TokenPlus,
+				lexer.TokenMinus,
+				lexer.TokenConvert,
 			},
 		},
 	}

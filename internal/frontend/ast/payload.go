@@ -19,14 +19,18 @@ type UnaryPayload struct {
 	Operator lexer.TokenKind
 }
 
-// BindingPayload stores the name and value of a variable
-// declaration or reassignment.
+// BindingPayload stores the name, value, and optional type annotation of a
+// variable declaration or reassignment.
 //
 // Name identifies the variable's spelling in the retained source.
 // Value identifies its expression in the AST arena.
+// TypeAnnotation identifies the source span of an explicit type annotation
+// on a let declaration, including an optional suffix such as '?'.
+// A zero-width span represents the absence of an annotation.
 type BindingPayload struct {
-	Name  source.ByteSpan
-	Value NodeID
+	Name           source.ByteSpan
+	Value          NodeID
+	TypeAnnotation source.ByteSpan
 }
 
 // ConversionPayload stores the operand and destination type of a

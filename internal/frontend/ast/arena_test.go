@@ -1061,3 +1061,218 @@ func TestArenaRollbackPreservesExistingConversionPayloads(t *testing.T) {
 		t.Errorf("preserved conversion payload = %+v, want %+v", got, first)
 	}
 }
+
+func TestArenaAddLetWithTypeAnnotation(t *testing.T) {
+	sourceText := "let age as Int be 20"
+	arena := NewArena(sourceText)
+
+	value := arena.AddInteger(
+		source.ByteSpan{Start: 18, End: 20},
+	)
+
+	statementSpan := source.ByteSpan{Start: 0, End: 20}
+	nameSpan := source.ByteSpan{Start: 4, End: 7}
+	annotationSpan := source.ByteSpan{Start: 11, End: 14}
+
+	id := arena.AddLetWithTypeAnnotation(
+		statementSpan,
+		nameSpan,
+		annotationSpan,
+		value,
+	)
+
+	node := arena.Get(id)
+
+	if node.Kind != NodeLetStatement {
+		t.Fatalf(
+			"node kind = %d, want %d",
+			node.Kind,
+			NodeLetStatement,
+		)
+	}
+
+	if node.Span != statementSpan {
+		t.Errorf(
+			"statement span = %+v, want %+v",
+			node.Span,
+			statementSpan,
+		)
+	}
+
+	payload := arena.BindingPayload(node.Data)
+
+	if payload.Name != nameSpan {
+		t.Errorf(
+			"name span = %+v, want %+v",
+			payload.Name,
+			nameSpan,
+		)
+	}
+
+	if payload.Value != value {
+		t.Errorf(
+			"value = %d, want %d",
+			payload.Value,
+			value,
+		)
+	}
+
+	if payload.TypeAnnotation != annotationSpan {
+		t.Errorf(
+			"type annotation span = %+v, want %+v",
+			payload.TypeAnnotation,
+			annotationSpan,
+		)
+	}
+
+	if got := arena.SourceText(payload.TypeAnnotation); got != "Int" {
+		t.Errorf("type annotation = %q, want %q", got, "Int")
+	}
+}
+
+func TestArenaBindingStatementsWithoutTypeAnnotation(t *testing.T) {
+	sourceText := "let age be 20\nchange age to 21"
+	arena := NewArena(sourceText)
+
+	value := arena.AddInteger(
+		source.ByteSpan{Start: 11, End: 13},
+	)
+
+	letID := arena.AddLet(
+		source.ByteSpan{Start: 0, End: 13},
+		source.ByteSpan{Start: 4, End: 7},
+		value,
+	)
+
+	changeID := arena.AddChange(
+		source.ByteSpan{Start: 14, End: 30},
+		source.ByteSpan{Start: 21, End: 24},
+		value,
+	)
+
+	tests := []struct {
+		name string
+		id   NodeID
+		kind NodeKind
+	}{
+		{
+			name: "let",
+			id:   letID,
+			kind: NodeLetStatement,
+		},
+		{
+			name: "change",
+			id:   changeID,
+			kind: NodeChangeStatement,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			node := arena.Get(tt.id)
+
+			if node.Kind != tt.kind {
+				t.Fatalf(
+					"node kind = %d, want %d",
+					node.Kind,
+					tt.kind,
+				)
+			}
+
+			payload := arena.BindingPayload(node.Data)
+
+			if payload.TypeAnnotation != (source.ByteSpan{}) {
+				t.Errorf(
+					"type annotation = %+v, want zero-value span",
+					payload.TypeAnnotation,
+				)
+			}
+		})
+	}
+}
+
+func TestArenaAddLetWithTypeAnnotationRejectsInvalidAnnotation(t *testing.T) {
+	tests := []struct {
+		name           string
+		statementSpan  source.ByteSpan
+		annotationSpan source.ByteSpan
+	}{
+		{
+			name:           "empty annotation",
+			statementSpan:  source.ByteSpan{Start: 0, End: 17},
+			annotationSpan: source.ByteSpan{Start: 9, End: 9},
+		},
+		{
+			name:           "annotation outside statement",
+			statementSpan:  source.ByteSpan{Start: 0, End: 8},
+			annotationSpan: source.ByteSpan{Start: 9, End: 12},
+		},
+		{
+			name:           "annotation outside source",
+			statementSpan:  source.ByteSpan{Start: 0, End: 17},
+			annotationSpan: source.ByteSpan{Start: 9, End: 30},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sourceText := "let x as Int be 1"
+			arena := NewArena(sourceText)
+
+			value := arena.AddInteger(
+				source.ByteSpan{Start: 16, End: 17},
+			)
+
+			beforeNodes := arena.Len()
+			beforeBindings := len(arena.bindings)
+
+			defer func() {
+				if recover() == nil {
+					t.Error("expected panic for invalid type annotation")
+				}
+
+				if arena.Len() != beforeNodes ||
+					len(arena.bindings) != beforeBindings {
+					t.Error("arena modified after invalid type annotation")
+				}
+			}()
+
+			arena.AddLetWithTypeAnnotation(
+				tt.statementSpan,
+				source.ByteSpan{Start: 4, End: 5},
+				tt.annotationSpan,
+				value,
+			)
+		})
+	}
+}
+
+func TestArenaRejectsTypeAnnotationOnNonLetBinding(t *testing.T) {
+	arena := NewArena("change x to 1")
+
+	value := arena.AddInteger(
+		source.ByteSpan{Start: 12, End: 13},
+	)
+
+	beforeNodes := arena.Len()
+	beforeBindings := len(arena.bindings)
+
+	defer func() {
+		if recover() == nil {
+			t.Error("expected panic for type annotation on change statement")
+		}
+
+		if arena.Len() != beforeNodes ||
+			len(arena.bindings) != beforeBindings {
+			t.Error("arena modified after rejecting non-let annotation")
+		}
+	}()
+
+	arena.addBinding(
+		NodeChangeStatement,
+		source.ByteSpan{Start: 0, End: 13},
+		source.ByteSpan{Start: 7, End: 8},
+		source.ByteSpan{Start: 7, End: 8},
+		value,
+	)
+}
